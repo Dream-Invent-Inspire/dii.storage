@@ -2,11 +2,27 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Company>Dream Invent Inspire, Inc</Company>
+    <Description>A framework for managing entities to be stored in CosmosDB. Supports object compression, property name abbreviation, and encryption by annotation.</Description>
+    <PackageLicenseFile>COPYING.LESSER.txt</PackageLicenseFile>
+    <RepositoryUrl>https://github.com/Dream-Invent-Inspire/dii.cosmos</RepositoryUrl>
+    <PackageTags>Cosmos, Cosmos DB, Dream Invent Inspire</PackageTags>
+    <Authors>Andrew Beers &amp; Patrick MacMannis</Authors>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageId>dii.cosmos_dream_invent_inspire_inc</PackageId>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="MessagePack" Version="2.3.85" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.27.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\COPYING.LESSER.txt">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
