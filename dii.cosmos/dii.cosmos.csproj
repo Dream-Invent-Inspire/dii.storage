@@ -7,10 +7,11 @@
     <Description>A framework for managing entities to be stored in CosmosDB. Supports object compression, property name abbreviation, and encryption by annotation.</Description>
     <PackageLicenseFile>COPYING.LESSER.txt</PackageLicenseFile>
     <RepositoryUrl>https://github.com/Dream-Invent-Inspire/dii.cosmos</RepositoryUrl>
-    <PackageTags>Cosmos, Cosmos DB, Dream Invent Inspire</PackageTags>
-    <Authors>Andrew Beers &amp; Patrick MacMannis</Authors>
+    <PackageTags>Cosmos;CosmosDB;MessagePack</PackageTags>
+    <Authors>pmacmannis,aquamoogle</Authors>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageId>dii.cosmos_dream_invent_inspire_inc</PackageId>
+    <PackageId>dii.cosmos</PackageId>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
