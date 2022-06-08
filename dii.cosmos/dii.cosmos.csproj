@@ -8,10 +8,10 @@
     <PackageLicenseFile>COPYING.LESSER.txt</PackageLicenseFile>
     <RepositoryUrl>https://github.com/Dream-Invent-Inspire/dii.cosmos</RepositoryUrl>
     <PackageTags>Cosmos;CosmosDB;MessagePack</PackageTags>
-    <Authors>pmacmannis,aquamoogle</Authors>
+    <Authors>Andrew Beers &amp; Pat MacMannis</Authors>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageId>dii.cosmos</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
