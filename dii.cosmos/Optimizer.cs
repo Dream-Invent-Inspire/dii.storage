@@ -222,7 +222,7 @@ namespace dii.cosmos
 				{
 					partitionFields.Add(partition.Order, property);
 
-					if (char.IsWhiteSpace(partition.Separator))
+					if (!char.IsWhiteSpace(partition.Separator))
                     {
 						partitionSeparator = partition.Separator;
 					}
