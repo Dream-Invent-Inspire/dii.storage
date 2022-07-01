@@ -1,8 +1,9 @@
 ﻿using dii.cosmos.Attributes;
+using dii.cosmos.Models;
 
 namespace dii.cosmos.tests.Models
 {
-    public class FakeEntityTwo
+    public class FakeEntityTwo : DiiCosmosEntity
 	{
 		/// <summary>
 		/// The Unique Id for the <see cref="FakeEntityTwo"/>.
@@ -11,13 +12,13 @@ namespace dii.cosmos.tests.Models
 		public string FakeEntityTwoId { get; set; }
 
 		[Searchable("id")]
-		public string Id { get { return FakeEntityTwoId; } set { FakeEntityTwoId = value; } }
+		public string Id { get; set; }
 
 		/// <summary>
-		/// A <see cref="string"/> Cosmos primitive to be searched.
+		/// A <see cref="string"/> value to be searched.
 		/// </summary>
-		[Searchable("_etag")]
-		public string Version { get; set; }
+		[Searchable("string")]
+		public string SearchableStringValue { get; set; }
 
 		/// <summary>
 		/// A <see cref="string"/> value to be compressed.

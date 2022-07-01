@@ -20,6 +20,12 @@ namespace dii.cosmos.tests.Orderer
                 throw new ArgumentNullException(nameof(testCases), "Cannot use TestPriorityOrderer without at least 1 test case.");
             }
 
+            if (testCases.Count() == 1)
+            {
+                yield return testCases.First();
+                yield break;
+            }
+
             var sortedMethods = new SortedDictionary<int, List<TTestCase>>();
             var comparison = new Comparison<TTestCase>((x, y) => StringComparer.OrdinalIgnoreCase.Compare(x.TestMethod.Method.Name, y.TestMethod.Method.Name));
             var assemblyQualifiedName = typeof(TestPriorityOrderAttribute).AssemblyQualifiedName;

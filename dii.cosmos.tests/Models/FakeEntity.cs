@@ -1,11 +1,12 @@
 ﻿using dii.cosmos.Attributes;
+using dii.cosmos.Models;
 using System;
 using System.Collections.Generic;
 using static dii.cosmos.tests.Models.Enums;
 
 namespace dii.cosmos.tests.Models
 {
-    public class FakeEntity
+    public class FakeEntity : DiiCosmosEntity
 	{
 		/// <summary>
 		/// The Unique Id for the <see cref="FakeEntity"/>.
@@ -19,7 +20,7 @@ namespace dii.cosmos.tests.Models
 		/// <summary>
 		/// A <see cref="string"/> Cosmos primitive to be searched.
 		/// </summary>
-		[Searchable("_etag")]
+		[Searchable("_self")]
 		public string SearchableCosmosPrimitive { get; set; }
 
 		/// <summary>

@@ -1,6 +1,7 @@
 ﻿using dii.cosmos.Attributes;
 using dii.cosmos.Exceptions;
 using dii.cosmos.Models;
+using dii.cosmos.Models.Interfaces;
 using MessagePack;
 using Newtonsoft.Json.Linq;
 using System;
@@ -16,14 +17,22 @@ namespace dii.cosmos
     public class Optimizer
 	{
 		#region Private Fields
-		private static object _lock = new object();
 		private static Optimizer _instance;
+		private static object _instanceLock = new object();
+		private static bool _autoDetectTypes;
+		private static bool _ignoreInvalidDiiCosmosEntities;
 
 		private readonly ModuleBuilder _builder;
 		private readonly Dictionary<Type, Serializer> _packing;
 		private readonly Dictionary<Type, Serializer> _unpacking;
 
 		private const string _dynamicAssemblyName = "dii.dynamic.storage";
+
+		private readonly string[] _reservedSearchableKeys = new string[2]
+		{
+			Constants.ReservedPartitionKeyKey,
+			Constants.ReservedCompressedKey
+		};
 		#endregion Private Fields
 
 		#region Public Fields
@@ -40,8 +49,8 @@ namespace dii.cosmos
 			Tables = new List<TableMetaData>();
 			TableMappings = new Dictionary<Type, TableMetaData>();
 
-			var assemblyName = new AssemblyName(_dynamicAssemblyName);
-			var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
+			var assemblyName = new AssemblyName($"{_dynamicAssemblyName}.{Guid.NewGuid()}");
+			var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndCollect);
 
 			_builder = assemblyBuilder.DefineDynamicModule($"{assemblyName}.dll");
 
@@ -52,33 +61,29 @@ namespace dii.cosmos
 		#region Public Methods
 		public static Optimizer Init(params Type[] types)
 		{
-			bool isNew = false;
+			return InitializeOptimizer(types);
+		}
 
-			if (_instance == null)
-			{
-				lock (_lock)
-				{
-					if (_instance == null)
-					{
-						isNew = true;
-						_instance = new Optimizer(types);
-					}
-				}
-			}
+		public static Optimizer Init(bool ignoreInvalidDiiCosmosEntities = false, params Type[] types)
+		{
+			_ignoreInvalidDiiCosmosEntities = ignoreInvalidDiiCosmosEntities;
 
-			if (!isNew)
-			{
-				_instance.ConfigureTypes(types);
-			}
+			return InitializeOptimizer(types);
+		}
 
-			return _instance;
+		public static Optimizer Init(bool autoDetectTypes = false, bool ignoreInvalidDiiCosmosEntities = false)
+		{
+			_autoDetectTypes = autoDetectTypes;
+			_ignoreInvalidDiiCosmosEntities = ignoreInvalidDiiCosmosEntities;
+
+			return InitializeOptimizer();
 		}
 
 		public static Optimizer Get()
 		{
 			if (_instance == null)
 			{
-				throw new DiiNotInitializedException("Optimizer");
+				throw new DiiNotInitializedException(nameof(Optimizer));
 			}
 
 			return _instance;
@@ -86,6 +91,19 @@ namespace dii.cosmos
 
 		public void ConfigureTypes(params Type[] types)
 		{
+			if (_autoDetectTypes)
+			{
+				var currentAssemblyName = Assembly.GetExecutingAssembly().FullName;
+
+				// Look for types.
+				types = AppDomain.CurrentDomain
+					.GetAssemblies()
+					.Where(x => !x.IsDynamic && x.FullName != currentAssemblyName)
+					.SelectMany(x => x.GetExportedTypes())
+					.Where(x => x.GetTypeInfo().ImplementedInterfaces.Any(z => z.Name == nameof(IDiiCosmosEntity)))
+					.ToArray();
+			}
+
 			if (types != null && types.Any())
 			{
 				foreach (var type in types)
@@ -94,15 +112,18 @@ namespace dii.cosmos
 					{
 						var storageType = GenerateType(type);
 
-						var tableMetaData = new TableMetaData
+						if (storageType != null)
 						{
-							TableName = type.Name,
-							ConcreteType = type,
-							StorageType = storageType
-						};
+							var tableMetaData = new TableMetaData
+							{
+								TableName = type.Name,
+								ConcreteType = type,
+								StorageType = storageType
+							};
 
-						Tables.Add(tableMetaData);
-						TableMappings.Add(type, tableMetaData);
+							Tables.Add(tableMetaData);
+							TableMappings.Add(type, tableMetaData);
+						}
 					}
 				}
 			}
@@ -135,7 +156,7 @@ namespace dii.cosmos
 			return null;
 		}
 
-		public T FromEntity<T>(object obj) where T : new()
+		public T FromEntity<T>(object obj) where T : IDiiCosmosEntity, new()
 		{
 			if (obj == null)
 			{
@@ -176,7 +197,7 @@ namespace dii.cosmos
 			return null;
 		}
 
-		public T UnpackageFromJson<T>(string json) where T : new()
+		public T UnpackageFromJson<T>(string json) where T : IDiiCosmosEntity, new()
 		{
 			if (string.IsNullOrWhiteSpace(json))
 			{
@@ -196,6 +217,30 @@ namespace dii.cosmos
 		#endregion Public Methods
 
 		#region Private Methods
+		private static Optimizer InitializeOptimizer(params Type[] types)
+		{
+			bool isNew = false;
+
+			if (_instance == null)
+			{
+				lock (_instanceLock)
+				{
+					if (_instance == null)
+					{
+						isNew = true;
+						_instance = new Optimizer(types);
+					}
+				}
+			}
+
+			if (!isNew)
+			{
+				_instance.ConfigureTypes(types);
+			}
+
+			return _instance;
+		}
+
 		private Type GenerateType(Type source)
 		{
 			var jsonMap = new PackingMapper();
@@ -233,9 +278,18 @@ namespace dii.cosmos
 				var search = property.GetCustomAttribute<SearchableAttribute>();
 				if (search != null)
 				{
-					if (search.Abbreviation == Constants.ReservedCompressedKey)
+					if (_reservedSearchableKeys.Contains(search.Abbreviation))
 					{
-						throw new DiiReservedSearchableKeyException(Constants.ReservedCompressedKey, property.Name, source.Name);
+						if (_ignoreInvalidDiiCosmosEntities)
+                        {
+							// Do not create the entity to be used, but do not throw an exception.
+							return null;
+                        }
+						else
+						{
+							// Throw an exception when an invalid type is attempted.
+							throw new DiiReservedSearchableKeyException(search.Abbreviation, property.Name, source.Name);
+						}
 					}
 
 					var jsonAttr = new CustomAttributeBuilder(jsonAttrConstructor, new object[] { search.Abbreviation });
@@ -410,7 +464,7 @@ namespace dii.cosmos
 				return packedObject;
 			}
 
-			public T Unpackage<T>(object packedObject) where T : new()
+			public T Unpackage<T>(object packedObject) where T : IDiiCosmosEntity, new()
 			{
 				if (packedObject == null)
 				{
