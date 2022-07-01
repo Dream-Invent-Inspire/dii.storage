@@ -7,7 +7,7 @@ namespace dii.cosmos.tests.Models
     {
         public string Uri { get; set; } = "https://localhost:8081";
         public string Key { get; set; } = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
-        public string DatabaseId { get; set; } = $"dii-tests-local-{Guid.NewGuid()}";
+        public string DatabaseId { get; set; } = $"dii-cosmos-tests-local-{Guid.NewGuid()}";
         public bool AutoCreate { get; set; } = true;
         public int MaxRUPerSecond { get; set; } = 4000;
         public bool AutoAdjustMaxRUPerSecond { get; set; } = true;

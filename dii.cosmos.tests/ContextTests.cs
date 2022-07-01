@@ -2,38 +2,30 @@
 using dii.cosmos.tests.Attributes;
 using dii.cosmos.tests.Models;
 using dii.cosmos.tests.Orderer;
-using Newtonsoft.Json.Linq;
-using System;
+using dii.cosmos.tests.Utilities;
 using System.Threading.Tasks;
 using Xunit;
 
 namespace dii.cosmos.tests
 {
+    [Collection(nameof(ContextTests))]
+    [TestCollectionPriorityOrder(1)]
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class ContextTests
     {
         [Fact, TestPriorityOrder(1)]
-        [Trait("Cosmos", "Context Tests")]
         public void Init_NotInitialized()
         {
-            Context context = null;
-
-            Assert.Null(context);
-
             var exception = Assert.Throws<DiiNotInitializedException>(() => { Context.Get(); });
 
             Assert.NotNull(exception);
-            Assert.Equal("Context not initialized.", exception.Message);
+            Assert.Equal(new DiiNotInitializedException(nameof(Context)).Message, exception.Message);
         }
 
         [Fact, TestPriorityOrder(2)]
-        [Trait("Cosmos", "Context Tests")]
         public void Init_Success()
         {
-            var fakeCosmosDatabaseConfig = new FakeCosmosDatabaseConfig
-            {
-                DatabaseId = "dii-tests-local-context-tests"
-            };
+            var fakeCosmosDatabaseConfig = new FakeCosmosDatabaseConfig();
 
             var context = Context.Init(fakeCosmosDatabaseConfig);
 
@@ -41,7 +33,6 @@ namespace dii.cosmos.tests
         }
 
         [Fact, TestPriorityOrder(3)]
-        [Trait("Cosmos", "Context Tests")]
         public void Init_Get()
         {
             var context = Context.Get();
@@ -50,7 +41,6 @@ namespace dii.cosmos.tests
         }
 
         [Fact, TestPriorityOrder(4)]
-        [Trait("Cosmos", "Context Tests")]
         public async Task DoesDatabaseExistAsync_Success()
         {
             var context = Context.Get();
@@ -71,7 +61,6 @@ namespace dii.cosmos.tests
         }
 
         [Fact, TestPriorityOrder(5)]
-        [Trait("Cosmos", "Context Tests")]
         public async Task InitTables_Success()
         {
             var context = Context.Get();
@@ -83,7 +72,7 @@ namespace dii.cosmos.tests
 
             Assert.NotNull(optimizer);
 
-            await context.InitTables(optimizer.Tables.ToArray()).ConfigureAwait(false);
+            await context.InitTables(optimizer.Tables).ConfigureAwait(false);
 
             Assert.NotNull(context.TableMappings);
             Assert.Equal(optimizer.TableMappings[typeof(FakeEntity)], context.TableMappings[typeof(FakeEntity)]);
@@ -91,15 +80,12 @@ namespace dii.cosmos.tests
 
         #region Teardown
         [Fact, TestPriorityOrder(int.MaxValue)]
-        [Trait("Cosmos", "Context Tests")]
         public async Task Teardown()
         {
-            var context = Context.Get();
+            await TestHelpers.TeardownCosmosDbAsync().ConfigureAwait(false);
 
-            if (context.Db != null)
-            {
-                _ = await context.Db.DeleteAsync().ConfigureAwait(false);
-            }
+            TestHelpers.ResetContextInstance();
+            TestHelpers.ResetOptimizerInstance();
         }
         #endregion
     }

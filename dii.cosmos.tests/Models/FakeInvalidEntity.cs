@@ -1,8 +1,9 @@
 ﻿using dii.cosmos.Attributes;
+using dii.cosmos.Models;
 
 namespace dii.cosmos.tests.Models
 {
-    public class FakeInvalidEntity
+    public class FakeInvalidEntity : DiiCosmosEntity
 	{
 		/// <summary>
 		/// The Unique Id for the <see cref="FakeInvalidEntity"/>.
@@ -14,15 +15,9 @@ namespace dii.cosmos.tests.Models
 		public string Id { get { return FakeInvalidEntityId; } set { FakeInvalidEntityId = value; } }
 
 		/// <summary>
-		/// A <see cref="string"/> Cosmos primitive to be searched.
-		/// </summary>
-		[Searchable("_etag")]
-		public string Version { get; set; }
-
-		/// <summary>
 		/// A <see cref="string"/> value to be searched. This property has an invalid search key of 'p'.
 		/// </summary>
-		[Searchable("p")]
-		public string InvalidSearchableKeyStringValue { get; set; }
+		[Searchable(Constants.ReservedCompressedKey)]
+		public string InvalidSearchableKeyStringPValue { get; set; }
 	}
 }
