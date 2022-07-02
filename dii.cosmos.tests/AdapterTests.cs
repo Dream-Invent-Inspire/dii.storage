@@ -94,7 +94,7 @@ namespace dii.cosmos.tests
 			_adapterFixture.CreatedFakeEntities[0].SearchableIntegerValue = 999999;
 			_adapterFixture.CreatedFakeEntities[0] = await _adapterFixture.FakeEntityAdapter.UpsertAsync(_adapterFixture.CreatedFakeEntities[0]).ConfigureAwait(false);
 
-			Assert.NotEqual(toUpdate.Version, _adapterFixture.CreatedFakeEntities[0].Version);
+			Assert.NotEqual(toUpdate.DataVersion, _adapterFixture.CreatedFakeEntities[0].DataVersion);
 			Assert.Equal(999999, _adapterFixture.CreatedFakeEntities[0].SearchableIntegerValue);
 
 			toUpdate.SearchableIntegerValue = 888888;
@@ -437,7 +437,7 @@ namespace dii.cosmos.tests
 
 			if (checkPrimitiveProperties)
 			{
-				Assert.Equal(expected.Version, actual.Version);
+				Assert.Equal(expected.DataVersion, actual.DataVersion);
 				Assert.Equal(expected.SearchableCosmosPrimitive, actual.SearchableCosmosPrimitive);
 			}
 
@@ -482,7 +482,7 @@ namespace dii.cosmos.tests
 
 			if (checkPrimitiveProperties)
 			{
-				Assert.Equal(expected.Version, actual.Version);
+				Assert.Equal(expected.DataVersion, actual.DataVersion);
 			}
 
 			// Compressed Top Level Fields

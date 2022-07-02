@@ -145,9 +145,9 @@ namespace dii.cosmos
 		/// <inheritdoc/>
 		public async Task<T> CreateAsync(T diiCosmosEntity, PartitionKey? partitionKey = null, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
-			if (requestOptions == null && !string.IsNullOrEmpty(diiCosmosEntity.Version))
+			if (requestOptions == null && !string.IsNullOrEmpty(diiCosmosEntity.DataVersion))
 			{
-				requestOptions = new ItemRequestOptions { IfMatchEtag = diiCosmosEntity.Version };
+				requestOptions = new ItemRequestOptions { IfMatchEtag = diiCosmosEntity.DataVersion };
 			}
 
 			var packedEntity = _optimizer.ToEntity(diiCosmosEntity);
@@ -163,9 +163,9 @@ namespace dii.cosmos
 		/// <inheritdoc/>
 		public async Task<T> UpsertAsync(T diiCosmosEntity, PartitionKey? partitionKey = null, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
-			if (requestOptions == null && !string.IsNullOrEmpty(diiCosmosEntity.Version))
+			if (requestOptions == null && !string.IsNullOrEmpty(diiCosmosEntity.DataVersion))
 			{
-				requestOptions = new ItemRequestOptions { IfMatchEtag = diiCosmosEntity.Version };
+				requestOptions = new ItemRequestOptions { IfMatchEtag = diiCosmosEntity.DataVersion };
 			}
 
 			var packedEntity = _optimizer.ToEntity(diiCosmosEntity);
@@ -193,9 +193,9 @@ namespace dii.cosmos
 		/// <inheritdoc/>
 		public async Task<T> ReplaceAsync(T diiCosmosEntity, string id, PartitionKey? partitionKey = null, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
-			if (requestOptions == null && !string.IsNullOrEmpty(diiCosmosEntity.Version))
+			if (requestOptions == null && !string.IsNullOrEmpty(diiCosmosEntity.DataVersion))
 			{
-				requestOptions = new ItemRequestOptions { IfMatchEtag = diiCosmosEntity.Version };
+				requestOptions = new ItemRequestOptions { IfMatchEtag = diiCosmosEntity.DataVersion };
 			}
 
 			var packedEntity = _optimizer.ToEntity(diiCosmosEntity);

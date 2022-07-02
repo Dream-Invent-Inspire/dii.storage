@@ -458,7 +458,7 @@ namespace dii.cosmos.tests
             Assert.Equal(id, unpackedEntity.FakeEntityTwoId);
             Assert.Equal(id, unpackedEntity.Id);
             Assert.Equal("fakeEntityTwo: CompressedStringValue", unpackedEntity.CompressedStringValue);
-            Assert.Equal("\"00000000-0000-0000-79bf-5e755a3201d8\"", unpackedEntity.Version);
+            Assert.Equal("\"00000000-0000-0000-79bf-5e755a3201d8\"", unpackedEntity.DataVersion);
         }
 
         [Fact, TestPriorityOrder(30)]
