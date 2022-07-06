@@ -20,5 +20,7 @@ namespace dii.cosmos.Models
 		public bool AutoAdjustMaxRUPerSecond { get; set; }
 
 		public bool AutoScaling { get; set; }
+
+		public bool? AllowBulkExecution { get; set; }
 	}
 }
