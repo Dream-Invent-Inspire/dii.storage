@@ -37,5 +37,12 @@
 		/// Allow autoscaling.
 		/// </summary>
 		bool AutoScaling { get; set; }
+
+		/// <summary>
+		/// Allows optimistic batching of requests to service. Setting this option might
+		/// impact the latency of the operations. Hence this option is recommended for non-latency
+		/// sensitive scenarios only.
+		/// </summary>
+		bool? AllowBulkExecution { get; set; }
 	}
 }

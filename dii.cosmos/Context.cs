@@ -34,7 +34,17 @@ namespace dii.cosmos
 		private Context(INoSqlDatabaseConfig config)
 		{
 			Config = config;
-			Client = new CosmosClient(Config.Uri, Config.Key);
+
+			CosmosClientOptions cosmosClientOptions = null;
+			if (config.AllowBulkExecution.HasValue)
+            {
+				cosmosClientOptions = new CosmosClientOptions
+				{
+					AllowBulkExecution = config.AllowBulkExecution.Value
+				};
+            }
+
+			Client = new CosmosClient(Config.Uri, Config.Key, cosmosClientOptions);
 		}
 		#endregion Constructors
 
