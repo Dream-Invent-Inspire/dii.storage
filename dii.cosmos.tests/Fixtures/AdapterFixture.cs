@@ -12,8 +12,8 @@ namespace dii.cosmos.tests.Fixtures
     {
         public Optimizer Optimizer;
         public INoSqlDatabaseConfig NoSqlDatabaseConfig;
-        public IDiiCosmosAdapter<FakeEntity> FakeEntityAdapter;
-        public IDiiCosmosAdapter<FakeEntityTwo> FakeEntityTwoAdapter;
+        public IDiiAdapter<FakeEntity> FakeEntityAdapter;
+        public IDiiAdapter<FakeEntityTwo> FakeEntityTwoAdapter;
         public List<FakeEntity> CreatedFakeEntities;
         public List<FakeEntityTwo> CreatedFakeEntityTwos;
 

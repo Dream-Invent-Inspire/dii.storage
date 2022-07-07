@@ -8,13 +8,15 @@ namespace dii.cosmos.Attributes
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
 	public class PartitionKeyAttribute : Attribute
 	{
-		public PartitionKeyAttribute(int order = 0, char separator = Constants.DefaultPartitionDelimitor)
+		public PartitionKeyAttribute(Type parititonKeyType = null, int order = 0, char separator = Constants.DefaultPartitionDelimitor)
 		{
 			Order = order;
 			Separator = separator;
+			PartitionKeyType = parititonKeyType ?? typeof(string);
 		}
 
-		public int Order { get; set; }
-		public char Separator { get; set; }
+		public int Order { get; init; }
+		public char Separator { get; init; }
+		public Type PartitionKeyType { get; init; }
 	}
 }

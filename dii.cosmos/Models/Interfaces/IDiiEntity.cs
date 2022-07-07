@@ -2,7 +2,7 @@
 
 namespace dii.cosmos.Models.Interfaces
 {
-    public interface IDiiCosmosEntity
+    public interface IDiiEntity
 	{
 		/// <summary>
 		/// Each version of this object can be stored and fetched in Cosmos.

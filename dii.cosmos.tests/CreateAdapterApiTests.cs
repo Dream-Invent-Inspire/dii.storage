@@ -52,7 +52,7 @@ namespace dii.cosmos.tests
 				CompressedStringValue = $"fakeEntityTwo: {nameof(FakeEntityTwo.CompressedStringValue)}"
 			};
 
-			var savedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.CreateAsync(fakeEntityTwo, new PartitionKey(fakeEntityTwo.FakeEntityTwoId)).ConfigureAwait(false);
+			var savedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.CreateAsync(fakeEntityTwo).ConfigureAwait(false);
 
 			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo, savedFakeEntityTwo);
 
@@ -110,11 +110,11 @@ namespace dii.cosmos.tests
 				CompressedStringValue = $"fakeEntityTwo3: {nameof(FakeEntityTwo.CompressedStringValue)}"
 			};
 
-			var entitiesToCreate = new List<(PartitionKey partitionKey, FakeEntityTwo diiCosmosEntity)>
+			var entitiesToCreate = new List<FakeEntityTwo>
 			{
-				(new PartitionKey(fakeEntityTwo1.FakeEntityTwoId), fakeEntityTwo1),
-				(new PartitionKey(fakeEntityTwo2.FakeEntityTwoId), fakeEntityTwo2),
-				(new PartitionKey(fakeEntityTwo3.FakeEntityTwoId), fakeEntityTwo3)
+				fakeEntityTwo1,
+				fakeEntityTwo2,
+				fakeEntityTwo3
 			};
 
 			var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.CreateBulkAsync(entitiesToCreate).ConfigureAwait(false);

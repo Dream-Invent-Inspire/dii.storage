@@ -11,7 +11,7 @@ namespace dii.cosmos.tests.Models
 		[PartitionKey()]
 		public string FakeInvalidEntityId { get; set; }
 
-		[Searchable("id")]
+		[Id()]
 		public string Id { get { return FakeInvalidEntityId; } set { FakeInvalidEntityId = value; } }
 
 		/// <summary>

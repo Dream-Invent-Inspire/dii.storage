@@ -1,5 +1,6 @@
 ﻿using dii.cosmos.Attributes;
 using dii.cosmos.Models;
+using Microsoft.Azure.Cosmos;
 
 namespace dii.cosmos.tests.Models
 {
@@ -8,10 +9,10 @@ namespace dii.cosmos.tests.Models
 		/// <summary>
 		/// The Unique Id for the <see cref="FakeEntityTwo"/>.
 		/// </summary>
-		[PartitionKey()]
+		[PartitionKey(typeof(PartitionKey))]
 		public string FakeEntityTwoId { get; set; }
 
-		[Searchable("id")]
+		[Id()]
 		public string Id { get; set; }
 
 		/// <summary>

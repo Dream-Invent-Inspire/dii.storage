@@ -21,8 +21,8 @@ namespace dii.cosmos.tests.Utilities
 		{
 			for (var i = 0; i < adapterFixture.CreatedFakeEntities.Count; i++)
 			{
-				var success = await adapterFixture.FakeEntityAdapter.DeleteAsync(adapterFixture.CreatedFakeEntities[i].Id, new PartitionKey(adapterFixture.CreatedFakeEntities[i].FakeEntityId)).ConfigureAwait(false);
-				var shouldBeNull = await adapterFixture.FakeEntityAdapter.GetAsync(adapterFixture.CreatedFakeEntities[i].Id, new PartitionKey(adapterFixture.CreatedFakeEntities[i].FakeEntityId)).ConfigureAwait(false);
+				var success = await adapterFixture.FakeEntityAdapter.DeleteAsync(adapterFixture.CreatedFakeEntities[i].Id, adapterFixture.CreatedFakeEntities[i].FakeEntityId).ConfigureAwait(false);
+				var shouldBeNull = await adapterFixture.FakeEntityAdapter.GetAsync(adapterFixture.CreatedFakeEntities[i].Id, adapterFixture.CreatedFakeEntities[i].FakeEntityId).ConfigureAwait(false);
 
 				Assert.True(success);
 				Assert.Null(shouldBeNull);
@@ -35,8 +35,8 @@ namespace dii.cosmos.tests.Utilities
 		{
 			for (var i = 0; i < adapterFixture.CreatedFakeEntityTwos.Count; i++)
 			{
-				var success = await adapterFixture.FakeEntityTwoAdapter.DeleteAsync(adapterFixture.CreatedFakeEntityTwos[i].Id, new PartitionKey(adapterFixture.CreatedFakeEntityTwos[i].FakeEntityTwoId)).ConfigureAwait(false);
-				var shouldBeNull = await adapterFixture.FakeEntityTwoAdapter.GetAsync(adapterFixture.CreatedFakeEntityTwos[i].Id, new PartitionKey(adapterFixture.CreatedFakeEntityTwos[i].FakeEntityTwoId)).ConfigureAwait(false);
+				var success = await adapterFixture.FakeEntityTwoAdapter.DeleteAsync(adapterFixture.CreatedFakeEntityTwos[i].Id, adapterFixture.CreatedFakeEntityTwos[i].FakeEntityTwoId).ConfigureAwait(false);
+				var shouldBeNull = await adapterFixture.FakeEntityTwoAdapter.GetAsync(adapterFixture.CreatedFakeEntityTwos[i].Id, adapterFixture.CreatedFakeEntityTwos[i].FakeEntityTwoId).ConfigureAwait(false);
 
 				Assert.True(success);
 				Assert.Null(shouldBeNull);

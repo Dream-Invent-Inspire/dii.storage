@@ -49,7 +49,7 @@ namespace dii.cosmos.tests
 				CompressedStringValue = $"fakeEntityTwo: {nameof(FakeEntityTwo.CompressedStringValue)}"
 			};
 
-			var savedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.CreateAsync(fakeEntityTwo, new PartitionKey(fakeEntityTwo.FakeEntityTwoId)).ConfigureAwait(false);
+			var savedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.CreateAsync(fakeEntityTwo).ConfigureAwait(false);
 
 			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo, savedFakeEntityTwo);
 
@@ -68,7 +68,7 @@ namespace dii.cosmos.tests
 				CompressedStringValue = $"replacementFakeEntityTwo: {nameof(FakeEntityTwo.CompressedStringValue)}"
 			};
 
-			var replacedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.ReplaceAsync(replacementFakeEntityTwo, fakeEntityTwo.Id, new PartitionKey(fakeEntityTwo.FakeEntityTwoId)).ConfigureAwait(false);
+			var replacedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.ReplaceAsync(replacementFakeEntityTwo).ConfigureAwait(false);
 
 			TestHelpers.AssertFakeEntityTwosMatch(replacementFakeEntityTwo, replacedFakeEntityTwo);
 
@@ -81,14 +81,14 @@ namespace dii.cosmos.tests
 			var toUpdate = _adapterFixture.Optimizer.UnpackageFromJson<FakeEntityTwo>(_adapterFixture.Optimizer.PackageToJson(_adapterFixture.CreatedFakeEntityTwos[0]));
 
 			_adapterFixture.CreatedFakeEntityTwos[0].SearchableLongValue = 999999L;
-			_adapterFixture.CreatedFakeEntityTwos[0] = await _adapterFixture.FakeEntityTwoAdapter.ReplaceAsync(_adapterFixture.CreatedFakeEntityTwos[0], _adapterFixture.CreatedFakeEntityTwos[0].Id, new PartitionKey(_adapterFixture.CreatedFakeEntityTwos[0].FakeEntityTwoId)).ConfigureAwait(false);
+			_adapterFixture.CreatedFakeEntityTwos[0] = await _adapterFixture.FakeEntityTwoAdapter.ReplaceAsync(_adapterFixture.CreatedFakeEntityTwos[0]).ConfigureAwait(false);
 
 			Assert.NotEqual(toUpdate.DataVersion, _adapterFixture.CreatedFakeEntityTwos[0].DataVersion);
 			Assert.Equal(999999L, _adapterFixture.CreatedFakeEntityTwos[0].SearchableLongValue);
 
 			toUpdate.SearchableLongValue = 888888L;
 
-			var exception = await Assert.ThrowsAsync<CosmosException>(() => { return _adapterFixture.FakeEntityTwoAdapter.ReplaceAsync(toUpdate, toUpdate.Id, new PartitionKey(toUpdate.FakeEntityTwoId)); }).ConfigureAwait(false);
+			var exception = await Assert.ThrowsAsync<CosmosException>(() => { return _adapterFixture.FakeEntityTwoAdapter.ReplaceAsync(toUpdate); }).ConfigureAwait(false);
 
 			Assert.NotNull(exception);
 			Assert.Equal(HttpStatusCode.PreconditionFailed, exception.StatusCode);
@@ -141,11 +141,11 @@ namespace dii.cosmos.tests
 				CompressedStringValue = $"fakeEntityTwo3: {nameof(FakeEntityTwo.CompressedStringValue)}"
 			};
 
-			var entitiesToCreate = new List<(PartitionKey partitionKey, FakeEntityTwo diiCosmosEntity)>
+			var entitiesToCreate = new List<FakeEntityTwo>
 			{
-				(new PartitionKey(fakeEntityTwo1.FakeEntityTwoId), fakeEntityTwo1),
-				(new PartitionKey(fakeEntityTwo2.FakeEntityTwoId), fakeEntityTwo2),
-				(new PartitionKey(fakeEntityTwo3.FakeEntityTwoId), fakeEntityTwo3)
+				fakeEntityTwo1,
+				fakeEntityTwo2,
+				fakeEntityTwo3
 			};
 
 			var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.CreateBulkAsync(entitiesToCreate).ConfigureAwait(false);
@@ -188,11 +188,11 @@ namespace dii.cosmos.tests
 				CompressedStringValue = $"replacementFakeEntityTwo3: {nameof(FakeEntityTwo.CompressedStringValue)}"
 			};
 
-			var entitiesToReplace = new List<(string id, PartitionKey partitionKey, FakeEntityTwo diiCosmosEntity)>
+			var entitiesToReplace = new List<FakeEntityTwo>
 			{
-				(fakeEntityTwo1.Id, new PartitionKey(fakeEntityTwo1.FakeEntityTwoId), replacementFakeEntityTwo1),
-				(fakeEntityTwo2.Id, new PartitionKey(fakeEntityTwo2.FakeEntityTwoId), replacementFakeEntityTwo2),
-				(fakeEntityTwo3.Id, new PartitionKey(fakeEntityTwo3.FakeEntityTwoId), replacementFakeEntityTwo3)
+				replacementFakeEntityTwo1,
+				replacementFakeEntityTwo2,
+				replacementFakeEntityTwo3
 			};
 
 			var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.ReplaceBulkAsync(entitiesToReplace).ConfigureAwait(false);
@@ -213,9 +213,9 @@ namespace dii.cosmos.tests
 
 			_adapterFixture.CreatedFakeEntityTwos[0].SearchableLongValue = 999999L;
 
-			var entitiesToReplace = new List<(string id, PartitionKey partitionKey, FakeEntityTwo diiCosmosEntity)>
+			var entitiesToReplace = new List<FakeEntityTwo>
 			{
-				(_adapterFixture.CreatedFakeEntityTwos[0].Id, new PartitionKey(_adapterFixture.CreatedFakeEntityTwos[0].FakeEntityTwoId), _adapterFixture.CreatedFakeEntityTwos[0])
+				_adapterFixture.CreatedFakeEntityTwos[0]
 			};
 
 			var result = await _adapterFixture.FakeEntityTwoAdapter.ReplaceBulkAsync(entitiesToReplace).ConfigureAwait(false);
@@ -226,9 +226,9 @@ namespace dii.cosmos.tests
 
 			toUpdate.SearchableLongValue = 888888L;
 
-			entitiesToReplace = new List<(string id, PartitionKey partitionKey, FakeEntityTwo diiCosmosEntity)>
+			entitiesToReplace = new List<FakeEntityTwo>
 			{
-				(_adapterFixture.CreatedFakeEntityTwos[0].Id, new PartitionKey(_adapterFixture.CreatedFakeEntityTwos[0].FakeEntityTwoId), toUpdate)
+				toUpdate
 			};
 
 			var exception = await Assert.ThrowsAsync<CosmosException>(() => { return _adapterFixture.FakeEntityTwoAdapter.ReplaceBulkAsync(entitiesToReplace); }).ConfigureAwait(false);

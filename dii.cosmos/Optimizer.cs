@@ -28,9 +28,10 @@ namespace dii.cosmos
 
 		private const string _dynamicAssemblyName = "dii.dynamic.storage";
 
-		private readonly string[] _reservedSearchableKeys = new string[2]
+		private readonly string[] _reservedSearchableKeys = new string[3]
 		{
 			Constants.ReservedPartitionKeyKey,
+			Constants.ReservedIdKey,
 			Constants.ReservedCompressedKey
 		};
 		#endregion Private Fields
@@ -100,7 +101,7 @@ namespace dii.cosmos
 					.GetAssemblies()
 					.Where(x => !x.IsDynamic && x.FullName != currentAssemblyName)
 					.SelectMany(x => x.GetExportedTypes())
-					.Where(x => x.GetTypeInfo().ImplementedInterfaces.Any(z => z.Name == nameof(IDiiCosmosEntity)))
+					.Where(x => x.GetTypeInfo().ImplementedInterfaces.Any(z => z.Name == nameof(IDiiEntity)))
 					.ToArray();
 			}
 
@@ -156,7 +157,7 @@ namespace dii.cosmos
 			return null;
 		}
 
-		public T FromEntity<T>(object obj) where T : IDiiCosmosEntity, new()
+		public T FromEntity<T>(object obj) where T : IDiiEntity, new()
 		{
 			if (obj == null)
 			{
@@ -197,7 +198,7 @@ namespace dii.cosmos
 			return null;
 		}
 
-		public T UnpackageFromJson<T>(string json) where T : IDiiCosmosEntity, new()
+		public T UnpackageFromJson<T>(string json) where T : IDiiEntity, new()
 		{
 			if (string.IsNullOrWhiteSpace(json))
 			{
@@ -213,6 +214,71 @@ namespace dii.cosmos
 			}
 
 			return default(T);
+		}
+
+		public TKey GetPartitionKey<T, TKey>(T obj)
+		{
+			if (obj == null)
+			{
+				throw new ArgumentNullException(nameof(obj));
+			}
+
+			var type = typeof(T);
+
+			if (_packing.ContainsKey(type))
+			{
+				var partitionKeyValues = new List<object>();
+
+				foreach (var property in _packing[type].PartitionKeyProperties)
+				{
+					partitionKeyValues.Add(property.GetValue(obj));
+				}
+
+				var partitionKeyString = string.Join(_packing[type].PartitionKeySeparator, partitionKeyValues);
+
+				if (_packing[type].PartitionKeyType != typeof(string))
+                {
+					return (TKey)Activator.CreateInstance(_packing[type].PartitionKeyType, partitionKeyString);
+                }
+			}
+
+			return default(TKey);
+		}
+
+		public string GetId<T>(T obj)
+		{
+			if (obj == null)
+			{
+				throw new ArgumentNullException(nameof(obj));
+			}
+
+			var type = typeof(T);
+
+			if (_packing.ContainsKey(type))
+			{
+				var idValues = new List<object>();
+
+				foreach (var property in _packing[type].IdProperties)
+				{
+					idValues.Add(property.GetValue(obj));
+				}
+
+				return string.Join(_packing[type].IdSeparator, idValues);
+			}
+
+			return null;
+		}
+
+		public Type GetPartitionKeyType<T>()
+		{
+			var type = typeof(T);
+
+			if (_packing.ContainsKey(type))
+			{
+				return _packing[type].PartitionKeyType;
+			}
+
+			return null;
 		}
 		#endregion Public Methods
 
@@ -256,22 +322,44 @@ namespace dii.cosmos
 
 			var partitionSeparator = Constants.DefaultPartitionDelimitor;
 			var partitionFields = new SortedList<int, PropertyInfo>();
+			var partitionKeyType = typeof(string);
+
+			var idSeparator = Constants.DefaultIdDelimitor;
+			var idFields = new SortedList<int, PropertyInfo>();
 
 			var jsonAttrConstructor = typeof(JsonPropertyNameAttribute).GetConstructor(new Type[] { typeof(string) });
 			var compressAttrConstructor = typeof(KeyAttribute).GetConstructor(new Type[] { typeof(int) });
 
 			foreach (var property in source.GetProperties())
 			{
-				var partition = property.GetCustomAttribute<PartitionKeyAttribute>();
-				if (partition != null)
+				var partitionKey = property.GetCustomAttribute<PartitionKeyAttribute>();
+				if (partitionKey != null)
 				{
-					partitionFields.Add(partition.Order, property);
+					partitionFields.Add(partitionKey.Order, property);
 
-					if (!char.IsWhiteSpace(partition.Separator))
+					if (!char.IsWhiteSpace(partitionKey.Separator))
                     {
-						partitionSeparator = partition.Separator;
+						partitionSeparator = partitionKey.Separator;
+					}
+
+					if (partitionKey.PartitionKeyType != null && partitionKey.PartitionKeyType != typeof(string))
+                    {
+						partitionKeyType = partitionKey.PartitionKeyType;
 					}
 					
+					continue;
+				}
+
+				var id = property.GetCustomAttribute<IdAttribute>();
+				if (id != null)
+				{
+					idFields.Add(id.Order, property);
+
+					if (!char.IsWhiteSpace(id.Separator))
+					{
+						idSeparator = id.Separator;
+					}
+
 					continue;
 				}
 
@@ -315,30 +403,35 @@ namespace dii.cosmos
 			var jsonAttachmentAttr = new CustomAttributeBuilder(jsonAttrConstructor, new object[] { Constants.ReservedCompressedKey });
 			_ = AddProperty(typeBuilder, Constants.ReservedCompressedKey, typeof(string), jsonAttachmentAttr);
 			_ = AddProperty(typeBuilder, Constants.ReservedPartitionKeyKey, typeof(string));
+			_ = AddProperty(typeBuilder, Constants.ReservedIdKey, typeof(string));
 
 			Type storageEntityType = typeBuilder.CreateTypeInfo();
 			Type compressedEntityType = compressBuilder.CreateTypeInfo();
 			PropertyInfo attachments;
 			PropertyInfo partitionKeyInfo;
+			PropertyInfo idInfo;
 
 			{
 				var instance = Activator.CreateInstance(storageEntityType);
 				storageEntityType = instance.GetType();
 
-				var props = instance.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).ToDictionary(x => x.Name, x => x);
+				var props = storageEntityType.GetProperties(BindingFlags.Public | BindingFlags.Instance).ToDictionary(x => x.Name, x => x);
 				attachments = props[Constants.ReservedCompressedKey];
 				props.Remove(Constants.ReservedCompressedKey);
 
 				partitionKeyInfo = props[Constants.ReservedPartitionKeyKey];
 				props.Remove(Constants.ReservedPartitionKeyKey);
 
+				idInfo = props[Constants.ReservedIdKey];
+				props.Remove(Constants.ReservedIdKey);
+
 				jsonMap.EmitProperties = props;
 			}
 
 			{
 				var instance = Activator.CreateInstance(compressedEntityType);
-				var props = instance.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).ToDictionary(x => x.Name, x => x);
 				compressedEntityType = instance.GetType();
+				var props = compressedEntityType.GetProperties(BindingFlags.Public | BindingFlags.Instance).ToDictionary(x => x.Name, x => x);
 
 				compressMap.EmitProperties = props;
 			}
@@ -352,6 +445,14 @@ namespace dii.cosmos
 					.Select(x => x.Value)
 					.ToList(),
 				PartitionKeySeparator = partitionSeparator.ToString(),
+				PartitionKeyType = partitionKeyType,
+				Id = idInfo,
+				IdProperties = idFields
+					.OrderBy(x => x.Key)
+					.ThenBy(x => x.Value.Name)
+					.Select(x => x.Value)
+					.ToList(),
+				IdSeparator = idSeparator.ToString(),
 				Attachment = attachments,
 				StoredEntityMapping = jsonMap,
 				CompressedEntityMapping = compressMap,
@@ -413,6 +514,10 @@ namespace dii.cosmos
 			public PropertyInfo PartitionKey { get; set; }
 			public List<PropertyInfo> PartitionKeyProperties { get; set; }
 			public string PartitionKeySeparator { get; set; }
+			public Type PartitionKeyType { get; set; }
+			public PropertyInfo Id { get; set; }
+			public List<PropertyInfo> IdProperties { get; set; }
+			public string IdSeparator { get; set; }
 			public PropertyInfo Attachment { get; set; }
 			public PackingMapper StoredEntityMapping { get; set; }
 			public PackingMapper CompressedEntityMapping { get; set; }
@@ -435,6 +540,24 @@ namespace dii.cosmos
 				var packedObject = Activator.CreateInstance(StoredEntityType);
 				var compressedEntity = Activator.CreateInstance(CompressedEntityType);
 
+				var partitionKeyValues = new List<object>();
+
+				foreach (var property in PartitionKeyProperties)
+				{
+					partitionKeyValues.Add(property.GetValue(unpackedObject));
+				}
+
+				PartitionKey.SetValue(packedObject, string.Join(PartitionKeySeparator, partitionKeyValues));
+
+				var idValues = new List<object>();
+
+				foreach (var property in IdProperties)
+				{
+					idValues.Add(property.GetValue(unpackedObject));
+				}
+
+				Id.SetValue(packedObject, string.Join(IdSeparator, idValues));
+
 				foreach (var property in StoredEntityMapping.ConcreteProperties)
 				{
 					var val = property.Value.GetValue(unpackedObject);
@@ -447,15 +570,6 @@ namespace dii.cosmos
 					CompressedEntityMapping.EmitProperties[property.Key].SetValue(compressedEntity, val);
 				}
 
-				var keyValues = new List<object>();
-
-				foreach (var property in PartitionKeyProperties)
-				{
-					keyValues.Add(property.GetValue(unpackedObject));
-				}
-
-				PartitionKey.SetValue(packedObject, string.Join(PartitionKeySeparator, keyValues));
-
 				var compressedBytes = MessagePackSerializer.Serialize(CompressedEntityType, compressedEntity);
 				var compressedString = Convert.ToBase64String(compressedBytes);
 
@@ -464,7 +578,7 @@ namespace dii.cosmos
 				return packedObject;
 			}
 
-			public T Unpackage<T>(object packedObject) where T : IDiiCosmosEntity, new()
+			public T Unpackage<T>(object packedObject) where T : IDiiEntity, new()
 			{
 				if (packedObject == null)
 				{
@@ -483,6 +597,22 @@ namespace dii.cosmos
 				var compressedBytes = Convert.FromBase64String(compressedString);
 				var compressedObj = MessagePackSerializer.Deserialize(CompressedEntityType, compressedBytes);
 
+				// Reverse engineer parition key string.
+				var partitionKey = ((string)PartitionKey.GetValue(packedObject)).Split(new string[] { PartitionKeySeparator }, StringSplitOptions.None);
+
+				for (var i = 0; i < PartitionKeyProperties.Count; i++)
+				{
+					PartitionKeyProperties[i].SetValue(unpackedObject, partitionKey[i]);
+				}
+
+				// Reverse engineer id string.
+				var id = ((string)Id.GetValue(packedObject)).Split(new string[] { IdSeparator }, StringSplitOptions.None);
+
+				for (var i = 0; i < IdProperties.Count; i++)
+				{
+					IdProperties[i].SetValue(unpackedObject, id[i]);
+				}
+
 				foreach (var property in CompressedEntityMapping.EmitProperties)
 				{
 					var val = property.Value.GetValue(compressedObj);
@@ -493,14 +623,6 @@ namespace dii.cosmos
 				{
 					var val = property.Value.GetValue(packedObject);
 					StoredEntityMapping.ConcreteProperties[property.Key].SetValue(unpackedObject, val);
-				}
-
-				// Reverse engineer PK string.
-				var partitionKey = ((string)PartitionKey.GetValue(packedObject)).Split(new string[] { PartitionKeySeparator }, StringSplitOptions.None);
-
-				for (var i = 0; i < PartitionKeyProperties.Count; i++)
-				{
-					PartitionKeyProperties[i].SetValue(unpackedObject, partitionKey[i]);
 				}
 
 				return unpackedObject;

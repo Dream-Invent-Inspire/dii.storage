@@ -490,7 +490,7 @@ namespace dii.cosmos.tests
             var entity = optimizer.PackageToJson(fakeEntityTwo);
 
             Assert.NotNull(entity);
-            Assert.Equal($"{{\"id\":\"{fakeEntityTwo.Id}\",\"string\":null,\"long\":0,\"_etag\":null,\"p\":\"kdkkZmFrZUVudGl0eVR3bzogQ29tcHJlc3NlZFN0cmluZ1ZhbHVl\",\"PK\":\"{fakeEntityTwo.FakeEntityTwoId}\"}}", entity);
+            Assert.Equal($"{{\"string\":null,\"long\":0,\"_etag\":null,\"p\":\"kdkkZmFrZUVudGl0eVR3bzogQ29tcHJlc3NlZFN0cmluZ1ZhbHVl\",\"PK\":\"{fakeEntityTwo.FakeEntityTwoId}\",\"id\":\"{fakeEntityTwo.Id}\"}}", entity);
         }
 
         [Fact, TestPriorityOrder(32)]

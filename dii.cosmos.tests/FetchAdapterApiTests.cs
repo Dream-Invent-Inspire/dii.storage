@@ -48,7 +48,7 @@ namespace dii.cosmos.tests
 				CompressedStringValue = $"fakeEntityTwo: {nameof(FakeEntityTwo.CompressedStringValue)}"
 			};
 
-			var savedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.CreateAsync(fakeEntityTwo, new PartitionKey(fakeEntityTwo.FakeEntityTwoId)).ConfigureAwait(false);
+			var savedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.CreateAsync(fakeEntityTwo).ConfigureAwait(false);
 
 			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo, savedFakeEntityTwo);
 
@@ -59,7 +59,7 @@ namespace dii.cosmos.tests
 		public async Task GetAsync_Success()
 		{
 			var fakeEntityTwo = _adapterFixture.CreatedFakeEntityTwos[0];
-			var fetchedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.GetAsync(fakeEntityTwo.Id, new PartitionKey(fakeEntityTwo.FakeEntityTwoId)).ConfigureAwait(false);
+			var fetchedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.GetAsync(fakeEntityTwo.Id, fakeEntityTwo.FakeEntityTwoId).ConfigureAwait(false);
 
 			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo, fetchedFakeEntityTwo, true);
 		}
@@ -111,11 +111,11 @@ namespace dii.cosmos.tests
                 CompressedStringValue = $"fakeEntityTwo3: {nameof(FakeEntityTwo.CompressedStringValue)}"
             };
 
-            var entitiesToCreate = new List<(PartitionKey partitionKey, FakeEntityTwo diiCosmosEntity)>
+            var entitiesToCreate = new List<FakeEntityTwo>
             {
-                (new PartitionKey(fakeEntityTwo1.FakeEntityTwoId), fakeEntityTwo1),
-                (new PartitionKey(fakeEntityTwo2.FakeEntityTwoId), fakeEntityTwo2),
-                (new PartitionKey(fakeEntityTwo3.FakeEntityTwoId), fakeEntityTwo3)
+                fakeEntityTwo1,
+                fakeEntityTwo2,
+                fakeEntityTwo3
             };
 
             var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.CreateBulkAsync(entitiesToCreate).ConfigureAwait(false);
@@ -133,10 +133,10 @@ namespace dii.cosmos.tests
             var fakeEntityTwo1 = _adapterFixture.CreatedFakeEntityTwos[0];
             var fakeEntityTwo3 = _adapterFixture.CreatedFakeEntityTwos[2];
 
-            var items = new List<(string, PartitionKey)>
+            var items = new List<(string, string)>
             {
-                (fakeEntityTwo1.Id, new PartitionKey(fakeEntityTwo1.FakeEntityTwoId)),
-                (fakeEntityTwo3.Id, new PartitionKey(fakeEntityTwo3.FakeEntityTwoId))
+                (fakeEntityTwo1.Id, fakeEntityTwo1.FakeEntityTwoId),
+                (fakeEntityTwo3.Id, fakeEntityTwo3.FakeEntityTwoId)
             };
 
             var fetchedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.GetManyAsync(items).ConfigureAwait(false);
@@ -194,11 +194,11 @@ namespace dii.cosmos.tests
                 CompressedStringValue = $"fakeEntityTwo3: {nameof(FakeEntityTwo.CompressedStringValue)}"
             };
 
-            var entitiesToCreate = new List<(PartitionKey partitionKey, FakeEntityTwo diiCosmosEntity)>
+            var entitiesToCreate = new List<FakeEntityTwo>
             {
-                (new PartitionKey(fakeEntityTwo1.FakeEntityTwoId), fakeEntityTwo1),
-                (new PartitionKey(fakeEntityTwo2.FakeEntityTwoId), fakeEntityTwo2),
-                (new PartitionKey(fakeEntityTwo3.FakeEntityTwoId), fakeEntityTwo3)
+                fakeEntityTwo1,
+                fakeEntityTwo2,
+                fakeEntityTwo3
             };
 
             var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.CreateBulkAsync(entitiesToCreate).ConfigureAwait(false);
@@ -287,11 +287,11 @@ namespace dii.cosmos.tests
                 CompressedStringValue = $"fakeEntityTwo3: {nameof(FakeEntityTwo.CompressedStringValue)}"
             };
 
-            var entitiesToCreate = new List<(PartitionKey partitionKey, FakeEntityTwo diiCosmosEntity)>
+            var entitiesToCreate = new List<FakeEntityTwo>
             {
-                (new PartitionKey(fakeEntityTwo1.FakeEntityTwoId), fakeEntityTwo1),
-                (new PartitionKey(fakeEntityTwo2.FakeEntityTwoId), fakeEntityTwo2),
-                (new PartitionKey(fakeEntityTwo3.FakeEntityTwoId), fakeEntityTwo3)
+                fakeEntityTwo1,
+                fakeEntityTwo2,
+                fakeEntityTwo3
             };
 
             var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.CreateBulkAsync(entitiesToCreate).ConfigureAwait(false);

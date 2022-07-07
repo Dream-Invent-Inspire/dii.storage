@@ -49,7 +49,7 @@ namespace dii.cosmos.tests
 				CompressedStringValue = $"fakeEntityTwo1: {nameof(FakeEntityTwo.CompressedStringValue)}"
 			};
 
-			var savedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.CreateAsync(fakeEntityTwo1, new PartitionKey(fakeEntityTwo1.FakeEntityTwoId)).ConfigureAwait(false);
+			var savedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.CreateAsync(fakeEntityTwo1).ConfigureAwait(false);
 
 			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo1, savedFakeEntityTwo);
 
@@ -67,7 +67,7 @@ namespace dii.cosmos.tests
 				CompressedStringValue = $"fakeEntityTwo2: {nameof(FakeEntityTwo.CompressedStringValue)}"
 			};
 
-			var replacedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.UpsertAsync(fakeEntityTwo2, new PartitionKey(fakeEntityTwo2.FakeEntityTwoId)).ConfigureAwait(false);
+			var replacedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.UpsertAsync(fakeEntityTwo2).ConfigureAwait(false);
 
 			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo2, replacedFakeEntityTwo);
 
@@ -86,7 +86,7 @@ namespace dii.cosmos.tests
 				CompressedStringValue = $"replacementFakeEntityTwo1: {nameof(FakeEntityTwo.CompressedStringValue)}"
 			};
 
-			var replacedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.UpsertAsync(replacementFakeEntityTwo1, new PartitionKey(fakeEntityTwo.FakeEntityTwoId)).ConfigureAwait(false);
+			var replacedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.UpsertAsync(replacementFakeEntityTwo1).ConfigureAwait(false);
 
 			TestHelpers.AssertFakeEntityTwosMatch(replacementFakeEntityTwo1, replacedFakeEntityTwo);
 
@@ -151,10 +151,10 @@ namespace dii.cosmos.tests
                 CompressedStringValue = $"fakeEntityTwo2: {nameof(FakeEntityTwo.CompressedStringValue)}"
             };
 
-            var entitiesToCreate = new List<(PartitionKey partitionKey, FakeEntityTwo diiCosmosEntity)>
+            var entitiesToCreate = new List<FakeEntityTwo>
             {
-                (new PartitionKey(fakeEntityTwo1.FakeEntityTwoId), fakeEntityTwo1),
-                (new PartitionKey(fakeEntityTwo2.FakeEntityTwoId), fakeEntityTwo2)
+                fakeEntityTwo1,
+                fakeEntityTwo2
             };
 
             var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.CreateBulkAsync(entitiesToCreate).ConfigureAwait(false);
@@ -184,10 +184,10 @@ namespace dii.cosmos.tests
                 CompressedStringValue = $"fakeEntityTwo4: {nameof(FakeEntityTwo.CompressedStringValue)}"
             };
 
-            var entitiesToCreate = new List<(PartitionKey partitionKey, FakeEntityTwo diiCosmosEntity)>
+            var entitiesToCreate = new List<FakeEntityTwo>
             {
-                (new PartitionKey(fakeEntityTwo3.FakeEntityTwoId), fakeEntityTwo3),
-                (new PartitionKey(fakeEntityTwo4.FakeEntityTwoId), fakeEntityTwo4)
+                fakeEntityTwo3,
+                fakeEntityTwo4
             };
 
             var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.UpsertBulkAsync(entitiesToCreate).ConfigureAwait(false);
@@ -220,10 +220,10 @@ namespace dii.cosmos.tests
                 CompressedStringValue = $"replacementFakeEntityTwo4: {nameof(FakeEntityTwo.CompressedStringValue)}"
             };
 
-            var entitiesToReplace = new List<(PartitionKey partitionKey, FakeEntityTwo diiCosmosEntity)>
+            var entitiesToReplace = new List<FakeEntityTwo>
             {
-                (new PartitionKey(fakeEntityTwo2.FakeEntityTwoId), replacementFakeEntityTwo2),
-                (new PartitionKey(fakeEntityTwo4.FakeEntityTwoId), replacementFakeEntityTwo4)
+                replacementFakeEntityTwo2,
+                replacementFakeEntityTwo4
             };
 
             var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.UpsertBulkAsync(entitiesToReplace).ConfigureAwait(false);
@@ -273,12 +273,12 @@ namespace dii.cosmos.tests
                 CompressedStringValue = $"replacementFakeEntityTwo3: {nameof(FakeEntityTwo.CompressedStringValue)}"
             };
 
-            var entitiesToCreateOrReplace = new List<(PartitionKey partitionKey, FakeEntityTwo diiCosmosEntity)>
+            var entitiesToCreateOrReplace = new List<FakeEntityTwo>
             {
-                (new PartitionKey(fakeEntityTwo1.FakeEntityTwoId), replacementFakeEntityTwo1),
-                (new PartitionKey(fakeEntityTwo3.FakeEntityTwoId), replacementFakeEntityTwo3),
-                (new PartitionKey(fakeEntityTwo5.FakeEntityTwoId), fakeEntityTwo5),
-                (new PartitionKey(fakeEntityTwo6.FakeEntityTwoId), fakeEntityTwo6)
+                replacementFakeEntityTwo1,
+                replacementFakeEntityTwo3,
+                fakeEntityTwo5,
+                fakeEntityTwo6
             };
 
             var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.UpsertBulkAsync(entitiesToCreateOrReplace).ConfigureAwait(false);
@@ -301,9 +301,9 @@ namespace dii.cosmos.tests
 
             _adapterFixture.CreatedFakeEntityTwos[0].SearchableLongValue = 999999L;
 
-            var entitiesToCreateOrReplace = new List<(PartitionKey partitionKey, FakeEntityTwo diiCosmosEntity)>
+            var entitiesToCreateOrReplace = new List<FakeEntityTwo>
             {
-                (new PartitionKey(_adapterFixture.CreatedFakeEntityTwos[0].FakeEntityTwoId), _adapterFixture.CreatedFakeEntityTwos[0])
+                _adapterFixture.CreatedFakeEntityTwos[0]
             };
 
             var result = await _adapterFixture.FakeEntityTwoAdapter.UpsertBulkAsync(entitiesToCreateOrReplace).ConfigureAwait(false);
@@ -314,9 +314,9 @@ namespace dii.cosmos.tests
 
             toUpdate.SearchableLongValue = 888888L;
 
-            entitiesToCreateOrReplace = new List<(PartitionKey partitionKey, FakeEntityTwo diiCosmosEntity)>
+            entitiesToCreateOrReplace = new List<FakeEntityTwo>
             {
-                (new PartitionKey(_adapterFixture.CreatedFakeEntityTwos[0].FakeEntityTwoId), toUpdate)
+                toUpdate
             };
 
             var exception = await Assert.ThrowsAsync<CosmosException>(() => { return _adapterFixture.FakeEntityTwoAdapter.UpsertBulkAsync(entitiesToCreateOrReplace); }).ConfigureAwait(false);
