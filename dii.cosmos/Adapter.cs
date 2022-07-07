@@ -3,6 +3,7 @@ using dii.cosmos.Models.Interfaces;
 using Microsoft.Azure.Cosmos;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,12 +12,18 @@ namespace dii.cosmos
 {
     public class Adapter<T> : IDiiCosmosAdapter<T> where T : IDiiCosmosEntity, new()
 	{
+		#region Private Fields
 		private readonly Container _container;
 		private readonly Optimizer _optimizer;
 		private readonly TableMetaData _table;
 		private readonly Context _context;
-		public TableMetaData Table => _table;
+		#endregion Private Fields
 
+		#region Public Fields
+		public TableMetaData Table => _table;
+		#endregion Public Fields
+
+		#region Constructors
 		public Adapter()
 		{
 			_context = Context.Get();
@@ -24,7 +31,11 @@ namespace dii.cosmos
 			_table = _context.TableMappings[typeof(T)];
 			_container = _context.Client.GetContainer(_context.Config.DatabaseId, _table.TableName);
 		}
+		#endregion Constructors
 
+		#region Public Methods
+
+		#region Fetch APIs
 		/// <inheritdoc/>
 		public async Task<T> GetAsync(string id, PartitionKey partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
@@ -141,19 +152,15 @@ namespace dii.cosmos
 
 			return results;
 		}
+		#endregion Fetch APIs
 
+		#region Create APIs
 		/// <inheritdoc/>
 		public async Task<T> CreateAsync(T diiCosmosEntity, PartitionKey? partitionKey = null, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
-			if (requestOptions == null && !string.IsNullOrEmpty(diiCosmosEntity.DataVersion))
-			{
-				requestOptions = new ItemRequestOptions { IfMatchEtag = diiCosmosEntity.DataVersion };
-			}
-
 			var packedEntity = _optimizer.ToEntity(diiCosmosEntity);
-			ItemResponse<object> returnedEntity;
 
-			returnedEntity = await _container.CreateItemAsync(packedEntity, partitionKey, requestOptions, cancellationToken).ConfigureAwait(false);
+			var returnedEntity  = await _container.CreateItemAsync(packedEntity, partitionKey, requestOptions, cancellationToken).ConfigureAwait(false);
 
 			var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
 
@@ -161,35 +168,38 @@ namespace dii.cosmos
 		}
 
 		/// <inheritdoc/>
-		public async Task<T> UpsertAsync(T diiCosmosEntity, PartitionKey? partitionKey = null, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		public async Task<ICollection<T>> CreateBulkAsync(IReadOnlyList<(PartitionKey partitionKey, T diiCosmosEntity)> diiCosmosEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
-			if (requestOptions == null && !string.IsNullOrEmpty(diiCosmosEntity.DataVersion))
+			var unpackedEntities = default(ICollection<T>);
+
+			if (diiCosmosEntities == null || !diiCosmosEntities.Any())
+            {
+				return unpackedEntities;
+            }
+
+			var packedEntities = diiCosmosEntities.Select(x => new
 			{
-				requestOptions = new ItemRequestOptions { IfMatchEtag = diiCosmosEntity.DataVersion };
+				PartitionKey = x.partitionKey,
+				Entity = _optimizer.ToEntity(x.diiCosmosEntity)
+			});
+
+			var concurrentTasks = new List<Task<ItemResponse<object>>>();
+
+			foreach (var packedEntity in packedEntities)
+			{
+				var task = _container.CreateItemAsync(packedEntity.Entity, packedEntity.PartitionKey, requestOptions, cancellationToken);
+				concurrentTasks.Add(task);
 			}
 
-			var packedEntity = _optimizer.ToEntity(diiCosmosEntity);
-			ItemResponse<object> returnedEntity;
+			var itemResponses = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
 
-			returnedEntity = await _container.UpsertItemAsync(packedEntity, partitionKey, requestOptions, cancellationToken).ConfigureAwait(false);
+			unpackedEntities = itemResponses.Select(x => _optimizer.FromEntity<T>(x.Resource)).ToList();
 
-			var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
-
-			return unpackedEntity;
+			return unpackedEntities;
 		}
+		#endregion Create APIs
 
-		/// <inheritdoc/>
-		public async Task<T> PatchAsync(string id, PartitionKey partitionKey, IReadOnlyList<PatchOperation> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
-		{
-			ItemResponse<object> returnedEntity;
-
-			returnedEntity = await _container.PatchItemAsync<object>(id, partitionKey, patchOperations, requestOptions, cancellationToken).ConfigureAwait(false);
-
-			var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
-
-			return unpackedEntity;
-		}
-
+		#region Replace APIs
 		/// <inheritdoc/>
 		public async Task<T> ReplaceAsync(T diiCosmosEntity, string id, PartitionKey? partitionKey = null, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
@@ -199,9 +209,8 @@ namespace dii.cosmos
 			}
 
 			var packedEntity = _optimizer.ToEntity(diiCosmosEntity);
-			ItemResponse<object> returnedEntity;
 
-			returnedEntity = await _container.ReplaceItemAsync(packedEntity, id, partitionKey, requestOptions, cancellationToken).ConfigureAwait(false);
+			var returnedEntity = await _container.ReplaceItemAsync(packedEntity, id, partitionKey, requestOptions, cancellationToken).ConfigureAwait(false);
 
 			var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
 
@@ -209,11 +218,184 @@ namespace dii.cosmos
 		}
 
 		/// <inheritdoc/>
+		public async Task<ICollection<T>> ReplaceBulkAsync(IReadOnlyList<(string id, PartitionKey partitionKey, T diiCosmosEntity)> diiCosmosEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		{
+			var unpackedEntities = default(ICollection<T>);
+
+			if (diiCosmosEntities == null || !diiCosmosEntities.Any())
+			{
+				return unpackedEntities;
+			}
+
+			var packedEntities = diiCosmosEntities.Select(x => new
+			{
+				Id = x.id,
+				PartitionKey = x.partitionKey,
+				Entity = _optimizer.ToEntity(x.diiCosmosEntity),
+				UnpackedEntity = x.diiCosmosEntity
+			});
+
+			var concurrentTasks = new List<Task<ItemResponse<object>>>();
+			var generateRequestOptions = (requestOptions == null);
+
+			foreach (var packedEntity in packedEntities)
+			{
+				if (generateRequestOptions && !string.IsNullOrEmpty(packedEntity.UnpackedEntity.DataVersion))
+				{
+					requestOptions = new ItemRequestOptions { IfMatchEtag = packedEntity.UnpackedEntity.DataVersion };
+				}
+
+				var task = _container.ReplaceItemAsync(packedEntity.Entity, packedEntity.Id, packedEntity.PartitionKey, requestOptions, cancellationToken);
+				concurrentTasks.Add(task);
+
+				if (generateRequestOptions)
+				{
+					requestOptions = null;
+				}
+			}
+
+			var itemResponses = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+
+			unpackedEntities = itemResponses.Select(x => _optimizer.FromEntity<T>(x.Resource)).ToList();
+
+			return unpackedEntities;
+		}
+		#endregion Replace APIs
+
+		#region Upsert APIs
+		/// <inheritdoc/>
+		public async Task<T> UpsertAsync(T diiCosmosEntity, PartitionKey? partitionKey = null, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		{
+			if (requestOptions == null && !string.IsNullOrEmpty(diiCosmosEntity.DataVersion))
+			{
+				requestOptions = new ItemRequestOptions { IfMatchEtag = diiCosmosEntity.DataVersion };
+			}
+
+			var packedEntity = _optimizer.ToEntity(diiCosmosEntity);
+
+			var returnedEntity = await _container.UpsertItemAsync(packedEntity, partitionKey, requestOptions, cancellationToken).ConfigureAwait(false);
+
+			var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
+
+			return unpackedEntity;
+		}
+
+		/// <inheritdoc/>
+		public async Task<ICollection<T>> UpsertBulkAsync(IReadOnlyList<(PartitionKey partitionKey, T diiCosmosEntity)> diiCosmosEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		{
+			var unpackedEntities = default(ICollection<T>);
+
+			if (diiCosmosEntities == null || !diiCosmosEntities.Any())
+			{
+				return unpackedEntities;
+			}
+
+			var packedEntities = diiCosmosEntities.Select(x => new
+			{
+				PartitionKey = x.partitionKey,
+				Entity = _optimizer.ToEntity(x.diiCosmosEntity),
+				UnpackedEntity = x.diiCosmosEntity
+			});
+
+			var concurrentTasks = new List<Task<ItemResponse<object>>>();
+			var generateRequestOptions = (requestOptions == null);
+
+			foreach (var packedEntity in packedEntities)
+			{
+				if (generateRequestOptions && !string.IsNullOrEmpty(packedEntity.UnpackedEntity.DataVersion))
+				{
+					requestOptions = new ItemRequestOptions { IfMatchEtag = packedEntity.UnpackedEntity.DataVersion };
+				}
+
+				var task = _container.UpsertItemAsync(packedEntity.Entity, packedEntity.PartitionKey, requestOptions, cancellationToken);
+				concurrentTasks.Add(task);
+
+				if (generateRequestOptions)
+                {
+					requestOptions = null;
+				}
+			}
+
+			var itemResponses = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+
+			unpackedEntities = itemResponses.Select(x => _optimizer.FromEntity<T>(x.Resource)).ToList();
+
+			return unpackedEntities;
+		}
+		#endregion Upsert APIs
+
+		#region Patch APIs
+		/// <inheritdoc/>
+		public async Task<T> PatchAsync(string id, PartitionKey partitionKey, IReadOnlyList<PatchOperation> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		{
+			var returnedEntity = await _container.PatchItemAsync<object>(id, partitionKey, patchOperations, requestOptions, cancellationToken).ConfigureAwait(false);
+
+			var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
+
+			return unpackedEntity;
+		}
+
+		/// <inheritdoc/>
+		public async Task<ICollection<T>> PatchBulkAsync(IReadOnlyList<(string id, PartitionKey partitionKey, IReadOnlyList<PatchOperation> listOfPatchOperations)> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		{
+			var unpackedEntities = default(ICollection<T>);
+
+			if (patchOperations == null || !patchOperations.Any())
+			{
+				return unpackedEntities;
+			}
+
+			var concurrentTasks = new List<Task<ItemResponse<object>>>();
+
+			foreach (var patchOperation in patchOperations)
+			{
+				var task = _container.PatchItemAsync<object>(patchOperation.id, patchOperation.partitionKey, patchOperation.listOfPatchOperations, requestOptions, cancellationToken);
+				concurrentTasks.Add(task);
+			}
+
+			var itemResponses = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+
+			unpackedEntities = itemResponses.Select(x => _optimizer.FromEntity<T>(x.Resource)).ToList();
+
+			return unpackedEntities;
+		}
+		#endregion Patch APIs
+
+		#region Delete APIs
+		/// <inheritdoc/>
 		public async Task<bool> DeleteAsync(string id, PartitionKey partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
-        {
+		{
 			var response = await _container.DeleteItemStreamAsync(id, partitionKey, requestOptions, cancellationToken).ConfigureAwait(false);
 
 			return response.IsSuccessStatusCode;
 		}
-    }
+
+		/// <inheritdoc/>
+		public async Task<bool> DeleteBulkAsync(IReadOnlyList<(string id, PartitionKey partitionKey)> ids, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		{
+			var response = false;
+
+			if (ids == null || !ids.Any())
+			{
+				return response;
+			}
+
+			var concurrentTasks = new List<Task<ResponseMessage>>();
+
+			foreach (var id in ids)
+			{
+				var task = _container.DeleteItemStreamAsync(id.id, id.partitionKey, requestOptions, cancellationToken);
+				concurrentTasks.Add(task);
+			}
+
+			var responseMessages = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+
+			response = responseMessages.All(x => x.IsSuccessStatusCode);
+
+			return response;
+		}
+		#endregion Delete APIs
+
+		#endregion Public Methods
+	}
 }

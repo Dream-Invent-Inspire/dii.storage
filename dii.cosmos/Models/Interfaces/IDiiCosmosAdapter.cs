@@ -7,6 +7,7 @@ namespace dii.cosmos.Models.Interfaces
 {
     public interface IDiiCosmosAdapter<T> where T : IDiiCosmosEntity, new()
     {
+        #region Fetch APIs
         /// <summary>
         /// Reads a item from the Azure Cosmos service as an asynchronous operation.
         /// </summary>
@@ -70,7 +71,9 @@ namespace dii.cosmos.Models.Interfaces
         /// Only supports single partition queries.
         /// </remarks>
         Task<PagedList<T>> GetPagedAsync(string queryText = null, string continuationToken = null, QueryRequestOptions requestOptions = null);
+        #endregion Fetch APIs
 
+        #region Create APIs
         /// <summary>
         /// Creates a item as an asynchronous operation in the Azure Cosmos service.
         /// </summary>
@@ -87,40 +90,22 @@ namespace dii.cosmos.Models.Interfaces
         Task<T> CreateAsync(T diiCosmosEntity, PartitionKey? partitionKey = null, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Upserts an item as an asynchronous operation in the Azure Cosmos service.
+        /// Creates multiple items as an asynchronous operation in the Azure Cosmos service.
         /// </summary>
-        /// <param name="diiCosmosEntity">A JSON serializable object that must contain an id property.</param>
-        /// <param name="partitionKey">The partition key for the item. If not specified will be populated by extracting from {T}.</param>
+        /// <param name="diiCosmosEntities">List of Microsoft.Azure.Cosmos.PartitionKey and entities.</param>
         /// <param name="requestOptions">(Optional) The options for the item query request.</param>
         /// <param name="cancellationToken">(Optional) System.Threading.CancellationToken representing request cancellation.</param>
         /// <returns>
-        /// The item that was upserted.
+        /// The items that were created.
         /// </returns>
         /// <remarks>
-        /// 
+        /// When <see cref="CosmosClientOptions.AllowBulkExecution"/> is set to <see langword="true"/>, allows optimistic batching of requests
+        /// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
         /// </remarks>
-        Task<T> UpsertAsync(T diiCosmosEntity, PartitionKey? partitionKey = null, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default);
+        Task<ICollection<T>> CreateBulkAsync(IReadOnlyList<(PartitionKey partitionKey, T diiCosmosEntity)> diiCosmosEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default);
+        #endregion Create APIs
 
-        /// <summary>
-        /// Patches an item in the Azure Cosmos service as an asynchronous operation.
-        /// </summary>
-        /// <param name="id">The Cosmos item id of the item to be patched.</param>
-        /// <param name="partitionKey">The partition key for the item.</param>
-        /// <param name="patchOperations">Represents a list of operations to be sequentially applied to the referred Cosmos item.</param>
-        /// <param name="requestOptions">(Optional) The options for the item query request.</param>
-        /// <param name="cancellationToken">(Optional) System.Threading.CancellationToken representing request cancellation.</param>
-        /// <returns>
-        /// The item that was updated.
-        /// </returns>
-        /// <remarks>
-        /// The item's partition key value is immutable. To change an item's partition key
-        /// value you must delete the original item and insert a new item. The patch operations
-        /// are atomic and are executed sequentially. By default, resource body will be returned
-        /// as part of the response. User can request no content by setting Microsoft.Azure.Cosmos.ItemRequestOptions.EnableContentResponseOnWrite
-        /// flag to false.
-        /// </remarks>
-        Task<T> PatchAsync(string id, PartitionKey partitionKey, IReadOnlyList<PatchOperation> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default);
-
+        #region Replace APIs
         /// <summary>
         /// Replaces a item in the Azure Cosmos service as an asynchronous operation.
         /// </summary>
@@ -142,6 +127,106 @@ namespace dii.cosmos.Models.Interfaces
         Task<T> ReplaceAsync(T diiCosmosEntity, string id, PartitionKey? partitionKey = null, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Replaces multiple items in the Azure Cosmos service as an asynchronous operation.
+        /// </summary>
+        /// <param name="diiCosmosEntities">List of item.Id, Microsoft.Azure.Cosmos.PartitionKey and entities.</param>
+        /// <param name="requestOptions">(Optional) The options for the item query request.</param>
+        /// <param name="cancellationToken">(Optional) System.Threading.CancellationToken representing request cancellation.</param>
+        /// <returns>
+        /// The items that were updated.
+        /// </returns>
+        /// <remarks>
+        /// When <see cref="CosmosClientOptions.AllowBulkExecution"/> is set to <see langword="true"/>, allows optimistic batching of requests
+        /// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
+        /// <para>
+        /// The item's partition key value is immutable. To change an item's partition key
+        /// value you must delete the original item and insert a new item.
+        /// </para>
+        /// <para>
+        /// This operation does not work on entities that use the same value for both the id and parition key.
+        /// </para>
+        /// </remarks>
+        Task<ICollection<T>> ReplaceBulkAsync(IReadOnlyList<(string id, PartitionKey partitionKey, T diiCosmosEntity)> diiCosmosEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default);
+        #endregion Replace APIs
+
+        #region Upsert APIs
+        /// <summary>
+        /// Upserts an item as an asynchronous operation in the Azure Cosmos service.
+        /// </summary>
+        /// <param name="diiCosmosEntity">A JSON serializable object that must contain an id property.</param>
+        /// <param name="partitionKey">The partition key for the item. If not specified will be populated by extracting from {T}.</param>
+        /// <param name="requestOptions">(Optional) The options for the item query request.</param>
+        /// <param name="cancellationToken">(Optional) System.Threading.CancellationToken representing request cancellation.</param>
+        /// <returns>
+        /// The item that was upserted.
+        /// </returns>
+        /// <remarks>
+        /// 
+        /// </remarks>
+        Task<T> UpsertAsync(T diiCosmosEntity, PartitionKey? partitionKey = null, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Upserts multiple items as an asynchronous operation in the Azure Cosmos service.
+        /// </summary>
+        /// <param name="diiCosmosEntities">List of Microsoft.Azure.Cosmos.PartitionKey and entities.</param>
+        /// <param name="requestOptions">(Optional) The options for the item query request.</param>
+        /// <param name="cancellationToken">(Optional) System.Threading.CancellationToken representing request cancellation.</param>
+        /// <returns>
+        /// The items that were upserted.
+        /// </returns>
+        /// <remarks>
+        /// When <see cref="CosmosClientOptions.AllowBulkExecution"/> is set to <see langword="true"/>, allows optimistic batching of requests
+        /// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
+        /// </remarks>
+        Task<ICollection<T>> UpsertBulkAsync(IReadOnlyList<(PartitionKey partitionKey, T diiCosmosEntity)> diiCosmosEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default);
+        #endregion Upsert APIs
+
+        #region Patch APIs
+        /// <summary>
+        /// Patches an item in the Azure Cosmos service as an asynchronous operation.
+        /// </summary>
+        /// <param name="id">The Cosmos item id of the item to be patched.</param>
+        /// <param name="partitionKey">The partition key for the item.</param>
+        /// <param name="patchOperations">Represents a list of operations to be sequentially applied to the referred Cosmos item.</param>
+        /// <param name="requestOptions">(Optional) The options for the item query request.</param>
+        /// <param name="cancellationToken">(Optional) System.Threading.CancellationToken representing request cancellation.</param>
+        /// <returns>
+        /// The item that was updated.
+        /// </returns>
+        /// <remarks>
+        /// The item's partition key value is immutable. To change an item's partition key
+        /// value you must delete the original item and insert a new item. The patch operations
+        /// are atomic and are executed sequentially. By default, resource body will be returned
+        /// as part of the response. User can request no content by setting Microsoft.Azure.Cosmos.ItemRequestOptions.EnableContentResponseOnWrite
+        /// flag to false.
+        /// </remarks>
+        Task<T> PatchAsync(string id, PartitionKey partitionKey, IReadOnlyList<PatchOperation> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Patches multiple items in the Azure Cosmos service as an asynchronous operation.
+        /// </summary>
+        /// <param name="patchOperations">List of item.Id, Microsoft.Azure.Cosmos.PartitionKey and a list of operations to be sequentially applied to the referred Cosmos item.</param>
+        /// <param name="requestOptions">(Optional) The options for the item query request.</param>
+        /// <param name="cancellationToken">(Optional) System.Threading.CancellationToken representing request cancellation.</param>
+        /// <returns>
+        /// The items that were updated.
+        /// </returns>
+        /// <remarks>
+        /// When <see cref="CosmosClientOptions.AllowBulkExecution"/> is set to <see langword="true"/>, allows optimistic batching of requests
+        /// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
+        /// <para>
+        /// The item's partition key value is immutable. To change an item's partition key
+        /// value you must delete the original item and insert a new item. The patch operations
+        /// are atomic and are executed sequentially. By default, resource body will be returned
+        /// as part of the response. User can request no content by setting Microsoft.Azure.Cosmos.ItemRequestOptions.EnableContentResponseOnWrite
+        /// flag to false.
+        /// </para>
+        /// </remarks>
+        Task<ICollection<T>> PatchBulkAsync(IReadOnlyList<(string id, PartitionKey partitionKey, IReadOnlyList<PatchOperation> listOfPatchOperations)> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default);
+        #endregion Patch APIs
+
+        #region Delete APIs
+        /// <summary>
         /// Delete a item from the Azure Cosmos service as an asynchronous operation.
         /// </summary>
         /// <param name="id">The Cosmos item id</param>
@@ -155,5 +240,21 @@ namespace dii.cosmos.Models.Interfaces
         /// 
         /// </remarks>
         Task<bool> DeleteAsync(string id, PartitionKey partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Delete multiple items from the Azure Cosmos service as an asynchronous operation.
+        /// </summary>
+        /// <param name="ids">List of item.Id and Microsoft.Azure.Cosmos.PartitionKey.</param>
+        /// <param name="requestOptions">(Optional) The options for the item query request.</param>
+        /// <param name="cancellationToken">(Optional) System.Threading.CancellationToken representing request cancellation.</param>
+        /// <returns>
+        /// The success status of the operation.
+        /// </returns>
+        /// <remarks>
+        /// When <see cref="CosmosClientOptions.AllowBulkExecution"/> is set to <see langword="true"/>, allows optimistic batching of requests
+        /// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
+        /// </remarks>
+        Task<bool> DeleteBulkAsync(IReadOnlyList<(string id, PartitionKey partitionKey)> ids, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default);
+        #endregion Delete APIs
     }
 }

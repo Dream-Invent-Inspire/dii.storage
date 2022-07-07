@@ -21,6 +21,12 @@ namespace dii.cosmos.tests.Models
 		public string SearchableStringValue { get; set; }
 
 		/// <summary>
+		/// A <see cref="long"/> value to be searched.
+		/// </summary>
+		[Searchable("long")]
+		public long SearchableLongValue { get; set; }
+
+		/// <summary>
 		/// A <see cref="string"/> value to be compressed.
 		/// </summary>
 		[Compress(0)]
