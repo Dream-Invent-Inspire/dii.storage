@@ -3,14 +3,13 @@ using dii.cosmos.tests.Fixtures;
 using dii.cosmos.tests.Models;
 using dii.cosmos.tests.Orderer;
 using dii.cosmos.tests.Utilities;
-using Microsoft.Azure.Cosmos;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace dii.cosmos.tests
+namespace dii.cosmos.tests.CosmosTests
 {
     [Collection(nameof(DeleteAdapterApiTests))]
     [TestCollectionPriorityOrder(7)]
@@ -29,7 +28,7 @@ namespace dii.cosmos.tests
 		public async Task DeleteAsync_Prep()
 		{
 			// Ensure context exists and is initialized.
-			var context = Context.Get();
+			var context = DiiCosmosContext.Get();
 
 			Assert.NotNull(context);
 			Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);
@@ -77,7 +76,7 @@ namespace dii.cosmos.tests
 		public async Task DeleteBulkAsync_Prep()
 		{
 			// Ensure context exists and is initialized.
-			var context = Context.Get();
+			var context = DiiCosmosContext.Get();
 
 			Assert.NotNull(context);
 			Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);

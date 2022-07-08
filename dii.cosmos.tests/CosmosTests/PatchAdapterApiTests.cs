@@ -10,7 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace dii.cosmos.tests
+namespace dii.cosmos.tests.CosmosTests
 {
     [Collection(nameof(PatchAdapterApiTests))]
     [TestCollectionPriorityOrder(8)]
@@ -29,7 +29,7 @@ namespace dii.cosmos.tests
 		public async Task PatchAsync_Prep()
 		{
 			// Ensure context exists and is initialized.
-			var context = Context.Get();
+			var context = DiiCosmosContext.Get();
 
 			Assert.NotNull(context);
 			Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);
@@ -110,7 +110,7 @@ namespace dii.cosmos.tests
 		public async Task PatchBulkAsync_Prep()
 		{
 			// Ensure context exists and is initialized.
-			var context = Context.Get();
+			var context = DiiCosmosContext.Get();
 
 			Assert.NotNull(context);
 			Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);

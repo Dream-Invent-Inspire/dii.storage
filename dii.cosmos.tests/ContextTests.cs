@@ -16,10 +16,10 @@ namespace dii.cosmos.tests
         [Fact, TestPriorityOrder(1)]
         public void Init_NotInitialized()
         {
-            var exception = Assert.Throws<DiiNotInitializedException>(() => { Context.Get(); });
+            var exception = Assert.Throws<DiiNotInitializedException>(() => { DiiCosmosContext.Get(); });
 
             Assert.NotNull(exception);
-            Assert.Equal(new DiiNotInitializedException(nameof(Context)).Message, exception.Message);
+            Assert.Equal(new DiiNotInitializedException(nameof(DiiCosmosContext)).Message, exception.Message);
         }
 
         [Fact, TestPriorityOrder(2)]
@@ -27,7 +27,7 @@ namespace dii.cosmos.tests
         {
             var fakeCosmosDatabaseConfig = new FakeCosmosDatabaseConfig();
 
-            var context = Context.Init(fakeCosmosDatabaseConfig);
+            var context = DiiCosmosContext.Init(fakeCosmosDatabaseConfig);
 
             Assert.NotNull(context);
         }
@@ -35,7 +35,7 @@ namespace dii.cosmos.tests
         [Fact, TestPriorityOrder(3)]
         public void Init_Get()
         {
-            var context = Context.Get();
+            var context = DiiCosmosContext.Get();
 
             Assert.NotNull(context);
         }
@@ -43,7 +43,7 @@ namespace dii.cosmos.tests
         [Fact, TestPriorityOrder(4)]
         public async Task DoesDatabaseExistAsync_Success()
         {
-            var context = Context.Get();
+            var context = DiiCosmosContext.Get();
 
             Assert.NotNull(context);
             Assert.Null(context.Db);
@@ -63,7 +63,7 @@ namespace dii.cosmos.tests
         [Fact, TestPriorityOrder(5)]
         public async Task InitTables_Success()
         {
-            var context = Context.Get();
+            var context = DiiCosmosContext.Get();
 
             Assert.NotNull(context);
             Assert.Null(context.TableMappings);

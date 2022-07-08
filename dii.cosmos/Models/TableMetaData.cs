@@ -1,5 +1,4 @@
-﻿using Microsoft.Azure.Cosmos;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace dii.cosmos.Models
@@ -11,6 +10,5 @@ namespace dii.cosmos.Models
 		public string PartitionKeyPath { get; } = $"/{Constants.ReservedPartitionKeyKey}";
 		public Type StorageType { get; set; }
 		public Type ConcreteType { get; set; }
-		public Container CosmosContainer { get; set; }
 	}
 }

@@ -1,7 +1,6 @@
 ﻿using dii.cosmos.Models;
 using dii.cosmos.Models.Interfaces;
 using Microsoft.Azure.Cosmos;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,27 +10,21 @@ using System.Threading.Tasks;
 
 namespace dii.cosmos
 {
-    public class Adapter<T> : IDiiAdapter<T> where T : IDiiEntity, new()
+    public class DiiCosmosAdapter<T> : DiiAdapter<T>, IDiiCosmosAdapter<T> where T : IDiiEntity, new()
 	{
 		#region Private Fields
 		private readonly Container _container;
 		private readonly Optimizer _optimizer;
 		private readonly TableMetaData _table;
-		private readonly Context _context;
-		private readonly Type _partitionKeyType;
+		private readonly DiiCosmosContext _context;
 		#endregion Private Fields
 
-		#region Public Fields
-		public TableMetaData Table => _table;
-		#endregion Public Fields
-
 		#region Constructors
-		public Adapter()
+		public DiiCosmosAdapter()
 		{
-			_context = Context.Get();
+			_context = DiiCosmosContext.Get();
 			_optimizer = Optimizer.Get();
-			_partitionKeyType = _optimizer.GetPartitionKeyType<T>();
-			_table = _context.TableMappings[typeof(T)];
+			_table = _optimizer.TableMappings[typeof(T)];
 			_container = _context.Client.GetContainer(_context.Config.DatabaseId, _table.TableName);
 		}
 		#endregion Constructors
@@ -39,6 +32,12 @@ namespace dii.cosmos
 		#region Public Methods
 
 		#region Fetch APIs
+		/// <inheritdoc/>
+		public override Task<T> GetAsync(string id, string partitionKey, CancellationToken cancellationToken = default)
+		{
+			return GetAsync(id, partitionKey, cancellationToken: cancellationToken);
+		}
+
 		/// <inheritdoc/>
 		public async Task<T> GetAsync(string id, string partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
@@ -62,6 +61,12 @@ namespace dii.cosmos
 			}
 
 			return diiEntity;
+		}
+
+		/// <inheritdoc/>
+		public override Task<ICollection<T>> GetManyAsync(IReadOnlyList<(string id, string partitionKey)> idAndPks, CancellationToken cancellationToken = default)
+		{
+			return GetManyAsync(idAndPks, cancellationToken: cancellationToken);
 		}
 
 		/// <inheritdoc/>
@@ -128,6 +133,12 @@ namespace dii.cosmos
 		}
 
 		/// <inheritdoc/>
+		public override Task<PagedList<T>> GetPagedAsync(string queryText = null, string continuationToken = null)
+		{
+			return GetPagedAsync(queryText, continuationToken: continuationToken);
+		}
+
+		/// <inheritdoc/>
 		public async Task<PagedList<T>> GetPagedAsync(string queryText = null, string continuationToken = null, QueryRequestOptions requestOptions = null)
 		{
 			var iterator = _container.GetItemQueryStreamIterator(queryText, continuationToken, requestOptions);
@@ -159,6 +170,12 @@ namespace dii.cosmos
 
 		#region Create APIs
 		/// <inheritdoc/>
+		public override Task<T> CreateAsync(T diiEntity, CancellationToken cancellationToken = default)
+		{
+			return CreateAsync(diiEntity, cancellationToken: cancellationToken);
+		}
+
+		/// <inheritdoc/>
 		public async Task<T> CreateAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			var packedEntity = _optimizer.ToEntity(diiEntity);
@@ -169,6 +186,12 @@ namespace dii.cosmos
 			var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
 
 			return unpackedEntity;
+		}
+
+		/// <inheritdoc/>
+		public override Task<ICollection<T>> CreateBulkAsync(IReadOnlyList<T> diiEntities, CancellationToken cancellationToken = default)
+		{
+			return CreateBulkAsync(diiEntities, cancellationToken: cancellationToken);
 		}
 
 		/// <inheritdoc/>
@@ -205,6 +228,12 @@ namespace dii.cosmos
 
 		#region Replace APIs
 		/// <inheritdoc/>
+		public override Task<T> ReplaceAsync(T diiEntity, CancellationToken cancellationToken = default)
+		{
+			return ReplaceAsync(diiEntity, cancellationToken: cancellationToken);
+		}
+
+		/// <inheritdoc/>
 		public async Task<T> ReplaceAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			if (requestOptions == null && !string.IsNullOrEmpty(diiEntity.DataVersion))
@@ -221,6 +250,12 @@ namespace dii.cosmos
 			var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
 
 			return unpackedEntity;
+		}
+
+		/// <inheritdoc/>
+		public override Task<ICollection<T>> ReplaceBulkAsync(IReadOnlyList<T> diiEntities, CancellationToken cancellationToken = default)
+		{
+			return ReplaceBulkAsync(diiEntities, cancellationToken: cancellationToken);
 		}
 
 		/// <inheritdoc/>
@@ -270,6 +305,12 @@ namespace dii.cosmos
 
 		#region Upsert APIs
 		/// <inheritdoc/>
+		public override Task<T> UpsertAsync(T diiEntity, CancellationToken cancellationToken = default)
+		{
+			return UpsertAsync(diiEntity, cancellationToken: cancellationToken);
+		}
+
+		/// <inheritdoc/>
 		public async Task<T> UpsertAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			if (requestOptions == null && !string.IsNullOrEmpty(diiEntity.DataVersion))
@@ -285,6 +326,12 @@ namespace dii.cosmos
 			var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
 
 			return unpackedEntity;
+		}
+
+		/// <inheritdoc/>
+		public override Task<ICollection<T>> UpsertBulkAsync(IReadOnlyList<T> diiEntities, CancellationToken cancellationToken = default)
+		{
+			return UpsertBulkAsync(diiEntities, cancellationToken: cancellationToken);
 		}
 
 		/// <inheritdoc/>
@@ -354,9 +401,9 @@ namespace dii.cosmos
 
 			var concurrentTasks = new List<Task<ItemResponse<object>>>();
 
-			foreach (var patchOperation in patchOperations)
+			foreach (var (id, partitionKey, listOfPatchOperations) in patchOperations)
 			{
-				var task = _container.PatchItemAsync<object>(patchOperation.id, new PartitionKey(patchOperation.partitionKey), patchOperation.listOfPatchOperations, requestOptions, cancellationToken);
+				var task = _container.PatchItemAsync<object>(id, new PartitionKey(partitionKey), listOfPatchOperations, requestOptions, cancellationToken);
 				concurrentTasks.Add(task);
 			}
 
@@ -370,11 +417,23 @@ namespace dii.cosmos
 
 		#region Delete APIs
 		/// <inheritdoc/>
+		public override Task<bool> DeleteAsync(string id, string partitionKey, CancellationToken cancellationToken = default)
+		{
+			return DeleteAsync(id, partitionKey, cancellationToken: cancellationToken);
+		}
+
+		/// <inheritdoc/>
 		public async Task<bool> DeleteAsync(string id, string partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			var response = await _container.DeleteItemStreamAsync(id, new PartitionKey(partitionKey), requestOptions, cancellationToken).ConfigureAwait(false);
 
 			return response.IsSuccessStatusCode;
+		}
+
+		/// <inheritdoc/>
+		public override Task<bool> DeleteBulkAsync(IReadOnlyList<(string id, string partitionKey)> idAndPks, CancellationToken cancellationToken = default)
+		{
+			return DeleteBulkAsync(idAndPks, cancellationToken: cancellationToken);
 		}
 
 		/// <inheritdoc/>
@@ -389,9 +448,9 @@ namespace dii.cosmos
 
 			var concurrentTasks = new List<Task<ResponseMessage>>();
 
-			foreach (var idAndPk in idAndPks)
+			foreach (var (id, partitionKey) in idAndPks)
 			{
-				var task = _container.DeleteItemStreamAsync(idAndPk.id, new PartitionKey(idAndPk.partitionKey), requestOptions, cancellationToken);
+				var task = _container.DeleteItemStreamAsync(id, new PartitionKey(partitionKey), requestOptions, cancellationToken);
 				concurrentTasks.Add(task);
 			}
 
@@ -401,8 +460,8 @@ namespace dii.cosmos
 
 			return response;
 		}
-		#endregion Delete APIs
+        #endregion Delete APIs
 
-		#endregion Public Methods
-	}
+        #endregion Public Methods
+    }
 }

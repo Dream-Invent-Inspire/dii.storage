@@ -10,7 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace dii.cosmos.tests
+namespace dii.cosmos.tests.CosmosTests
 {
     [Collection(nameof(FetchAdapterApiTests))]
     [TestCollectionPriorityOrder(3)]
@@ -29,7 +29,7 @@ namespace dii.cosmos.tests
 		public async Task GetAsync_Prep()
 		{
 			// Ensure context exists and is initialized.
-			var context = Context.Get();
+			var context = DiiCosmosContext.Get();
 
 			Assert.NotNull(context);
 			Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);
@@ -76,7 +76,7 @@ namespace dii.cosmos.tests
         public async Task GetManyAsync_Prep()
         {
             // Ensure context exists and is initialized.
-            var context = Context.Get();
+            var context = DiiCosmosContext.Get();
 
             Assert.NotNull(context);
             Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);
@@ -159,7 +159,7 @@ namespace dii.cosmos.tests
         public async Task GetPagedAsync_QueryDefinition_Prep()
         {
             // Ensure context exists and is initialized.
-            var context = Context.Get();
+            var context = DiiCosmosContext.Get();
 
             Assert.NotNull(context);
             Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);
@@ -249,7 +249,7 @@ namespace dii.cosmos.tests
         public async Task GetPagedAsync_QueryText_Prep()
         {
             // Ensure context exists and is initialized.
-            var context = Context.Get();
+            var context = DiiCosmosContext.Get();
 
             Assert.NotNull(context);
             Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);

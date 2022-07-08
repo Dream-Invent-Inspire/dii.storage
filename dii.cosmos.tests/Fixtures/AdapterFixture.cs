@@ -12,8 +12,8 @@ namespace dii.cosmos.tests.Fixtures
     {
         public Optimizer Optimizer;
         public INoSqlDatabaseConfig NoSqlDatabaseConfig;
-        public IDiiAdapter<FakeEntity> FakeEntityAdapter;
-        public IDiiAdapter<FakeEntityTwo> FakeEntityTwoAdapter;
+        public IDiiCosmosAdapter<FakeEntity> FakeEntityAdapter;
+        public IDiiCosmosAdapter<FakeEntityTwo> FakeEntityTwoAdapter;
         public List<FakeEntity> CreatedFakeEntities;
         public List<FakeEntityTwo> CreatedFakeEntityTwos;
 
@@ -21,7 +21,7 @@ namespace dii.cosmos.tests.Fixtures
         {
             NoSqlDatabaseConfig = new FakeCosmosDatabaseConfig();
 
-            var context = Context.Init(NoSqlDatabaseConfig);
+            var context = DiiCosmosContext.Init(NoSqlDatabaseConfig);
 
             var dbExistsTask = context.DoesDatabaseExistAsync();
             dbExistsTask.Wait();
@@ -40,12 +40,12 @@ namespace dii.cosmos.tests.Fixtures
 
             if (FakeEntityAdapter == null)
             {
-                FakeEntityAdapter = new Adapter<FakeEntity>();
+                FakeEntityAdapter = new DiiCosmosAdapter<FakeEntity>();
             }
 
             if (FakeEntityTwoAdapter == null)
             {
-                FakeEntityTwoAdapter = new Adapter<FakeEntityTwo>();
+                FakeEntityTwoAdapter = new DiiCosmosAdapter<FakeEntityTwo>();
             }
 
             if (CreatedFakeEntities == null)

@@ -11,7 +11,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace dii.cosmos.tests
+namespace dii.cosmos.tests.CosmosTests
 {
     [Collection(nameof(ReplaceAdapterApiTests))]
     [TestCollectionPriorityOrder(5)]
@@ -30,7 +30,7 @@ namespace dii.cosmos.tests
 		public async Task ReplaceAsync_Prep()
 		{
 			// Ensure context exists and is initialized.
-			var context = Context.Get();
+			var context = DiiCosmosContext.Get();
 
 			Assert.NotNull(context);
 			Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);
@@ -106,7 +106,7 @@ namespace dii.cosmos.tests
 		public async Task ReplaceBulkAsync_Prep()
 		{
 			// Ensure context exists and is initialized.
-			var context = Context.Get();
+			var context = DiiCosmosContext.Get();
 
 			Assert.NotNull(context);
 			Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);

@@ -47,7 +47,7 @@ namespace dii.cosmos.tests.Utilities
 
 		public static async Task TeardownCosmosDbAsync()
 		{
-			var context = Context.Get();
+			var context = DiiCosmosContext.Get();
 
 			if (context.Db != null)
 			{
@@ -57,10 +57,10 @@ namespace dii.cosmos.tests.Utilities
 
 		public static void ResetContextInstance()
 		{
-			var instance = Context.Get();
-			var type = typeof(Context);
+			var instance = DiiCosmosContext.Get();
+			var type = typeof(DiiCosmosContext);
 
-			FieldInfo configField = type.GetField("Config", _publicBindingFlags);
+			PropertyInfo configField = type.GetProperty("Config", _publicBindingFlags);
 			configField.SetValue(instance, null);
 
 			FieldInfo clientField = type.GetField("Client", _publicBindingFlags);

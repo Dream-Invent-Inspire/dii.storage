@@ -1,7 +1,6 @@
 ﻿using dii.cosmos.Attributes;
 using dii.cosmos.Models.Interfaces;
 using MessagePack;
-using Microsoft.Azure.Cosmos;
 using System;
 
 namespace dii.cosmos.Models
