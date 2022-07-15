@@ -223,20 +223,7 @@ namespace dii.cosmos.tests.CosmosTests
             var fakeEntityTwo1 = _adapterFixture.CreatedFakeEntityTwos[0];
             var fakeEntityTwo3 = _adapterFixture.CreatedFakeEntityTwos[2];
 
-            var idsToFetch = new Dictionary<string, string>()
-            {
-                { $"@id1", fakeEntityTwo1.Id },
-                { $"@id2", fakeEntityTwo3.Id }
-            };
-
-            var queryDefinition = new QueryDefinition($"SELECT * FROM fakeentitytwo fet WHERE fet.id IN ({string.Join(", ", idsToFetch.Keys)})");
-
-            foreach (var id in idsToFetch)
-            {
-                queryDefinition.WithParameter(id.Key, id.Value);
-            }
-
-            var fetchedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.GetPagedAsync(queryDefinition).ConfigureAwait(false);
+            var fetchedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.GetByIdsAsync(fakeEntityTwo1.Id, fakeEntityTwo3.Id).ConfigureAwait(false);
 
             Assert.NotNull(fetchedFakeEntityTwos);
             Assert.Equal(2, fetchedFakeEntityTwos.Count);
