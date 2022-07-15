@@ -21,8 +21,8 @@ namespace dii.cosmos.tests.Utilities
 		{
 			for (var i = 0; i < adapterFixture.CreatedFakeEntities.Count; i++)
 			{
-				var success = await adapterFixture.FakeEntityAdapter.DeleteAsync(adapterFixture.CreatedFakeEntities[i].Id, adapterFixture.CreatedFakeEntities[i].FakeEntityId).ConfigureAwait(false);
-				var shouldBeNull = await adapterFixture.FakeEntityAdapter.GetAsync(adapterFixture.CreatedFakeEntities[i].Id, adapterFixture.CreatedFakeEntities[i].FakeEntityId).ConfigureAwait(false);
+				var success = await adapterFixture.FakeEntityAdapter.DeleteAsync(adapterFixture.CreatedFakeEntities[i]).ConfigureAwait(false);
+				var shouldBeNull = await adapterFixture.FakeEntityAdapter.GetByIdsAsync(adapterFixture.CreatedFakeEntities[i].Id, adapterFixture.CreatedFakeEntities[i].FakeEntityId).ConfigureAwait(false);
 
 				Assert.True(success);
 				Assert.Null(shouldBeNull);

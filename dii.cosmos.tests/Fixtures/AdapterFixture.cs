@@ -2,6 +2,7 @@
 using dii.cosmos.tests.Models;
 using System;
 using System.Collections.Generic;
+using dii.cosmos.tests.Adapters;
 
 namespace dii.cosmos.tests.Fixtures
 {
@@ -12,8 +13,8 @@ namespace dii.cosmos.tests.Fixtures
     {
         public Optimizer Optimizer;
         public INoSqlDatabaseConfig NoSqlDatabaseConfig;
-        public IDiiCosmosAdapter<FakeEntity> FakeEntityAdapter;
-        public IDiiCosmosAdapter<FakeEntityTwo> FakeEntityTwoAdapter;
+        public IFakeEntityAdapter FakeEntityAdapter;
+        public IFakeEntityTwoAdapter FakeEntityTwoAdapter;
         public List<FakeEntity> CreatedFakeEntities;
         public List<FakeEntityTwo> CreatedFakeEntityTwos;
 
@@ -40,12 +41,12 @@ namespace dii.cosmos.tests.Fixtures
 
             if (FakeEntityAdapter == null)
             {
-                FakeEntityAdapter = new DiiCosmosAdapter<FakeEntity>();
+                FakeEntityAdapter = new FakeEntitySampleAdapter();
             }
 
             if (FakeEntityTwoAdapter == null)
             {
-                FakeEntityTwoAdapter = new DiiCosmosAdapter<FakeEntityTwo>();
+                FakeEntityTwoAdapter = new FakeEntityTwoSampleAdapter();
             }
 
             if (CreatedFakeEntities == null)
