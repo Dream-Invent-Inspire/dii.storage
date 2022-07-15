@@ -63,7 +63,7 @@ namespace dii.cosmos.tests.CosmosTests
 
 			Assert.True(success);
 
-			var shouldBeNull = await _adapterFixture.FakeEntityTwoAdapter.GetAsync(fakeEntityTwo.Id, fakeEntityTwo.FakeEntityTwoId).ConfigureAwait(false);
+			var shouldBeNull = await _adapterFixture.FakeEntityTwoAdapter.GetByIdsAsync(fakeEntityTwo.Id, fakeEntityTwo.FakeEntityTwoId).ConfigureAwait(false);
 
 			Assert.Null(shouldBeNull);
 
@@ -134,14 +134,7 @@ namespace dii.cosmos.tests.CosmosTests
 			var fakeEntityTwo2 = _adapterFixture.CreatedFakeEntityTwos[1];
 			var fakeEntityTwo3 = _adapterFixture.CreatedFakeEntityTwos[2];
 
-			var idsToDelete = new List<(string id, string partitionKey)>
-			{
-				(fakeEntityTwo1.Id, fakeEntityTwo1.FakeEntityTwoId),
-				(fakeEntityTwo2.Id, fakeEntityTwo2.FakeEntityTwoId),
-				(fakeEntityTwo3.Id, fakeEntityTwo3.FakeEntityTwoId)
-			};
-
-			var success = await _adapterFixture.FakeEntityTwoAdapter.DeleteBulkAsync(idsToDelete).ConfigureAwait(false);
+			var success = await _adapterFixture.FakeEntityTwoAdapter.DeleteBulkAsync(entities: new[] { fakeEntityTwo1, fakeEntityTwo2, fakeEntityTwo3 }).ConfigureAwait(false);
 
 			Assert.True(success);
 
@@ -152,7 +145,7 @@ namespace dii.cosmos.tests.CosmosTests
 				(fakeEntityTwo3.Id, fakeEntityTwo3.FakeEntityTwoId)
 			};
 
-			var shouldBeNull = await _adapterFixture.FakeEntityTwoAdapter.GetManyAsync(idsToCheck).ConfigureAwait(false);
+			var shouldBeNull = await _adapterFixture.FakeEntityTwoAdapter.GetManyByIdsAsync(idsToCheck).ConfigureAwait(false);
 
 			Assert.Empty(shouldBeNull);
 

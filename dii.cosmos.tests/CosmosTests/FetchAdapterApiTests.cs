@@ -1,4 +1,5 @@
-﻿using dii.cosmos.tests.Attributes;
+﻿using dii.cosmos.tests.Adapters;
+using dii.cosmos.tests.Attributes;
 using dii.cosmos.tests.Fixtures;
 using dii.cosmos.tests.Models;
 using dii.cosmos.tests.Orderer;
@@ -66,7 +67,7 @@ namespace dii.cosmos.tests.CosmosTests
 		public async Task GetAsync_Success()
 		{
 			var fakeEntityTwo = _adapterFixture.CreatedFakeEntityTwos[0];
-			var fetchedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.GetAsync(fakeEntityTwo.Id, fakeEntityTwo.FakeEntityTwoId).ConfigureAwait(false);
+			var fetchedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.GetByIdsAsync(fakeEntityTwo.Id, fakeEntityTwo.FakeEntityTwoId).ConfigureAwait(false);
 
 			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo, fetchedFakeEntityTwo, true);
 		}
@@ -146,7 +147,7 @@ namespace dii.cosmos.tests.CosmosTests
                 (fakeEntityTwo3.Id, fakeEntityTwo3.FakeEntityTwoId)
             };
 
-            var fetchedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.GetManyAsync(items).ConfigureAwait(false);
+            var fetchedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.GetManyByIdsAsync(items).ConfigureAwait(false);
 
             Assert.NotNull(fetchedFakeEntityTwos);
             Assert.Equal(2, fetchedFakeEntityTwos.Count);
@@ -223,7 +224,7 @@ namespace dii.cosmos.tests.CosmosTests
             var fakeEntityTwo1 = _adapterFixture.CreatedFakeEntityTwos[0];
             var fakeEntityTwo3 = _adapterFixture.CreatedFakeEntityTwos[2];
 
-            var fetchedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.GetByIdsAsync(fakeEntityTwo1.Id, fakeEntityTwo3.Id).ConfigureAwait(false);
+            var fetchedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.GetManyByIdsAsync(new List<(string, string)>{(fakeEntityTwo1.Id, fakeEntityTwo1.FakeEntityTwoId), (fakeEntityTwo3.Id, fakeEntityTwo3.FakeEntityTwoId)}).ConfigureAwait(false);
 
             Assert.NotNull(fetchedFakeEntityTwos);
             Assert.Equal(2, fetchedFakeEntityTwos.Count);
@@ -304,9 +305,7 @@ namespace dii.cosmos.tests.CosmosTests
             var fakeEntityTwo2 = _adapterFixture.CreatedFakeEntityTwos[1];
             var fakeEntityTwo3 = _adapterFixture.CreatedFakeEntityTwos[2];
 
-            var queryText = $"SELECT * FROM fakeentitytwo fet WHERE fet.long >= 20";
-
-            var fetchedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.GetPagedAsync(queryText).ConfigureAwait(false);
+            var fetchedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.GetByLongComparison(20, ComparisonType.GreaterThanOrEqual).ConfigureAwait(false);
 
             Assert.NotNull(fetchedFakeEntityTwos);
             Assert.Equal(3, fetchedFakeEntityTwos.Count);
