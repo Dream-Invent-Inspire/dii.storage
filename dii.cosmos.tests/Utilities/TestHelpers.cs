@@ -36,7 +36,7 @@ namespace dii.cosmos.tests.Utilities
 			for (var i = 0; i < adapterFixture.CreatedFakeEntityTwos.Count; i++)
 			{
 				var success = await adapterFixture.FakeEntityTwoAdapter.DeleteAsync(adapterFixture.CreatedFakeEntityTwos[i].Id, adapterFixture.CreatedFakeEntityTwos[i].FakeEntityTwoId).ConfigureAwait(false);
-				var shouldBeNull = await adapterFixture.FakeEntityTwoAdapter.GetAsync(adapterFixture.CreatedFakeEntityTwos[i].Id, adapterFixture.CreatedFakeEntityTwos[i].FakeEntityTwoId).ConfigureAwait(false);
+				var shouldBeNull = await adapterFixture.FakeEntityTwoAdapter.GetByIdsAsync(adapterFixture.CreatedFakeEntityTwos[i].Id, adapterFixture.CreatedFakeEntityTwos[i].FakeEntityTwoId).ConfigureAwait(false);
 
 				Assert.True(success);
 				Assert.Null(shouldBeNull);
