@@ -15,6 +15,7 @@ namespace dii.cosmos.tests.Adapters
     public interface IFakeEntityAdapter
 	{
         Task<FakeEntity> GetByIdsAsync(string id, string fakeId, CancellationToken cancellationToken = default);
+        Task<bool> DeleteAsync(FakeEntity, CancellationToken cancellationToken = default);
 
     }
 
@@ -27,12 +28,20 @@ namespace dii.cosmos.tests.Adapters
 		{
             return await base.GetAsync(id, fakeId, cancellationToken).ConfigureAwait(false);
 		}
+
+        public async Task<bool> DeleteAsync(FakeEntity e, CancellationToken cancellationToken = default)
+		{
+            return await base.DeleteAsync(e).ConfigureAwait(false);
+		}
     }
 
 
     //This would belong in your onion BLL
     public interface IFakeEntityTwoAdapter
 	{
+        Task<FakeEntityTwo> CreateAsync(FakeEntityTwo diiEntity, CancellationToken cancellationToken = default);
+        Task<ICollection<FakeEntityTwo>> CreateBulkAsync(IReadOnlyList<FakeEntityTwo> diiEntities, CancellationToken cancellationToken = default);
+        Task<bool> DeleteAsync(string id, string fakeId, CancellationToken cancellationToken = default);
         Task<PagedList<FakeEntityTwo>> GetByIdsAsync(params string[] ids);
 
     }
@@ -41,6 +50,11 @@ namespace dii.cosmos.tests.Adapters
     //DI in app start.
     public class FakeEntityTwoSampleAdapter : DiiCosmosAdapter<FakeEntityTwo>, IFakeEntityTwoAdapter
     {
+        public new async Task<bool> DeleteAsync(string id, string fakeId, CancellationToken cancellationToken = default)
+		{
+            return await base.DeleteAsync(id, fakeId, cancellationToken).ConfigureAwait(false);
+		}
+
         public async Task<PagedList<FakeEntityTwo>> GetByIdsAsync(params string[] ids)
         {
             var keysDict = new Dictionary<string, string>();
