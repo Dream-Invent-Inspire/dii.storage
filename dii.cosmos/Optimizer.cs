@@ -405,11 +405,11 @@ namespace dii.cosmos
 					{
 						if (!SubPropertyMapping.ContainsKey(property.PropertyType))
 						{
+							SubPropertyMapping.Add(property.PropertyType, null);
 							var storageType = GenerateType(property.PropertyType, true);
-							SubPropertyMapping.Add(property.PropertyType, storageType);
+							SubPropertyMapping[property.PropertyType] = storageType;
+							_ = AddProperty(typeBuilder, search.Abbreviation, SubPropertyMapping[property.PropertyType], jsonAttr);
 						}
-
-						_ = AddProperty(typeBuilder, search.Abbreviation, SubPropertyMapping[property.PropertyType], jsonAttr);
 					}
 					else
 					{
@@ -434,14 +434,17 @@ namespace dii.cosmos
 
 			var jsonAttachmentAttr = new CustomAttributeBuilder(jsonAttrConstructor, new object[] { Constants.ReservedCompressedKey });
 			_ = AddProperty(typeBuilder, Constants.ReservedCompressedKey, typeof(string), jsonAttachmentAttr);
-			_ = AddProperty(typeBuilder, Constants.ReservedPartitionKeyKey, typeof(string));
-			_ = AddProperty(typeBuilder, Constants.ReservedIdKey, typeof(string));
+			if (!isSubEntity)
+			{
+				_ = AddProperty(typeBuilder, Constants.ReservedPartitionKeyKey, typeof(string));
+				_ = AddProperty(typeBuilder, Constants.ReservedIdKey, typeof(string));
+			}
 
 			Type storageEntityType = typeBuilder.CreateTypeInfo();
 			Type compressedEntityType = compressBuilder.CreateTypeInfo();
 			PropertyInfo attachments;
-			PropertyInfo partitionKeyInfo;
-			PropertyInfo idInfo;
+			PropertyInfo partitionKeyInfo = null;
+			PropertyInfo idInfo = null;
 
 			{
 				var instance = Activator.CreateInstance(storageEntityType);
@@ -451,11 +454,14 @@ namespace dii.cosmos
 				attachments = props[Constants.ReservedCompressedKey];
 				props.Remove(Constants.ReservedCompressedKey);
 
-				partitionKeyInfo = props[Constants.ReservedPartitionKeyKey];
-				props.Remove(Constants.ReservedPartitionKeyKey);
+				if (!isSubEntity)
+				{
+					partitionKeyInfo = props[Constants.ReservedPartitionKeyKey];
+					props.Remove(Constants.ReservedPartitionKeyKey);
 
-				idInfo = props[Constants.ReservedIdKey];
-				props.Remove(Constants.ReservedIdKey);
+					idInfo = props[Constants.ReservedIdKey];
+					props.Remove(Constants.ReservedIdKey);
+				}
 
 				jsonMap.EmitProperties = props;
 			}
@@ -579,23 +585,29 @@ namespace dii.cosmos
 				var packedObject = Activator.CreateInstance(StoredEntityType);
 				var compressedEntity = Activator.CreateInstance(CompressedEntityType);
 
-				var partitionKeyValues = new List<object>();
-
-				foreach (var property in PartitionKeyProperties)
+				if (PartitionKey != null)
 				{
-					partitionKeyValues.Add(property.GetValue(unpackedObject));
+					var partitionKeyValues = new List<object>();
+
+					foreach (var property in PartitionKeyProperties)
+					{
+						partitionKeyValues.Add(property.GetValue(unpackedObject));
+					}
+
+					PartitionKey.SetValue(packedObject, string.Join(PartitionKeySeparator, partitionKeyValues));
 				}
 
-				PartitionKey.SetValue(packedObject, string.Join(PartitionKeySeparator, partitionKeyValues));
-
-				var idValues = new List<object>();
-
-				foreach (var property in IdProperties)
+				if (Id != null)
 				{
-					idValues.Add(property.GetValue(unpackedObject));
-				}
+					var idValues = new List<object>();
 
-				Id.SetValue(packedObject, string.Join(IdSeparator, idValues));
+					foreach (var property in IdProperties)
+					{
+						idValues.Add(property.GetValue(unpackedObject));
+					}
+
+					Id.SetValue(packedObject, string.Join(IdSeparator, idValues));
+				}
 
 				foreach (var property in StoredEntityMapping.ConcreteProperties)
 				{
@@ -613,7 +625,7 @@ namespace dii.cosmos
 							throw;
 						}
 					}
-					else
+					else if(StoredEntityMapping.EmitProperties.ContainsKey(property.Key))
 					{
 						StoredEntityMapping.EmitProperties[property.Key].SetValue(packedObject, val);
 					}
@@ -652,20 +664,26 @@ namespace dii.cosmos
 				var compressedBytes = Convert.FromBase64String(compressedString);
 				var compressedObj = MessagePackSerializer.Deserialize(CompressedEntityType, compressedBytes);
 
-				// Reverse engineer parition key string.
-				var partitionKey = ((string)PartitionKey.GetValue(packedObject)).Split(new string[] { PartitionKeySeparator }, StringSplitOptions.None);
-
-				for (var i = 0; i < PartitionKeyProperties.Count; i++)
+				if (PartitionKey != null)
 				{
-					PartitionKeyProperties[i].SetValue(unpackedObject, partitionKey[i]);
+					// Reverse engineer parition key string.
+					var partitionKey = ((string)PartitionKey.GetValue(packedObject)).Split(new string[] { PartitionKeySeparator }, StringSplitOptions.None);
+
+					for (var i = 0; i < PartitionKeyProperties.Count; i++)
+					{
+						PartitionKeyProperties[i].SetValue(unpackedObject, partitionKey[i]);
+					}
 				}
 
-				// Reverse engineer id string.
-				var id = ((string)Id.GetValue(packedObject)).Split(new string[] { IdSeparator }, StringSplitOptions.None);
-
-				for (var i = 0; i < IdProperties.Count; i++)
+				if (Id != null)
 				{
-					IdProperties[i].SetValue(unpackedObject, id[i]);
+					// Reverse engineer id string.
+					var id = ((string)Id.GetValue(packedObject)).Split(new string[] { IdSeparator }, StringSplitOptions.None);
+
+					for (var i = 0; i < IdProperties.Count; i++)
+					{
+						IdProperties[i].SetValue(unpackedObject, id[i]);
+					}
 				}
 
 				foreach (var property in CompressedEntityMapping.EmitProperties)
