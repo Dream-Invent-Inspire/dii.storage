@@ -42,6 +42,11 @@ namespace dii.cosmos.tests.CosmosTests
 
 			var fakeEntityTwo = new FakeEntityTwo
 			{
+                ComplexSearchable = new FakeSearchableEntity
+                {
+                    Soaps = "Dove",
+                    Tacos = "Bell"
+                },
 				Id = DateTime.Now.Ticks.ToString(),
 				FakeEntityTwoId = DateTime.Now.AddMinutes(-1).Ticks.ToString(),
 				SearchableStringValue = $"fakeEntityTwo: {nameof(FakeEntityTwo.SearchableStringValue)}",
@@ -53,7 +58,9 @@ namespace dii.cosmos.tests.CosmosTests
 			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo, savedFakeEntityTwo);
 
 			_adapterFixture.CreatedFakeEntityTwos.Add(savedFakeEntityTwo);
-		}
+
+            await TestHelpers.TeardownCosmosDbAsync().ConfigureAwait(false);
+        }
 
 		[Fact, TestPriorityOrder(101)]
 		public async Task GetAsync_Success()

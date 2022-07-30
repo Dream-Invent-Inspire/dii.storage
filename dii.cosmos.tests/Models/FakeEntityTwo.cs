@@ -4,8 +4,29 @@ using Microsoft.Azure.Cosmos;
 
 namespace dii.cosmos.tests.Models
 {
-    public class FakeEntityTwo : DiiCosmosEntity
+	public class FakeSearchableEntity
 	{
+		/// <summary>
+		/// The Unique Id for the <see cref="FakeInvalidEntity"/>.
+		/// </summary>
+		[Searchable("xtacos")]
+		public string Tacos { get; set; }
+
+		/// <summary>
+		/// A <see cref="string"/> value to be searched. This property has an invalid search key of 'p'.
+		/// </summary>
+		[Searchable("xsoaps")]
+		public string Soaps { get; set; }
+	}
+	
+	public class FakeEntityTwo : DiiCosmosEntity
+	{
+		/// <summary>
+		/// A test object for complex nesting of objects to be searchable.
+		/// </summary>
+		[Searchable("complex")]
+		public FakeSearchableEntity ComplexSearchable { get; set; }
+
 		/// <summary>
 		/// The Unique Id for the <see cref="FakeEntityTwo"/>.
 		/// </summary>

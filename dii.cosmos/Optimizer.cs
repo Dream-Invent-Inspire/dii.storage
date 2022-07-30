@@ -39,6 +39,7 @@ namespace dii.cosmos
 		#region Public Fields
 		public readonly List<TableMetaData> Tables;
 		public readonly Dictionary<Type, TableMetaData> TableMappings;
+		public readonly Dictionary<Type, Type> SubPropertyMapping;
 		#endregion Public Fields
 
 		#region Constructors
@@ -49,6 +50,7 @@ namespace dii.cosmos
 
 			Tables = new List<TableMetaData>();
 			TableMappings = new Dictionary<Type, TableMetaData>();
+			SubPropertyMapping = new Dictionary<Type, Type>();
 
 			var assemblyName = new AssemblyName($"{_dynamicAssemblyName}.{Guid.NewGuid()}");
 			var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndCollect);
@@ -157,7 +159,24 @@ namespace dii.cosmos
 			return null;
 		}
 
-		public T FromEntity<T>(object obj) where T : IDiiEntity, new()
+		public object ToEntityObject<T>(object obj)
+		{
+			if (obj == null)
+			{
+				throw new ArgumentNullException(nameof(obj));
+			}
+
+			var type = typeof(T);
+
+			if (_packing.ContainsKey(type) && obj is T)
+			{
+				return _packing[type].Package(obj);
+			}
+
+			return null;
+		}
+
+		public T FromEntity<T>(object obj) where T : new()
 		{
 			if (obj == null)
 			{
@@ -198,7 +217,7 @@ namespace dii.cosmos
 			return null;
 		}
 
-		public T UnpackageFromJson<T>(string json) where T : IDiiEntity, new()
+		public T UnpackageFromJson<T>(string json) where T : new()
 		{
 			if (string.IsNullOrWhiteSpace(json))
 			{
@@ -307,7 +326,7 @@ namespace dii.cosmos
 			return _instance;
 		}
 
-		private Type GenerateType(Type source)
+		private Type GenerateType(Type source, bool isSubEntity = false)
 		{
 			var jsonMap = new PackingMapper();
 			var compressMap = new PackingMapper();
@@ -381,8 +400,21 @@ namespace dii.cosmos
 					}
 
 					var jsonAttr = new CustomAttributeBuilder(jsonAttrConstructor, new object[] { search.Abbreviation });
+					var childProps = property.PropertyType.GetProperties();
+					if (childProps.Any(x => x.GetCustomAttribute<SearchableAttribute>() != null) || childProps.Any(x => x.GetCustomAttribute<CompressAttribute>() != null))
+					{
+						if (!SubPropertyMapping.ContainsKey(property.PropertyType))
+						{
+							var storageType = GenerateType(property.PropertyType, true);
+							SubPropertyMapping.Add(property.PropertyType, storageType);
+						}
 
-					_ = AddProperty(typeBuilder, search.Abbreviation, property.PropertyType, jsonAttr);
+						_ = AddProperty(typeBuilder, search.Abbreviation, SubPropertyMapping[property.PropertyType], jsonAttr);
+					}
+					else
+					{
+						_ = AddProperty(typeBuilder, search.Abbreviation, property.PropertyType, jsonAttr);
+					}
 					jsonMap.ConcreteProperties.Add(search.Abbreviation, property);
 
 					continue;
@@ -526,7 +558,14 @@ namespace dii.cosmos
 			#endregion Public Properties
 
 			#region Constructors
-			public Serializer() { }
+			protected MethodInfo ptrUnpackage;
+			protected MethodInfo ptrPackage;
+			public Serializer() 
+			{
+				var t = typeof(Optimizer);
+				ptrUnpackage = t.GetMethod("FromEntity");
+				ptrPackage = t.GetMethod("ToEntityObject");
+			}
 			#endregion Constructors
 
 			#region Public Methods
@@ -561,7 +600,23 @@ namespace dii.cosmos
 				foreach (var property in StoredEntityMapping.ConcreteProperties)
 				{
 					var val = property.Value.GetValue(unpackedObject);
-					StoredEntityMapping.EmitProperties[property.Key].SetValue(packedObject, val);
+					if (val != null && Optimizer.Get().SubPropertyMapping.ContainsKey(val.GetType()))
+					{
+						try
+						{
+							var method = ptrPackage.MakeGenericMethod(val.GetType());
+							var complexSubType = method.Invoke(Optimizer.Get(), new object[] { val });
+							StoredEntityMapping.EmitProperties[property.Key].SetValue(packedObject, complexSubType);
+						}
+						catch (Exception ex)
+						{
+							throw;
+						}
+					}
+					else
+					{
+						StoredEntityMapping.EmitProperties[property.Key].SetValue(packedObject, val);
+					}
 				}
 
 				foreach (var property in CompressedEntityMapping.ConcreteProperties)
@@ -578,7 +633,7 @@ namespace dii.cosmos
 				return packedObject;
 			}
 
-			public T Unpackage<T>(object packedObject) where T : IDiiEntity, new()
+			public T Unpackage<T>(object packedObject) where T : new()
 			{
 				if (packedObject == null)
 				{
@@ -622,7 +677,23 @@ namespace dii.cosmos
 				foreach (var property in StoredEntityMapping.EmitProperties)
 				{
 					var val = property.Value.GetValue(packedObject);
-					StoredEntityMapping.ConcreteProperties[property.Key].SetValue(unpackedObject, val);
+					if (Optimizer.Get().SubPropertyMapping.ContainsKey(StoredEntityMapping.ConcreteProperties[property.Key].PropertyType))
+					{
+						try
+						{
+							var mthd = ptrUnpackage.MakeGenericMethod(StoredEntityMapping.ConcreteProperties[property.Key].PropertyType);
+							var complexSubType = mthd.Invoke(Optimizer.Get(), new object[] { val });
+							StoredEntityMapping.ConcreteProperties[property.Key].SetValue(unpackedObject, complexSubType);
+						}
+						catch (Exception ex)
+						{
+							throw;
+						}
+					}
+					else
+					{
+						StoredEntityMapping.ConcreteProperties[property.Key].SetValue(unpackedObject, val);
+					}
 				}
 
 				return unpackedObject;
