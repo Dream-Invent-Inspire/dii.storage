@@ -180,7 +180,7 @@ namespace dii.cosmos
 		{
 			if (obj == null)
 			{
-				throw new ArgumentNullException(nameof(obj));
+				return default(T);
 			}
 
 			var type = obj.GetType();
@@ -262,6 +262,30 @@ namespace dii.cosmos
 			}
 
 			return default(TKey);
+		}
+
+		public string GetPartitionKey<T>(T obj)
+		{
+			if (obj == null)
+			{
+				throw new ArgumentNullException(nameof(obj));
+			}
+
+			var type = typeof(T);
+
+			if (_packing.ContainsKey(type))
+			{
+				var partitionKeyValues = new List<object>();
+
+				foreach (var property in _packing[type].PartitionKeyProperties)
+				{
+					partitionKeyValues.Add(property.GetValue(obj));
+				}
+
+				return string.Join(_packing[type].PartitionKeySeparator, partitionKeyValues);
+			}
+
+			return default(string);
 		}
 
 		public string GetId<T>(T obj)

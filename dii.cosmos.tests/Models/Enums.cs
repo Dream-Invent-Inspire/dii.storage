@@ -12,5 +12,13 @@
             Fifth = 5,
             Sixth = 6
         }
+
+        public enum ComparisonType
+        {
+            GreaterThan,
+            GreaterThanOrEqual,
+            LessThanOrEqual,
+            LessThan
+        }
     }
 }

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace dii.cosmos
 {
-    public class DiiCosmosAdapter<T> : DiiAdapter<T>, IDiiCosmosAdapter<T> where T : IDiiEntity, new()
+    public abstract class DiiCosmosAdapter<T> where T : IDiiEntity, new()
 	{
 		#region Private Fields
 		private readonly Container _container;
@@ -32,14 +32,20 @@ namespace dii.cosmos
 		#region Public Methods
 
 		#region Fetch APIs
-		/// <inheritdoc/>
-		public override Task<T> GetAsync(string id, string partitionKey, CancellationToken cancellationToken = default)
-		{
-			return GetAsync(id, partitionKey, cancellationToken: cancellationToken);
-		}
-
-		/// <inheritdoc/>
-		public async Task<T> GetAsync(string id, string partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Reads an entity from the service as an asynchronous operation.
+		/// </summary>
+		/// <param name="id">The entity id.</param>
+		/// <param name="partitionKey">The partition key for the entity.</param>
+		/// <param name="requestOptions">(Optional) The options for the entity request.</param>
+		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+		/// <returns>
+		/// The entity.
+		/// </returns>
+		/// <remarks>
+		/// 
+		/// </remarks>
+		protected async Task<T> GetAsync(string id, string partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			var diiEntity = default(T);
 
@@ -63,14 +69,20 @@ namespace dii.cosmos
 			return diiEntity;
 		}
 
-		/// <inheritdoc/>
-		public override Task<ICollection<T>> GetManyAsync(IReadOnlyList<(string id, string partitionKey)> idAndPks, CancellationToken cancellationToken = default)
-		{
-			return GetManyAsync(idAndPks, cancellationToken: cancellationToken);
-		}
-
-		/// <inheritdoc/>
-		public async Task<ICollection<T>> GetManyAsync(IReadOnlyList<(string id, string partitionKey)> idAndPks, ReadManyRequestOptions readManyRequestOptions = null, CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Reads multiple entities from a container using Id and PartitionKey values.
+		/// </summary>
+		/// <param name="idAndPks">List of ids and partition keys.</param>
+		/// <param name="readManyRequestOptions">Request Options for ReadMany Operation</param>
+		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+		/// <returns>
+		/// A collection of entities.
+		/// </returns>
+		/// <remarks>
+		/// This is meant to perform better latency-wise than a query with IN statements to fetch
+		/// a large number of independent entities.
+		/// </remarks>
+		protected async Task<ICollection<T>> GetManyAsync(IReadOnlyList<(string id, string partitionKey)> idAndPks, ReadManyRequestOptions readManyRequestOptions = null, CancellationToken cancellationToken = default)
 		{
 			var diiEntities = default(ICollection<T>);
 
@@ -103,8 +115,22 @@ namespace dii.cosmos
 			return diiEntities;
 		}
 
-		/// <inheritdoc/>
-		public async Task<PagedList<T>> GetPagedAsync(QueryDefinition queryDefinition, string continuationToken = null, QueryRequestOptions requestOptions = null)
+		/// <summary>
+		/// This method creates a query for entities under a container in an Azure Cosmos database
+		/// using a SQL statement with parameterized values. For more information on preparing
+		/// SQL statements with parameterized values, please see
+		/// Microsoft.Azure.Cosmos.QueryDefinition.
+		/// </summary>
+		/// <param name="queryDefinition">The Cosmos SQL query definition.</param>
+		/// <param name="continuationToken">(Optional) The continuation token for subsequent calls.</param>
+		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+		/// <returns>
+		/// A PagedList of entities.
+		/// </returns>
+		/// <remarks>
+		/// 
+		/// </remarks>
+		protected async Task<PagedList<T>> GetPagedAsync(QueryDefinition queryDefinition, string continuationToken = null, QueryRequestOptions requestOptions = null)
 		{
 			var iterator = _container.GetItemQueryStreamIterator(queryDefinition, continuationToken, requestOptions);
 
@@ -132,14 +158,19 @@ namespace dii.cosmos
 			return results;
 		}
 
-		/// <inheritdoc/>
-		public override Task<PagedList<T>> GetPagedAsync(string queryText = null, string continuationToken = null)
-		{
-			return GetPagedAsync(queryText, continuationToken: continuationToken);
-		}
-
-		/// <inheritdoc/>
-		public async Task<PagedList<T>> GetPagedAsync(string queryText = null, string continuationToken = null, QueryRequestOptions requestOptions = null)
+		/// <summary>
+		/// This method creates a query for entities in the same partition using a SQL-like statement.
+		/// </summary>
+		/// <param name="queryText">The SQL query text.</param>
+		/// <param name="continuationToken">(Optional) The continuation token for subsequent calls.</param>
+		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+		/// <returns>
+		/// A PagedList of entities.
+		/// </returns>
+		/// <remarks>
+		/// Only supports single partition queries.
+		/// </remarks>
+		protected async Task<PagedList<T>> GetPagedAsync(string queryText = null, string continuationToken = null, QueryRequestOptions requestOptions = null)
 		{
 			var iterator = _container.GetItemQueryStreamIterator(queryText, continuationToken, requestOptions);
 
@@ -169,14 +200,19 @@ namespace dii.cosmos
 		#endregion Fetch APIs
 
 		#region Create APIs
-		/// <inheritdoc/>
-		public override Task<T> CreateAsync(T diiEntity, CancellationToken cancellationToken = default)
-		{
-			return CreateAsync(diiEntity, cancellationToken: cancellationToken);
-		}
-
-		/// <inheritdoc/>
-		public async Task<T> CreateAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Creates an entity as an asynchronous operation.
+		/// </summary>
+		/// <param name="diiEntity">The <see cref="T"/> to create.</param>
+		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+		/// <returns>
+		/// The entity that was created.
+		/// </returns>
+		/// <remarks>
+		/// 
+		/// </remarks>
+		protected async Task<T> CreateAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			var packedEntity = _optimizer.ToEntity(diiEntity);
 			var partitionKey = _optimizer.GetPartitionKey<T, PartitionKey>(diiEntity);
@@ -188,14 +224,20 @@ namespace dii.cosmos
 			return unpackedEntity;
 		}
 
-		/// <inheritdoc/>
-		public override Task<ICollection<T>> CreateBulkAsync(IReadOnlyList<T> diiEntities, CancellationToken cancellationToken = default)
-		{
-			return CreateBulkAsync(diiEntities, cancellationToken: cancellationToken);
-		}
-
-		/// <inheritdoc/>
-		public async Task<ICollection<T>> CreateBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Creates multiple entities as an asynchronous operation.
+		/// </summary>
+		/// <param name="diiEntities">The list of <see cref="IReadOnlyList{T}"/> to create.</param>
+		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+		/// <returns>
+		/// The entities that were created.
+		/// </returns>
+		/// <remarks>
+		/// When <see cref="CosmosClientOptions.AllowBulkExecution"/> is set to <see langword="true"/>, allows optimistic batching of requests
+		/// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
+		/// </remarks>
+		protected async Task<ICollection<T>> CreateBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			var unpackedEntities = default(ICollection<T>);
 
@@ -227,14 +269,23 @@ namespace dii.cosmos
 		#endregion Create APIs
 
 		#region Replace APIs
-		/// <inheritdoc/>
-		public override Task<T> ReplaceAsync(T diiEntity, CancellationToken cancellationToken = default)
-		{
-			return ReplaceAsync(diiEntity, cancellationToken: cancellationToken);
-		}
-
-		/// <inheritdoc/>
-		public async Task<T> ReplaceAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Replaces an entity as an asynchronous operation.
+		/// </summary>
+		/// <param name="diiEntity">The <see cref="T"/> to replace.</param>
+		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+		/// <returns>
+		/// The entity that was updated.
+		/// </returns>
+		/// <remarks>
+		/// The entity's partition key value is immutable. To change an entity's partition key
+		/// value you must delete the original entity and insert a new entity.
+		/// <para>
+		/// This operation does not work on entities that use the same value for both the id and parition key.
+		/// </para>
+		/// </remarks>
+		protected async Task<T> ReplaceAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			if (requestOptions == null && !string.IsNullOrEmpty(diiEntity.DataVersion))
 			{
@@ -252,14 +303,27 @@ namespace dii.cosmos
 			return unpackedEntity;
 		}
 
-		/// <inheritdoc/>
-		public override Task<ICollection<T>> ReplaceBulkAsync(IReadOnlyList<T> diiEntities, CancellationToken cancellationToken = default)
-		{
-			return ReplaceBulkAsync(diiEntities, cancellationToken: cancellationToken);
-		}
-
-		/// <inheritdoc/>
-		public async Task<ICollection<T>> ReplaceBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Replaces multiple entities as an asynchronous operation.
+		/// </summary>
+		/// <param name="diiEntities">The list of <see cref="IReadOnlyList{T}"/> to replace.</param>
+		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+		/// <returns>
+		/// The entities that were updated.
+		/// </returns>
+		/// <remarks>
+		/// When <see cref="CosmosClientOptions.AllowBulkExecution"/> is set to <see langword="true"/>, allows optimistic batching of requests
+		/// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
+		/// <para>
+		/// The entity's partition key value is immutable. To change an entity's partition key
+		/// value you must delete the original entity and insert a new entity.
+		/// </para>
+		/// <para>
+		/// This operation does not work on entities that use the same value for both the id and parition key.
+		/// </para>
+		/// </remarks>
+		protected async Task<ICollection<T>> ReplaceBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			var unpackedEntities = default(ICollection<T>);
 
@@ -304,14 +368,19 @@ namespace dii.cosmos
 		#endregion Replace APIs
 
 		#region Upsert APIs
-		/// <inheritdoc/>
-		public override Task<T> UpsertAsync(T diiEntity, CancellationToken cancellationToken = default)
-		{
-			return UpsertAsync(diiEntity, cancellationToken: cancellationToken);
-		}
-
-		/// <inheritdoc/>
-		public async Task<T> UpsertAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Upserts an entity as an asynchronous operation.
+		/// </summary>
+		/// <param name="diiEntity">The <see cref="T"/> to upsert.</param>
+		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+		/// <returns>
+		/// The entity that was upserted.
+		/// </returns>
+		/// <remarks>
+		/// 
+		/// </remarks>
+		protected async Task<T> UpsertAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			if (requestOptions == null && !string.IsNullOrEmpty(diiEntity.DataVersion))
 			{
@@ -328,14 +397,20 @@ namespace dii.cosmos
 			return unpackedEntity;
 		}
 
-		/// <inheritdoc/>
-		public override Task<ICollection<T>> UpsertBulkAsync(IReadOnlyList<T> diiEntities, CancellationToken cancellationToken = default)
-		{
-			return UpsertBulkAsync(diiEntities, cancellationToken: cancellationToken);
-		}
-
-		/// <inheritdoc/>
-		public async Task<ICollection<T>> UpsertBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Upserts multiple entities as an asynchronous operation.
+		/// </summary>
+		/// <param name="diiEntities">The list of <see cref="IReadOnlyList{T}"/> to upsert.</param>
+		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+		/// <returns>
+		/// The entities that were upserted.
+		/// </returns>
+		/// <remarks>
+		/// When <see cref="CosmosClientOptions.AllowBulkExecution"/> is set to <see langword="true"/>, allows optimistic batching of requests
+		/// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
+		/// </remarks>
+		protected async Task<ICollection<T>> UpsertBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			var unpackedEntities = default(ICollection<T>);
 
@@ -379,8 +454,25 @@ namespace dii.cosmos
 		#endregion Upsert APIs
 
 		#region Patch APIs
-		/// <inheritdoc/>
-		public async Task<T> PatchAsync(string id, string partitionKey, IReadOnlyList<PatchOperation> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Patches an entity as an asynchronous operation.
+		/// </summary>
+		/// <param name="id">The entity id.</param>
+		/// <param name="partitionKey">The partition key for the entity.</param>
+		/// <param name="patchOperations">Represents a list of operations to be sequentially applied to the referred entity.</param>
+		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+		/// <returns>
+		/// The entity that was updated.
+		/// </returns>
+		/// <remarks>
+		/// The entity's partition key value is immutable. To change an entity's partition key
+		/// value you must delete the original entity and insert a new entity. The patch operations
+		/// are atomic and are executed sequentially. By default, resource body will be returned
+		/// as part of the response. User can request no content by setting Microsoft.Azure.Cosmos.ItemRequestOptions.EnableContentResponseOnWrite
+		/// flag to false.
+		/// </remarks>
+		protected async Task<T> PatchAsync(string id, string partitionKey, IReadOnlyList<PatchOperation> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			var returnedEntity = await _container.PatchItemAsync<object>(id, new PartitionKey(partitionKey), patchOperations, requestOptions, cancellationToken).ConfigureAwait(false);
 
@@ -389,8 +481,27 @@ namespace dii.cosmos
 			return unpackedEntity;
 		}
 
-		/// <inheritdoc/>
-		public async Task<ICollection<T>> PatchBulkAsync(IReadOnlyList<(string id, string partitionKey, IReadOnlyList<PatchOperation> listOfPatchOperations)> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Patches multiple entities as an asynchronous operation.
+		/// </summary>
+		/// <param name="patchOperations">List of ids, partition keys and a list of operations to be sequentially applied to the referred entities.</param>
+		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+		/// <returns>
+		/// The entities that were updated.
+		/// </returns>
+		/// <remarks>
+		/// When <see cref="CosmosClientOptions.AllowBulkExecution"/> is set to <see langword="true"/>, allows optimistic batching of requests
+		/// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
+		/// <para>
+		/// The entity's partition key value is immutable. To change an entity's partition key
+		/// value you must delete the original entity and insert a new entity. The patch operations
+		/// are atomic and are executed sequentially. By default, resource body will be returned
+		/// as part of the response. User can request no content by setting Microsoft.Azure.Cosmos.ItemRequestOptions.EnableContentResponseOnWrite
+		/// flag to false.
+		/// </para>
+		/// </remarks>
+		protected async Task<ICollection<T>> PatchBulkAsync(IReadOnlyList<(string id, string partitionKey, IReadOnlyList<PatchOperation> listOfPatchOperations)> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			var unpackedEntities = default(ICollection<T>);
 
@@ -416,28 +527,84 @@ namespace dii.cosmos
 		#endregion Patch APIs
 
 		#region Delete APIs
-		/// <inheritdoc/>
-		public override Task<bool> DeleteAsync(string id, string partitionKey, CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Delete an entity as an asynchronous operation.
+		/// </summary>
+		/// <param name="diiEntity">The <see cref="T"/> to delete.</param>
+		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+		/// <returns>
+		/// The success status of the operation.
+		/// </returns>
+		/// <remarks>
+		/// 
+		/// </remarks>
+		protected Task<bool> DeleteEntityAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
-			return DeleteAsync(id, partitionKey, cancellationToken: cancellationToken);
+			var partitionKey = _optimizer.GetPartitionKey(diiEntity);
+			var id = _optimizer.GetId(diiEntity);
+
+			return DeleteAsync(id, partitionKey.ToString(), requestOptions, cancellationToken);
 		}
 
-		/// <inheritdoc/>
-		public async Task<bool> DeleteAsync(string id, string partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Delete an entity as an asynchronous operation.
+		/// </summary>
+		/// <param name="id">The entity id.</param>
+		/// <param name="partitionKey">The partition key for the entity.</param>
+		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+		/// <returns>
+		/// The success status of the operation.
+		/// </returns>
+		/// <remarks>
+		/// 
+		/// </remarks>
+		protected async Task<bool> DeleteAsync(string id, string partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			var response = await _container.DeleteItemStreamAsync(id, new PartitionKey(partitionKey), requestOptions, cancellationToken).ConfigureAwait(false);
 
 			return response.IsSuccessStatusCode;
 		}
 
-		/// <inheritdoc/>
-		public override Task<bool> DeleteBulkAsync(IReadOnlyList<(string id, string partitionKey)> idAndPks, CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Delete multiple entities as an asynchronous operation.
+		/// </summary>
+		/// <param name="diiEntities">The list of <see cref="IReadOnlyList{T}"/> to upsert.</param>
+		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+		/// <returns>
+		/// The success status of the operation.
+		/// </returns>
+		/// <remarks>
+		/// When <see cref="CosmosClientOptions.AllowBulkExecution"/> is set to <see langword="true"/>, allows optimistic batching of requests
+		/// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
+		/// </remarks>
+		protected Task<bool> DeleteEntitiesBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
-			return DeleteBulkAsync(idAndPks, cancellationToken: cancellationToken);
+			var idAndPks = diiEntities.Select<T, (string, string)>(x => new
+			(
+				_optimizer.GetId(x),
+				_optimizer.GetPartitionKey(x)
+			)).ToList();
+
+			return DeleteBulkAsync(idAndPks, requestOptions, cancellationToken);
 		}
 
-		/// <inheritdoc/>
-		public async Task<bool> DeleteBulkAsync(IReadOnlyList<(string id, string partitionKey)> idAndPks, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Delete multiple entities as an asynchronous operation.
+		/// </summary>
+		/// <param name="idAndPks">List of ids and partition keys.</param>
+		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+		/// <returns>
+		/// The success status of the operation.
+		/// </returns>
+		/// <remarks>
+		/// When <see cref="CosmosClientOptions.AllowBulkExecution"/> is set to <see langword="true"/>, allows optimistic batching of requests
+		/// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
+		/// </remarks>
+		protected async Task<bool> DeleteBulkAsync(IReadOnlyList<(string id, string partitionKey)> idAndPks, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			var response = false;
 
