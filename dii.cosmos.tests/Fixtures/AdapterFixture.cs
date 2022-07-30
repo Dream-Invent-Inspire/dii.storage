@@ -1,8 +1,9 @@
 ﻿using dii.cosmos.Models.Interfaces;
+using dii.cosmos.tests.Adapters;
 using dii.cosmos.tests.Models;
+using dii.cosmos.tests.Models.Interfaces;
 using System;
 using System.Collections.Generic;
-using dii.cosmos.tests.Adapters;
 
 namespace dii.cosmos.tests.Fixtures
 {
@@ -13,10 +14,8 @@ namespace dii.cosmos.tests.Fixtures
     {
         public Optimizer Optimizer;
         public INoSqlDatabaseConfig NoSqlDatabaseConfig;
-        public IFakeEntityAdapter FakeEntityAdapter;
-        public IFakeEntityTwoAdapter FakeEntityTwoAdapter;
+        public IFakeAdapter<FakeEntity> FakeEntityAdapter;
         public List<FakeEntity> CreatedFakeEntities;
-        public List<FakeEntityTwo> CreatedFakeEntityTwos;
 
         public AdapterFixture()
         {
@@ -41,22 +40,12 @@ namespace dii.cosmos.tests.Fixtures
 
             if (FakeEntityAdapter == null)
             {
-                FakeEntityAdapter = new FakeEntitySampleAdapter();
-            }
-
-            if (FakeEntityTwoAdapter == null)
-            {
-                FakeEntityTwoAdapter = new FakeEntityTwoSampleAdapter();
+                FakeEntityAdapter = new FakeEntityAdapter();
             }
 
             if (CreatedFakeEntities == null)
             {
                 CreatedFakeEntities = new List<FakeEntity>();
-            }
-
-            if (CreatedFakeEntityTwos == null)
-            {
-                CreatedFakeEntityTwos = new List<FakeEntityTwo>();
             }
         }
 

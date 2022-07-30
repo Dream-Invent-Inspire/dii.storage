@@ -1,10 +1,9 @@
-﻿using dii.cosmos.tests.Adapters;
-using dii.cosmos.tests.Attributes;
+﻿using dii.cosmos.tests.Attributes;
+using dii.cosmos.tests.Data;
 using dii.cosmos.tests.Fixtures;
 using dii.cosmos.tests.Models;
 using dii.cosmos.tests.Orderer;
 using dii.cosmos.tests.Utilities;
-using Microsoft.Azure.Cosmos;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,291 +25,156 @@ namespace dii.cosmos.tests.CosmosTests
         }
 
 		#region GetAsync
-		[Fact, TestPriorityOrder(100)]
-		public async Task GetAsync_Prep()
+		[Theory, TestPriorityOrder(100), ClassData(typeof(SingleFakeEntityData))]
+		public async Task GetAsync_Prep(FakeEntity fakeEntity)
 		{
-			// Ensure context exists and is initialized.
-			var context = DiiCosmosContext.Get();
+            // Ensure context exists and is initialized.
+            TestHelpers.PrepContextAndOptimizer();
 
-			Assert.NotNull(context);
-			Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);
+            var savedFakeEntity = await _adapterFixture.FakeEntityAdapter.CreateAsync(fakeEntity).ConfigureAwait(false);
 
-			var optimizer = Optimizer.Get();
+			TestHelpers.AssertFakeEntitiesMatch(fakeEntity, savedFakeEntity);
 
-			Assert.NotNull(optimizer);
-			Assert.NotNull(optimizer.Tables.FirstOrDefault(x => x.TableName == nameof(FakeEntityTwo)));
-			Assert.NotNull(optimizer.TableMappings[typeof(FakeEntityTwo)]);
-
-			var fakeEntityTwo = new FakeEntityTwo
-			{
-				Id = DateTime.Now.Ticks.ToString(),
-				FakeEntityTwoId = DateTime.Now.AddMinutes(-1).Ticks.ToString(),
-				SearchableStringValue = $"fakeEntityTwo: {nameof(FakeEntityTwo.SearchableStringValue)}",
-				CompressedStringValue = $"fakeEntityTwo: {nameof(FakeEntityTwo.CompressedStringValue)}"
-			};
-
-			var savedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.CreateAsync(fakeEntityTwo).ConfigureAwait(false);
-
-			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo, savedFakeEntityTwo);
-
-			_adapterFixture.CreatedFakeEntityTwos.Add(savedFakeEntityTwo);
+			_adapterFixture.CreatedFakeEntities.Add(savedFakeEntity);
 		}
 
 		[Fact, TestPriorityOrder(101)]
 		public async Task GetAsync_Success()
 		{
-			var fakeEntityTwo = _adapterFixture.CreatedFakeEntityTwos[0];
-			var fetchedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.GetByIdsAsync(fakeEntityTwo.Id, fakeEntityTwo.FakeEntityTwoId).ConfigureAwait(false);
+			var fakeEntity = _adapterFixture.CreatedFakeEntities[0];
+			var fetchedFakeEntity = await _adapterFixture.FakeEntityAdapter.GetAsync(fakeEntity.Id, fakeEntity.FakeEntityId).ConfigureAwait(false);
 
-			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo, fetchedFakeEntityTwo, true);
+			TestHelpers.AssertFakeEntitiesMatch(fakeEntity, fetchedFakeEntity, true);
 		}
 
 		[Fact, TestPriorityOrder(102)]
 		public async Task GetAsync_Post()
 		{
-			await TestHelpers.DeleteAllFakeEntityTwosAsync(_adapterFixture).ConfigureAwait(false);
+			await TestHelpers.DeleteAllFakeEntitiesAsync(_adapterFixture).ConfigureAwait(false);
 		}
         #endregion GetAsync
 
         #region GetManyAsync
-        [Fact, TestPriorityOrder(200)]
-        public async Task GetManyAsync_Prep()
+        [Theory, TestPriorityOrder(200), ClassData(typeof(MultipleFakeEntityData))]
+        public async Task GetManyAsync_Prep(List<FakeEntity> fakeEntities)
         {
             // Ensure context exists and is initialized.
-            var context = DiiCosmosContext.Get();
+            TestHelpers.PrepContextAndOptimizer();
 
-            Assert.NotNull(context);
-            Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);
+            var savedFakeEntities = await _adapterFixture.FakeEntityAdapter.CreateBulkAsync(fakeEntities).ConfigureAwait(false);
 
-            var optimizer = Optimizer.Get();
-
-            Assert.NotNull(optimizer);
-            Assert.NotNull(optimizer.Tables.FirstOrDefault(x => x.TableName == nameof(FakeEntityTwo)));
-            Assert.NotNull(optimizer.TableMappings[typeof(FakeEntityTwo)]);
-
-            var fakeEntityTwo1 = new FakeEntityTwo
+            foreach (var fakeEntity in fakeEntities)
             {
-                Id = DateTime.Now.Ticks.ToString(),
-                FakeEntityTwoId = DateTime.Now.AddMinutes(-1).Ticks.ToString(),
-                SearchableStringValue = $"fakeEntityTwo1: {nameof(FakeEntityTwo.SearchableStringValue)}",
-                CompressedStringValue = $"fakeEntityTwo1: {nameof(FakeEntityTwo.CompressedStringValue)}"
-            };
+                TestHelpers.AssertFakeEntitiesMatch(fakeEntity, savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity.Id));
+            }
 
-            var fakeEntityTwo2 = new FakeEntityTwo
-            {
-                Id = DateTime.Now.AddMinutes(-2).Ticks.ToString(),
-                FakeEntityTwoId = DateTime.Now.AddMinutes(-3).Ticks.ToString(),
-                SearchableStringValue = $"fakeEntityTwo2: {nameof(FakeEntityTwo.SearchableStringValue)}",
-                CompressedStringValue = $"fakeEntityTwo2: {nameof(FakeEntityTwo.CompressedStringValue)}"
-            };
-
-            var fakeEntityTwo3 = new FakeEntityTwo
-            {
-                Id = DateTime.Now.AddMinutes(-4).Ticks.ToString(),
-                FakeEntityTwoId = DateTime.Now.AddMinutes(-5).Ticks.ToString(),
-                SearchableStringValue = $"fakeEntityTwo3: {nameof(FakeEntityTwo.SearchableStringValue)}",
-                CompressedStringValue = $"fakeEntityTwo3: {nameof(FakeEntityTwo.CompressedStringValue)}"
-            };
-
-            var entitiesToCreate = new List<FakeEntityTwo>
-            {
-                fakeEntityTwo1,
-                fakeEntityTwo2,
-                fakeEntityTwo3
-            };
-
-            var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.CreateBulkAsync(entitiesToCreate).ConfigureAwait(false);
-
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo1, savedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo1.Id));
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo2, savedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo2.Id));
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo3, savedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo3.Id));
-
-            _adapterFixture.CreatedFakeEntityTwos.AddRange(savedFakeEntityTwos);
+            _adapterFixture.CreatedFakeEntities.AddRange(savedFakeEntities);
         }
 
         [Fact, TestPriorityOrder(201)]
         public async Task GetManyAsync_Success()
         {
-            var fakeEntityTwo1 = _adapterFixture.CreatedFakeEntityTwos[0];
-            var fakeEntityTwo3 = _adapterFixture.CreatedFakeEntityTwos[2];
+            var fakeEntity1 = _adapterFixture.CreatedFakeEntities[0];
+            var fakeEntity3 = _adapterFixture.CreatedFakeEntities[2];
 
             var items = new List<(string, string)>
             {
-                (fakeEntityTwo1.Id, fakeEntityTwo1.FakeEntityTwoId),
-                (fakeEntityTwo3.Id, fakeEntityTwo3.FakeEntityTwoId)
+                (fakeEntity1.Id, fakeEntity1.FakeEntityId),
+                (fakeEntity3.Id, fakeEntity3.FakeEntityId)
             };
 
-            var fetchedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.GetManyByIdsAsync(items).ConfigureAwait(false);
+            var fetchedFakeEntities = await _adapterFixture.FakeEntityAdapter.GetManyAsync(items).ConfigureAwait(false);
 
-            Assert.NotNull(fetchedFakeEntityTwos);
-            Assert.Equal(2, fetchedFakeEntityTwos.Count);
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo1, fetchedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo1.Id), true);
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo3, fetchedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo3.Id), true);
+            Assert.NotNull(fetchedFakeEntities);
+            Assert.Equal(2, fetchedFakeEntities.Count);
+            TestHelpers.AssertFakeEntitiesMatch(fakeEntity1, fetchedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity1.Id), true);
+            TestHelpers.AssertFakeEntitiesMatch(fakeEntity3, fetchedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity3.Id), true);
         }
 
         [Fact, TestPriorityOrder(202)]
         public async Task GetManyAsync_Post()
         {
-            await TestHelpers.DeleteAllFakeEntityTwosAsync(_adapterFixture).ConfigureAwait(false);
+            await TestHelpers.DeleteAllFakeEntitiesAsync(_adapterFixture).ConfigureAwait(false);
         }
         #endregion GetManyAsync
 
         #region GetPagedAsync (w/QueryDefinition)
-        [Fact, TestPriorityOrder(300)]
-        public async Task GetPagedAsync_QueryDefinition_Prep()
+        [Theory, TestPriorityOrder(300), ClassData(typeof(MultipleFakeEntityData))]
+        public async Task GetPagedAsync_QueryDefinition_Prep(List<FakeEntity> fakeEntities)
         {
             // Ensure context exists and is initialized.
-            var context = DiiCosmosContext.Get();
+            TestHelpers.PrepContextAndOptimizer();
 
-            Assert.NotNull(context);
-            Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);
+            var savedFakeEntities = await _adapterFixture.FakeEntityAdapter.CreateBulkAsync(fakeEntities).ConfigureAwait(false);
 
-            var optimizer = Optimizer.Get();
-
-            Assert.NotNull(optimizer);
-            Assert.NotNull(optimizer.Tables.FirstOrDefault(x => x.TableName == nameof(FakeEntityTwo)));
-            Assert.NotNull(optimizer.TableMappings[typeof(FakeEntityTwo)]);
-
-            var fakeEntityTwo1 = new FakeEntityTwo
+            foreach (var fakeEntity in fakeEntities)
             {
-                Id = DateTime.Now.Ticks.ToString(),
-                FakeEntityTwoId = DateTime.Now.AddMinutes(-1).Ticks.ToString(),
-                SearchableStringValue = $"fakeEntityTwo1: {nameof(FakeEntityTwo.SearchableStringValue)}",
-                CompressedStringValue = $"fakeEntityTwo1: {nameof(FakeEntityTwo.CompressedStringValue)}"
-            };
+                TestHelpers.AssertFakeEntitiesMatch(fakeEntity, savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity.Id));
+            }
 
-            var fakeEntityTwo2 = new FakeEntityTwo
-            {
-                Id = DateTime.Now.AddMinutes(-2).Ticks.ToString(),
-                FakeEntityTwoId = DateTime.Now.AddMinutes(-3).Ticks.ToString(),
-                SearchableStringValue = $"fakeEntityTwo2: {nameof(FakeEntityTwo.SearchableStringValue)}",
-                CompressedStringValue = $"fakeEntityTwo2: {nameof(FakeEntityTwo.CompressedStringValue)}"
-            };
-
-            var fakeEntityTwo3 = new FakeEntityTwo
-            {
-                Id = DateTime.Now.AddMinutes(-4).Ticks.ToString(),
-                FakeEntityTwoId = DateTime.Now.AddMinutes(-5).Ticks.ToString(),
-                SearchableStringValue = $"fakeEntityTwo3: {nameof(FakeEntityTwo.SearchableStringValue)}",
-                CompressedStringValue = $"fakeEntityTwo3: {nameof(FakeEntityTwo.CompressedStringValue)}"
-            };
-
-            var entitiesToCreate = new List<FakeEntityTwo>
-            {
-                fakeEntityTwo1,
-                fakeEntityTwo2,
-                fakeEntityTwo3
-            };
-
-            var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.CreateBulkAsync(entitiesToCreate).ConfigureAwait(false);
-
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo1, savedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo1.Id));
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo2, savedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo2.Id));
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo3, savedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo3.Id));
-
-            _adapterFixture.CreatedFakeEntityTwos.AddRange(savedFakeEntityTwos);
+            _adapterFixture.CreatedFakeEntities.AddRange(savedFakeEntities);
         }
 
         [Fact, TestPriorityOrder(301)]
         public async Task GetPagedAsync_QueryDefinition_Success()
         {
-            var fakeEntityTwo1 = _adapterFixture.CreatedFakeEntityTwos[0];
-            var fakeEntityTwo3 = _adapterFixture.CreatedFakeEntityTwos[2];
+            var fakeEntity1 = _adapterFixture.CreatedFakeEntities[0];
+            var fakeEntity3 = _adapterFixture.CreatedFakeEntities[2];
 
-            var fetchedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.GetManyByIdsAsync(new List<(string, string)>{(fakeEntityTwo1.Id, fakeEntityTwo1.FakeEntityTwoId), (fakeEntityTwo3.Id, fakeEntityTwo3.FakeEntityTwoId)}).ConfigureAwait(false);
+            var fetchedFakeEntities = await _adapterFixture.FakeEntityAdapter.GetManyAsync(new List<(string, string)>{(fakeEntity1.Id, fakeEntity1.FakeEntityId), (fakeEntity3.Id, fakeEntity3.FakeEntityId)}).ConfigureAwait(false);
 
-            Assert.NotNull(fetchedFakeEntityTwos);
-            Assert.Equal(2, fetchedFakeEntityTwos.Count);
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo1, fetchedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo1.Id), true);
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo3, fetchedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo3.Id), true);
+            Assert.NotNull(fetchedFakeEntities);
+            Assert.Equal(2, fetchedFakeEntities.Count);
+            TestHelpers.AssertFakeEntitiesMatch(fakeEntity1, fetchedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity1.Id), true);
+            TestHelpers.AssertFakeEntitiesMatch(fakeEntity3, fetchedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity3.Id), true);
         }
 
         [Fact, TestPriorityOrder(302)]
         public async Task GetPagedAsync_QueryDefinition_Post()
         {
-            await TestHelpers.DeleteAllFakeEntityTwosAsync(_adapterFixture).ConfigureAwait(false);
+            await TestHelpers.DeleteAllFakeEntitiesAsync(_adapterFixture).ConfigureAwait(false);
         }
         #endregion GetPagedAsync (w/QueryDefinition)
 
         #region GetPagedAsync (w/Query Text)
-        [Fact, TestPriorityOrder(400)]
-        public async Task GetPagedAsync_QueryText_Prep()
+        [Theory, TestPriorityOrder(400), ClassData(typeof(MultipleFakeEntityData))]
+        public async Task GetPagedAsync_QueryText_Prep(List<FakeEntity> fakeEntities)
         {
             // Ensure context exists and is initialized.
-            var context = DiiCosmosContext.Get();
+            TestHelpers.PrepContextAndOptimizer();
 
-            Assert.NotNull(context);
-            Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);
+            var savedFakeEntities = await _adapterFixture.FakeEntityAdapter.CreateBulkAsync(fakeEntities).ConfigureAwait(false);
 
-            var optimizer = Optimizer.Get();
-
-            Assert.NotNull(optimizer);
-            Assert.NotNull(optimizer.Tables.FirstOrDefault(x => x.TableName == nameof(FakeEntityTwo)));
-            Assert.NotNull(optimizer.TableMappings[typeof(FakeEntityTwo)]);
-
-            var fakeEntityTwo1 = new FakeEntityTwo
+            foreach (var fakeEntity in fakeEntities)
             {
-                Id = DateTime.Now.Ticks.ToString(),
-                FakeEntityTwoId = DateTime.Now.AddMinutes(-1).Ticks.ToString(),
-                SearchableStringValue = $"fakeEntityTwo1: {nameof(FakeEntityTwo.SearchableStringValue)}",
-                SearchableLongValue = 20L,
-                CompressedStringValue = $"fakeEntityTwo1: {nameof(FakeEntityTwo.CompressedStringValue)}"
-            };
+                TestHelpers.AssertFakeEntitiesMatch(fakeEntity, savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity.Id));
+            }
 
-            var fakeEntityTwo2 = new FakeEntityTwo
-            {
-                Id = DateTime.Now.AddMinutes(-2).Ticks.ToString(),
-                FakeEntityTwoId = DateTime.Now.AddMinutes(-3).Ticks.ToString(),
-                SearchableStringValue = $"fakeEntityTwo2: {nameof(FakeEntityTwo.SearchableStringValue)}",
-                SearchableLongValue = 25L,
-                CompressedStringValue = $"fakeEntityTwo2: {nameof(FakeEntityTwo.CompressedStringValue)}"
-            };
-
-            var fakeEntityTwo3 = new FakeEntityTwo
-            {
-                Id = DateTime.Now.AddMinutes(-4).Ticks.ToString(),
-                FakeEntityTwoId = DateTime.Now.AddMinutes(-5).Ticks.ToString(),
-                SearchableStringValue = $"fakeEntityTwo3: {nameof(FakeEntityTwo.SearchableStringValue)}",
-                SearchableLongValue = 78658L,
-                CompressedStringValue = $"fakeEntityTwo3: {nameof(FakeEntityTwo.CompressedStringValue)}"
-            };
-
-            var entitiesToCreate = new List<FakeEntityTwo>
-            {
-                fakeEntityTwo1,
-                fakeEntityTwo2,
-                fakeEntityTwo3
-            };
-
-            var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.CreateBulkAsync(entitiesToCreate).ConfigureAwait(false);
-
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo1, savedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo1.Id));
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo2, savedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo2.Id));
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo3, savedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo3.Id));
-
-            _adapterFixture.CreatedFakeEntityTwos.AddRange(savedFakeEntityTwos);
+            _adapterFixture.CreatedFakeEntities.AddRange(savedFakeEntities);
         }
 
         [Fact, TestPriorityOrder(401)]
         public async Task GetPagedAsync_QueryText_Success()
         {
-            var fakeEntityTwo1 = _adapterFixture.CreatedFakeEntityTwos[0];
-            var fakeEntityTwo2 = _adapterFixture.CreatedFakeEntityTwos[1];
-            var fakeEntityTwo3 = _adapterFixture.CreatedFakeEntityTwos[2];
+            var fakeEntity1 = _adapterFixture.CreatedFakeEntities[0];
+            var fakeEntity2 = _adapterFixture.CreatedFakeEntities[1];
+            var fakeEntity3 = _adapterFixture.CreatedFakeEntities[2];
 
-            var fetchedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.GetByLongComparison(20, ComparisonType.GreaterThanOrEqual).ConfigureAwait(false);
+            var queryText = $"SELECT * FROM fakeentity fe WHERE fe.int >= 1";
 
-            Assert.NotNull(fetchedFakeEntityTwos);
-            Assert.Equal(3, fetchedFakeEntityTwos.Count);
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo1, fetchedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo1.Id), true);
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo2, fetchedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo2.Id), true);
-            TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo3, fetchedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo3.Id), true);
+            var fetchedFakeEntities = await _adapterFixture.FakeEntityAdapter.GetPagedAsync(queryText).ConfigureAwait(false);
+
+            Assert.NotNull(fetchedFakeEntities);
+            Assert.Equal(3, fetchedFakeEntities.Count);
+            TestHelpers.AssertFakeEntitiesMatch(fakeEntity1, fetchedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity1.Id), true);
+            TestHelpers.AssertFakeEntitiesMatch(fakeEntity2, fetchedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity2.Id), true);
+            TestHelpers.AssertFakeEntitiesMatch(fakeEntity3, fetchedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity3.Id), true);
         }
 
         [Fact, TestPriorityOrder(402)]
         public async Task GetPagedAsync_QueryText_Post()
         {
-            await TestHelpers.DeleteAllFakeEntityTwosAsync(_adapterFixture).ConfigureAwait(false);
+            await TestHelpers.DeleteAllFakeEntitiesAsync(_adapterFixture).ConfigureAwait(false);
         }
         #endregion GetPagedAsync (w/Query Text)
 

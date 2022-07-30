@@ -1,4 +1,5 @@
 ﻿using dii.cosmos.tests.Attributes;
+using dii.cosmos.tests.Data;
 using dii.cosmos.tests.Fixtures;
 using dii.cosmos.tests.Models;
 using dii.cosmos.tests.Orderer;
@@ -28,40 +29,23 @@ namespace dii.cosmos.tests.CosmosTests
 		public void CreateAsync_Prep()
 		{
 			// Ensure context exists and is initialized.
-			var context = DiiCosmosContext.Get();
-
-			Assert.NotNull(context);
-			Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);
-
-			var optimizer = Optimizer.Get();
-
-			Assert.NotNull(optimizer);
-			Assert.NotNull(optimizer.Tables.FirstOrDefault(x => x.TableName == nameof(FakeEntityTwo)));
-			Assert.NotNull(optimizer.TableMappings[typeof(FakeEntityTwo)]);
+			TestHelpers.PrepContextAndOptimizer();
 		}
 
-		[Fact, TestPriorityOrder(101)]
-		public async Task CreateAsync_Success()
+		[Theory, TestPriorityOrder(101), ClassData(typeof(SingleFakeEntityData))]
+		public async Task CreateAsync_Success(FakeEntity fakeEntity)
 		{
-			var fakeEntityTwo = new FakeEntityTwo
-			{
-				Id = DateTime.Now.Ticks.ToString(),
-				FakeEntityTwoId = DateTime.Now.AddMinutes(-1).Ticks.ToString(),
-				SearchableStringValue = $"fakeEntityTwo: {nameof(FakeEntityTwo.SearchableStringValue)}",
-				CompressedStringValue = $"fakeEntityTwo: {nameof(FakeEntityTwo.CompressedStringValue)}"
-			};
+			var savedFakeEntity = await _adapterFixture.FakeEntityAdapter.CreateAsync(fakeEntity).ConfigureAwait(false);
 
-			var savedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.CreateAsync(fakeEntityTwo).ConfigureAwait(false);
+			TestHelpers.AssertFakeEntitiesMatch(fakeEntity, savedFakeEntity);
 
-			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo, savedFakeEntityTwo);
-
-			_adapterFixture.CreatedFakeEntityTwos.Add(savedFakeEntityTwo);
+			_adapterFixture.CreatedFakeEntities.Add(savedFakeEntity);
 		}
 
 		[Fact, TestPriorityOrder(102)]
 		public async Task CreateAsync_Post()
 		{
-			await TestHelpers.DeleteAllFakeEntityTwosAsync(_adapterFixture).ConfigureAwait(false);
+			await TestHelpers.DeleteAllFakeEntitiesAsync(_adapterFixture).ConfigureAwait(false);
 		}
 		#endregion CreateAsync
 
@@ -70,65 +54,26 @@ namespace dii.cosmos.tests.CosmosTests
 		public void CreateBulkAsync_Prep()
 		{
 			// Ensure context exists and is initialized.
-			var context = DiiCosmosContext.Get();
-
-			Assert.NotNull(context);
-			Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);
-
-			var optimizer = Optimizer.Get();
-
-			Assert.NotNull(optimizer);
-			Assert.NotNull(optimizer.Tables.FirstOrDefault(x => x.TableName == nameof(FakeEntityTwo)));
-			Assert.NotNull(optimizer.TableMappings[typeof(FakeEntityTwo)]);
+			TestHelpers.PrepContextAndOptimizer();
 		}
 
-		[Fact, TestPriorityOrder(201)]
-		public async Task CreateBulkAsync_Success()
+		[Theory, TestPriorityOrder(201), ClassData(typeof(MultipleFakeEntityData))]
+		public async Task CreateBulkAsync_Success(List<FakeEntity> fakeEntities)
 		{
-			var fakeEntityTwo1 = new FakeEntityTwo
+			var savedFakeEntities = await _adapterFixture.FakeEntityAdapter.CreateBulkAsync(fakeEntities).ConfigureAwait(false);
+
+			foreach (var fakeEntity in fakeEntities)
 			{
-				Id = DateTime.Now.Ticks.ToString(),
-				FakeEntityTwoId = DateTime.Now.AddMinutes(-1).Ticks.ToString(),
-				SearchableStringValue = $"fakeEntityTwo1: {nameof(FakeEntityTwo.SearchableStringValue)}",
-				CompressedStringValue = $"fakeEntityTwo1: {nameof(FakeEntityTwo.CompressedStringValue)}"
-			};
+				TestHelpers.AssertFakeEntitiesMatch(fakeEntity, savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity.Id));
+			}
 
-			var fakeEntityTwo2 = new FakeEntityTwo
-			{
-				Id = DateTime.Now.AddMinutes(-2).Ticks.ToString(),
-				FakeEntityTwoId = DateTime.Now.AddMinutes(-3).Ticks.ToString(),
-				SearchableStringValue = $"fakeEntityTwo2: {nameof(FakeEntityTwo.SearchableStringValue)}",
-				CompressedStringValue = $"fakeEntityTwo2: {nameof(FakeEntityTwo.CompressedStringValue)}"
-			};
-
-			var fakeEntityTwo3 = new FakeEntityTwo
-			{
-				Id = DateTime.Now.AddMinutes(-4).Ticks.ToString(),
-				FakeEntityTwoId = DateTime.Now.AddMinutes(-5).Ticks.ToString(),
-				SearchableStringValue = $"fakeEntityTwo3: {nameof(FakeEntityTwo.SearchableStringValue)}",
-				CompressedStringValue = $"fakeEntityTwo3: {nameof(FakeEntityTwo.CompressedStringValue)}"
-			};
-
-			var entitiesToCreate = new List<FakeEntityTwo>
-			{
-				fakeEntityTwo1,
-				fakeEntityTwo2,
-				fakeEntityTwo3
-			};
-
-			var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.CreateBulkAsync(entitiesToCreate).ConfigureAwait(false);
-
-			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo1, savedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo1.Id));
-			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo2, savedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo2.Id));
-			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo3, savedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo3.Id));
-
-			_adapterFixture.CreatedFakeEntityTwos.AddRange(savedFakeEntityTwos);
+			_adapterFixture.CreatedFakeEntities.AddRange(savedFakeEntities);
 		}
 
 		[Fact, TestPriorityOrder(202)]
 		public async Task CreateBulkAsync_Post()
 		{
-			await TestHelpers.DeleteAllFakeEntityTwosAsync(_adapterFixture).ConfigureAwait(false);
+			await TestHelpers.DeleteAllFakeEntitiesAsync(_adapterFixture).ConfigureAwait(false);
 		}
 		#endregion CreateBulkAsync
 
