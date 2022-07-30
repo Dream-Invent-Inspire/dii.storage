@@ -117,7 +117,7 @@ namespace dii.cosmos.tests.Models
 		/// <summary>
 		/// A value to test complex recursive nesting.
 		/// </summary>
-		[Searchable("xnesting")]
+		[Searchable("complex")]
 		public FakeSearchableEntity ComplexSearchable { get; set; }
 	}
 }

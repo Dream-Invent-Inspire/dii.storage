@@ -3,6 +3,7 @@ using dii.cosmos.tests.Attributes;
 using dii.cosmos.tests.Models;
 using dii.cosmos.tests.Orderer;
 using dii.cosmos.tests.Utilities;
+using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
 using System;
 using Xunit;
@@ -262,7 +263,6 @@ namespace dii.cosmos.tests
             Assert.Equal(2, optimizer.Tables.Count);
             Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
             Assert.Equal(nameof(FakeEntityTwo), optimizer.Tables[1].TableName);
-
 
             Assert.Equal(2, optimizer.TableMappings.Count);
             Assert.Equal(tableMappingsInitialized.Count, optimizer.TableMappings.Count);
@@ -586,6 +586,395 @@ namespace dii.cosmos.tests
             var exception = Assert.Throws<ArgumentException>(() => { optimizer.UnpackageFromJson<FakeEntityTwo>("{}"); });
             Assert.NotNull(exception);
             Assert.Equal("Packed object contained no properties. (Parameter 'packedObject')", exception.Message);
+        }
+
+        [Fact, TestPriorityOrder(40)]
+        public void ToEntityObject_Success()
+        {
+            var optimizer = Optimizer.Get();
+
+            var fakeSearchableEntity = new FakeSearchableEntity
+            {
+                Tacos = "Bell",
+                Soaps = "Dove",
+                Nesting = new FakeSearchableEntity
+                {
+                    Tacos = "Vegan",
+                    Soaps = "Ivy"
+                }
+            };
+
+            var entity = (dynamic)optimizer.ToEntityObject<FakeSearchableEntity>(fakeSearchableEntity);
+
+            Assert.NotNull(entity);
+            Assert.Equal(fakeSearchableEntity.Tacos, entity.Tacos);
+            Assert.Equal(fakeSearchableEntity.Soaps, entity.Soaps);
+            Assert.Equal(fakeSearchableEntity.Nesting.Tacos, entity.Nesting.Tacos);
+            Assert.Equal(fakeSearchableEntity.Nesting.Soaps, entity.Nesting.Soaps);
+        }
+
+        [Fact, TestPriorityOrder(41)]
+        public void ToEntityObject_UnregisteredType()
+        {
+            var optimizer = Optimizer.Get();
+
+            var unregisteredEntity = new FakeInvalidEntity
+            {
+                FakeInvalidEntityId = Guid.NewGuid().ToString(),
+                InvalidSearchableKeyStringPValue = $"fakeInvalidEntity: {nameof(FakeInvalidEntity.InvalidSearchableKeyStringPValue)}"
+            };
+
+            var entity = optimizer.ToEntityObject<FakeSearchableEntity>(unregisteredEntity);
+
+            Assert.Null(entity);
+        }
+
+        [Fact, TestPriorityOrder(42)]
+        public void ToEntityObject_Null()
+        {
+            var optimizer = Optimizer.Get();
+
+            var exception = Assert.Throws<ArgumentNullException>(() => { optimizer.ToEntityObject<FakeSearchableEntity>(null); });
+
+            Assert.NotNull(exception);
+            Assert.Equal("Value cannot be null. (Parameter 'obj')", exception.Message);
+        }
+
+        [Fact, TestPriorityOrder(43)]
+        public void GetPartitionKey_Object_Success()
+        {
+            var optimizer = Optimizer.Get();
+
+            var fakeEntity = new FakeEntity
+            {
+                Id = Guid.NewGuid().ToString(),
+                FakeEntityId = Guid.NewGuid().ToString()
+            };
+
+            var entity = optimizer.GetPartitionKey<FakeEntity, PartitionKey>(fakeEntity);
+
+            Assert.Equal(new PartitionKey(fakeEntity.FakeEntityId), entity);
+        }
+
+        [Fact, TestPriorityOrder(44)]
+        public void GetPartitionKey_Object_TypeNotFound()
+        {
+            var optimizer = Optimizer.Get();
+
+            var unregisteredEntity = new FakeInvalidEntity
+            {
+                Id = Guid.NewGuid().ToString(),
+                FakeInvalidEntityId = Guid.NewGuid().ToString()
+            };
+
+            var unpackedEntity = optimizer.GetPartitionKey<FakeInvalidEntity, PartitionKey>(unregisteredEntity);
+
+            Assert.Equal(default, unpackedEntity);
+        }
+
+        [Fact, TestPriorityOrder(45)]
+        public void GetPartitionKey_Object_Null()
+        {
+            var optimizer = Optimizer.Get();
+
+            var exception = Assert.Throws<ArgumentNullException>(() => { optimizer.GetPartitionKey<FakeEntity, PartitionKey>(null); });
+
+            Assert.NotNull(exception);
+            Assert.Equal("Value cannot be null. (Parameter 'obj')", exception.Message);
+        }
+
+        [Fact, TestPriorityOrder(46)]
+        public void GetPartitionKey_String_Success()
+        {
+            var optimizer = Optimizer.Get();
+
+            var fakeEntity = new FakeEntity
+            {
+                Id = Guid.NewGuid().ToString(),
+                FakeEntityId = Guid.NewGuid().ToString()
+            };
+
+            var entity = optimizer.GetPartitionKey(fakeEntity);
+
+            Assert.Equal(fakeEntity.FakeEntityId, entity);
+        }
+
+        [Fact, TestPriorityOrder(47)]
+        public void GetPartitionKey_String_TypeNotFound()
+        {
+            var optimizer = Optimizer.Get();
+
+            var unregisteredEntity = new FakeInvalidEntity
+            {
+                Id = Guid.NewGuid().ToString(),
+                FakeInvalidEntityId = Guid.NewGuid().ToString()
+            };
+
+            var unpackedEntity = optimizer.GetPartitionKey(unregisteredEntity);
+
+            Assert.Equal(default, unpackedEntity);
+        }
+
+        [Fact, TestPriorityOrder(48)]
+        public void GetPartitionKey_String_Null()
+        {
+            var optimizer = Optimizer.Get();
+
+            var exception = Assert.Throws<ArgumentNullException>(() => { optimizer.GetPartitionKey<FakeEntity>(null); });
+
+            Assert.NotNull(exception);
+            Assert.Equal("Value cannot be null. (Parameter 'obj')", exception.Message);
+        }
+
+        [Fact, TestPriorityOrder(49)]
+        public void GetId_Success()
+        {
+            var optimizer = Optimizer.Get();
+
+            var fakeEntity = new FakeEntity
+            {
+                Id = Guid.NewGuid().ToString(),
+                FakeEntityId = Guid.NewGuid().ToString()
+            };
+
+            var entity = optimizer.GetId(fakeEntity);
+
+            Assert.Equal(fakeEntity.Id, entity);
+        }
+
+        [Fact, TestPriorityOrder(50)]
+        public void GetId_TypeNotFound()
+        {
+            var optimizer = Optimizer.Get();
+
+            var unregisteredEntity = new FakeInvalidEntity
+            {
+                Id = Guid.NewGuid().ToString(),
+                FakeInvalidEntityId = Guid.NewGuid().ToString()
+            };
+
+            var unpackedEntity = optimizer.GetId(unregisteredEntity);
+
+            Assert.Equal(default, unpackedEntity);
+        }
+
+        [Fact, TestPriorityOrder(51)]
+        public void GetId_Null()
+        {
+            var optimizer = Optimizer.Get();
+
+            var exception = Assert.Throws<ArgumentNullException>(() => { optimizer.GetId<FakeEntity>(null); });
+
+            Assert.NotNull(exception);
+            Assert.Equal("Value cannot be null. (Parameter 'obj')", exception.Message);
+        }
+
+        [Fact, TestPriorityOrder(52)]
+        public void GetPartitionKeyType_Success()
+        {
+            var optimizer = Optimizer.Get();
+
+            var type = optimizer.GetPartitionKeyType<FakeEntity>();
+
+            Assert.Equal(typeof(PartitionKey), type);
+        }
+
+        [Fact, TestPriorityOrder(53)]
+        public void GetPartitionKeyType_NotFound()
+        {
+            var optimizer = Optimizer.Get();
+
+            var type = optimizer.GetPartitionKeyType<FakeInvalidEntity>();
+
+            Assert.Null(type);
+        }
+
+        [Fact, TestPriorityOrder(54)]
+        public void Optimizer_Multipart_PK_Success()
+        {
+            var optimizer = Optimizer.Get();
+            optimizer.ConfigureTypes(typeof(FakeEntityThree));
+
+            var fakeEntityThree = new FakeEntityThree
+            {
+                PK1 = "pt1",
+                PK2 = "pt2",
+                PK3 = "pt3"
+            };
+
+            var entity = (dynamic)optimizer.ToEntity(fakeEntityThree);
+
+            Assert.NotNull(entity);
+            Assert.Equal($"{fakeEntityThree.PK1}_{fakeEntityThree.PK2}_{fakeEntityThree.PK3}", entity.PK);
+        }
+
+        [Fact, TestPriorityOrder(55)]
+        public void Optimizer_Multipart_PK_UnassignedPart()
+        {
+            var optimizer = Optimizer.Get();
+            optimizer.ConfigureTypes(typeof(FakeEntityThree));
+
+            var fakeEntityThree = new FakeEntityThree
+            {
+                PK1 = "pt1",
+                PK3 = "pt3"
+            };
+
+            var entity = (dynamic)optimizer.ToEntity(fakeEntityThree);
+
+            Assert.NotNull(entity);
+            Assert.Equal($"{fakeEntityThree.PK1}_{fakeEntityThree.PK3}", entity.PK);
+        }
+
+        [Fact, TestPriorityOrder(56)]
+        public void Optimizer_Multipart_PK_NullPart()
+        {
+            var optimizer = Optimizer.Get();
+            optimizer.ConfigureTypes(typeof(FakeEntityThree));
+
+            var fakeEntityThree = new FakeEntityThree
+            {
+                PK1 = "pt1",
+                PK2 = null,
+                PK3 = "pt3"
+            };
+
+            var entity = (dynamic)optimizer.ToEntity(fakeEntityThree);
+
+            Assert.NotNull(entity);
+            Assert.Equal($"{fakeEntityThree.PK1}_{fakeEntityThree.PK3}", entity.PK);
+        }
+
+        [Fact, TestPriorityOrder(57)]
+        public void Optimizer_Multipart_PK_EmptyPart()
+        {
+            var optimizer = Optimizer.Get();
+            optimizer.ConfigureTypes(typeof(FakeEntityThree));
+
+            var fakeEntityThree = new FakeEntityThree
+            {
+                PK1 = "pt1",
+                PK2 = string.Empty,
+                PK3 = "pt3"
+            };
+
+            var entity = (dynamic)optimizer.ToEntity(fakeEntityThree);
+
+            Assert.NotNull(entity);
+            Assert.Equal($"{fakeEntityThree.PK1}_{fakeEntityThree.PK3}", entity.PK);
+        }
+
+        [Fact, TestPriorityOrder(58)]
+        public void Optimizer_Multipart_PK_WhitespacePart()
+        {
+            var optimizer = Optimizer.Get();
+            optimizer.ConfigureTypes(typeof(FakeEntityThree));
+
+            var fakeEntityThree = new FakeEntityThree
+            {
+                PK1 = "pt1",
+                PK2 = @"   ",
+                PK3 = "pt3"
+            };
+
+            var entity = (dynamic)optimizer.ToEntity(fakeEntityThree);
+
+            Assert.NotNull(entity);
+            Assert.Equal($"{fakeEntityThree.PK1}_{fakeEntityThree.PK3}", entity.PK);
+        }
+
+        [Fact, TestPriorityOrder(59)]
+        public void Optimizer_Multipart_Id_Success()
+        {
+            var optimizer = Optimizer.Get();
+            optimizer.ConfigureTypes(typeof(FakeEntityThree));
+
+            var fakeEntityThree = new FakeEntityThree
+            {
+                Id1 = "pt1",
+                Id2 = "pt2",
+                Id3 = "pt3"
+            };
+
+            var entity = (dynamic)optimizer.ToEntity(fakeEntityThree);
+
+            Assert.NotNull(entity);
+            Assert.Equal($"{fakeEntityThree.Id1}#{fakeEntityThree.Id2}#{fakeEntityThree.Id3}", entity.id);
+        }
+
+        [Fact, TestPriorityOrder(60)]
+        public void Optimizer_Multipart_Id_UnassignedPart()
+        {
+            var optimizer = Optimizer.Get();
+            optimizer.ConfigureTypes(typeof(FakeEntityThree));
+
+            var fakeEntityThree = new FakeEntityThree
+            {
+                Id1 = "pt1",
+                Id3 = "pt3"
+            };
+
+            var entity = (dynamic)optimizer.ToEntity(fakeEntityThree);
+
+            Assert.NotNull(entity);
+            Assert.Equal($"{fakeEntityThree.Id1}#{fakeEntityThree.Id3}", entity.id);
+        }
+
+        [Fact, TestPriorityOrder(61)]
+        public void Optimizer_Multipart_Id_NullPart()
+        {
+            var optimizer = Optimizer.Get();
+            optimizer.ConfigureTypes(typeof(FakeEntityThree));
+
+            var fakeEntityThree = new FakeEntityThree
+            {
+                Id1 = "pt1",
+                Id2 = null,
+                Id3 = "pt3"
+            };
+
+            var entity = (dynamic)optimizer.ToEntity(fakeEntityThree);
+
+            Assert.NotNull(entity);
+            Assert.Equal($"{fakeEntityThree.Id1}#{fakeEntityThree.Id3}", entity.id);
+        }
+
+        [Fact, TestPriorityOrder(62)]
+        public void Optimizer_Multipart_Id_EmptyPart()
+        {
+            var optimizer = Optimizer.Get();
+            optimizer.ConfigureTypes(typeof(FakeEntityThree));
+
+            var fakeEntityThree = new FakeEntityThree
+            {
+                Id1 = "pt1",
+                Id2 = string.Empty,
+                Id3 = "pt3"
+            };
+
+            var entity = (dynamic)optimizer.ToEntity(fakeEntityThree);
+
+            Assert.NotNull(entity);
+            Assert.Equal($"{fakeEntityThree.Id1}#{fakeEntityThree.Id3}", entity.id);
+        }
+
+        [Fact, TestPriorityOrder(63)]
+        public void Optimizer_Multipart_Id_WhitespacePart()
+        {
+            var optimizer = Optimizer.Get();
+            optimizer.ConfigureTypes(typeof(FakeEntityThree));
+
+            var fakeEntityThree = new FakeEntityThree
+            {
+                Id1 = "pt1",
+                Id2 = @"   ",
+                Id3 = "pt3"
+            };
+
+            var entity = (dynamic)optimizer.ToEntity(fakeEntityThree);
+
+            Assert.NotNull(entity);
+            Assert.Equal($"{fakeEntityThree.Id1}#{fakeEntityThree.Id3}", entity.id);
         }
 
         #region Teardown

@@ -615,7 +615,22 @@ namespace dii.cosmos
 
 					foreach (var property in PartitionKeyProperties)
 					{
-						partitionKeyValues.Add(property.GetValue(unpackedObject));
+						var partitionKeyValue = property.GetValue(unpackedObject);
+
+						if (property.PropertyType == typeof(string))
+						{
+							if (!string.IsNullOrWhiteSpace(partitionKeyValue as string))
+							{
+								partitionKeyValues.Add(partitionKeyValue);
+							}
+						}
+						else
+                        {
+							if (partitionKeyValue != null)
+							{
+								partitionKeyValues.Add(partitionKeyValue);
+							}
+						}
 					}
 
 					PartitionKey.SetValue(packedObject, string.Join(PartitionKeySeparator, partitionKeyValues));
@@ -627,7 +642,22 @@ namespace dii.cosmos
 
 					foreach (var property in IdProperties)
 					{
-						idValues.Add(property.GetValue(unpackedObject));
+						var idValue = property.GetValue(unpackedObject);
+
+						if (property.PropertyType == typeof(string))
+						{
+							if (!string.IsNullOrWhiteSpace(idValue as string))
+							{
+								idValues.Add(idValue);
+							}
+						}
+						else
+						{
+							if (idValue != null)
+							{
+								idValues.Add(idValue);
+							}
+						}
 					}
 
 					Id.SetValue(packedObject, string.Join(IdSeparator, idValues));

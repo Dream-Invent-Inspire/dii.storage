@@ -7,12 +7,6 @@ namespace dii.cosmos.tests.Models
 	public class FakeEntityTwo : DiiCosmosEntity
 	{
 		/// <summary>
-		/// A test object for complex nesting of objects to be searchable.
-		/// </summary>
-		[Searchable("complex")]
-		public FakeSearchableEntity ComplexSearchable { get; set; }
-
-		/// <summary>
 		/// The Unique Id for the <see cref="FakeEntityTwo"/>.
 		/// </summary>
 		[PartitionKey(typeof(PartitionKey))]
@@ -38,5 +32,12 @@ namespace dii.cosmos.tests.Models
 		/// </summary>
 		[Compress(0)]
 		public string CompressedStringValue { get; set; }
+
+		/// <summary>
+		/// A test object for complex nesting of objects to be searchable.
+		/// </summary>
+		[Searchable("complex")]
+		public FakeSearchableEntity ComplexSearchable { get; set; }
+
 	}
 }
