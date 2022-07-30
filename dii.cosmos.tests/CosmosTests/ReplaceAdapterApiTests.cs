@@ -1,4 +1,5 @@
 ﻿using dii.cosmos.tests.Attributes;
+using dii.cosmos.tests.Data;
 using dii.cosmos.tests.Fixtures;
 using dii.cosmos.tests.Models;
 using dii.cosmos.tests.Orderer;
@@ -10,6 +11,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Xunit;
+using static dii.cosmos.tests.Models.Enums;
 
 namespace dii.cosmos.tests.CosmosTests
 {
@@ -26,69 +28,92 @@ namespace dii.cosmos.tests.CosmosTests
         }
 
 		#region ReplaceAsync
-		[Fact, TestPriorityOrder(100)]
-		public async Task ReplaceAsync_Prep()
+		[Theory, TestPriorityOrder(100), ClassData(typeof(SingleFakeEntityData))]
+		public async Task ReplaceAsync_Prep(FakeEntity fakeEntity)
 		{
 			// Ensure context exists and is initialized.
-			var context = DiiCosmosContext.Get();
+			TestHelpers.PrepContextAndOptimizer();
 
-			Assert.NotNull(context);
-			Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);
+			var savedFakeEntity = await _adapterFixture.FakeEntityAdapter.CreateAsync(fakeEntity).ConfigureAwait(false);
 
-			var optimizer = Optimizer.Get();
+			TestHelpers.AssertFakeEntitiesMatch(fakeEntity, savedFakeEntity);
 
-			Assert.NotNull(optimizer);
-			Assert.NotNull(optimizer.Tables.FirstOrDefault(x => x.TableName == nameof(FakeEntityTwo)));
-			Assert.NotNull(optimizer.TableMappings[typeof(FakeEntityTwo)]);
-
-			var fakeEntityTwo = new FakeEntityTwo
-			{
-				Id = DateTime.Now.Ticks.ToString(),
-				FakeEntityTwoId = DateTime.Now.AddMinutes(-1).Ticks.ToString(),
-				SearchableStringValue = $"fakeEntityTwo: {nameof(FakeEntityTwo.SearchableStringValue)}",
-				CompressedStringValue = $"fakeEntityTwo: {nameof(FakeEntityTwo.CompressedStringValue)}"
-			};
-
-			var savedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.CreateAsync(fakeEntityTwo).ConfigureAwait(false);
-
-			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo, savedFakeEntityTwo);
-
-			_adapterFixture.CreatedFakeEntityTwos.Add(savedFakeEntityTwo);
+			_adapterFixture.CreatedFakeEntities.Add(savedFakeEntity);
 		}
 
 		[Fact, TestPriorityOrder(101)]
 		public async Task ReplaceAsync_Success()
 		{
-			var fakeEntityTwo = _adapterFixture.CreatedFakeEntityTwos[0];
-			var replacementFakeEntityTwo = new FakeEntityTwo
+			var fakeEntity = _adapterFixture.CreatedFakeEntities[0];
+
+			var replacementFakeEntity = new FakeEntity
 			{
-				Id = fakeEntityTwo.Id,
-				FakeEntityTwoId = fakeEntityTwo.FakeEntityTwoId,
-				SearchableStringValue = $"replacementFakeEntityTwo: {nameof(FakeEntityTwo.SearchableStringValue)}",
-				CompressedStringValue = $"replacementFakeEntityTwo: {nameof(FakeEntityTwo.CompressedStringValue)}"
+				Id = fakeEntity.Id,
+				FakeEntityId = fakeEntity.FakeEntityId,
+				SearchableIntegerValue = 4,
+				SearchableDecimalValue = 4.04m,
+				SearchableStringValue = $"replacementFakeEntity: {nameof(FakeEntity.SearchableStringValue)}",
+				SearchableGuidValue = Guid.NewGuid(),
+				SearchableListValue = new List<string>
+					{
+						$"replacementFakeEntity: {nameof(FakeEntity.SearchableListValue)}[0]",
+						$"replacementFakeEntity: {nameof(FakeEntity.SearchableListValue)}[1]"
+					},
+				SearchableDateTimeValue = DateTime.UtcNow.AddDays(4),
+				SearchableEnumValue = FakeEnum.Fourth,
+				CompressedPackedEntity = new FakeMessagePackEntity
+				{
+					PackedIntegerValue = 400,
+					PackedDecimalValue = 400.04m,
+					PackedStringValue = $"replacementFakeEntity: {nameof(FakeEntity.CompressedPackedEntity.PackedStringValue)}",
+					PackedGuidValue = Guid.NewGuid(),
+					PackedListValue = new List<string>
+						{
+							$"replacementFakeEntity: {nameof(FakeEntity.CompressedPackedEntity.PackedListValue)}[0]",
+							$"replacementFakeEntity: {nameof(FakeEntity.CompressedPackedEntity.PackedListValue)}[1]"
+						},
+					PackedDateTimeValue = DateTime.UtcNow.AddDays(400),
+					PackedEnumValue = FakeEnum.Sixth
+				},
+				CompressedIntegerValue = 40,
+				CompressedDecimalValue = 40.04m,
+				CompressedStringValue = $"replacementFakeEntity: {nameof(FakeEntity.CompressedStringValue)}",
+				CompressedGuidValue = Guid.NewGuid(),
+				CompressedListValue = new List<string>
+					{
+						$"replacementFakeEntity: {nameof(FakeEntity.CompressedListValue)}[0]",
+						$"replacementFakeEntity: {nameof(FakeEntity.CompressedListValue)}[1]"
+					},
+				CompressedDateTimeValue = DateTime.UtcNow.AddDays(40),
+				CompressedEnumValue = FakeEnum.Fifth,
+				ComplexSearchable = new FakeSearchableEntity
+				{
+					Soaps = "Dove",
+					Tacos = "Bell"
+				}
 			};
 
-			var replacedFakeEntityTwo = await _adapterFixture.FakeEntityTwoAdapter.ReplaceAsync(replacementFakeEntityTwo).ConfigureAwait(false);
+			var replacedFakeEntity = await _adapterFixture.FakeEntityAdapter.ReplaceAsync(replacementFakeEntity).ConfigureAwait(false);
 
-			TestHelpers.AssertFakeEntityTwosMatch(replacementFakeEntityTwo, replacedFakeEntityTwo);
+			TestHelpers.AssertFakeEntitiesMatch(replacementFakeEntity, replacedFakeEntity);
 
-			_adapterFixture.CreatedFakeEntityTwos[0] = replacedFakeEntityTwo;
+			_adapterFixture.CreatedFakeEntities[0] = replacedFakeEntity;
 		}
 
 		[Fact, TestPriorityOrder(102)]
 		public async Task ReplaceAsync_Idempotency()
 		{
-			var toUpdate = _adapterFixture.Optimizer.UnpackageFromJson<FakeEntityTwo>(_adapterFixture.Optimizer.PackageToJson(_adapterFixture.CreatedFakeEntityTwos[0]));
+			var toUpdate = _adapterFixture.Optimizer.UnpackageFromJson<FakeEntity>(_adapterFixture.Optimizer.PackageToJson(_adapterFixture.CreatedFakeEntities[0]));
 
-			_adapterFixture.CreatedFakeEntityTwos[0].SearchableLongValue = 999999L;
-			_adapterFixture.CreatedFakeEntityTwos[0] = await _adapterFixture.FakeEntityTwoAdapter.ReplaceAsync(_adapterFixture.CreatedFakeEntityTwos[0]).ConfigureAwait(false);
+			_adapterFixture.CreatedFakeEntities[0].SearchableIntegerValue = 999999;
+			_adapterFixture.CreatedFakeEntities[0] = await _adapterFixture.FakeEntityAdapter.ReplaceAsync(_adapterFixture.CreatedFakeEntities[0]).ConfigureAwait(false);
 
-			Assert.NotEqual(toUpdate.DataVersion, _adapterFixture.CreatedFakeEntityTwos[0].DataVersion);
-			Assert.Equal(999999L, _adapterFixture.CreatedFakeEntityTwos[0].SearchableLongValue);
+			Assert.NotEqual(toUpdate.DataVersion, _adapterFixture.CreatedFakeEntities[0].DataVersion);
+			Assert.Equal(999999, _adapterFixture.CreatedFakeEntities[0].SearchableIntegerValue);
 
-			toUpdate.SearchableLongValue = 888888L;
+			toUpdate.SearchableIntegerValue = 888888;
 
-			var exception = await Assert.ThrowsAsync<CosmosException>(() => { return _adapterFixture.FakeEntityTwoAdapter.ReplaceAsync(toUpdate); }).ConfigureAwait(false);
+			var exception = await Assert.ThrowsAsync<CosmosException>(() => { return _adapterFixture.FakeEntityAdapter.ReplaceAsync(toUpdate); }).ConfigureAwait(false);
 
 			Assert.NotNull(exception);
 			Assert.Equal(HttpStatusCode.PreconditionFailed, exception.StatusCode);
@@ -97,141 +122,219 @@ namespace dii.cosmos.tests.CosmosTests
 		[Fact, TestPriorityOrder(103)]
 		public async Task ReplaceAsync_Post()
 		{
-			await TestHelpers.DeleteAllFakeEntityTwosAsync(_adapterFixture).ConfigureAwait(false);
+			await TestHelpers.DeleteAllFakeEntitiesAsync(_adapterFixture).ConfigureAwait(false);
 		}
 		#endregion ReplaceAsync
 
 		#region ReplaceBulkAsync
-		[Fact, TestPriorityOrder(200)]
-		public async Task ReplaceBulkAsync_Prep()
+		[Theory, TestPriorityOrder(200), ClassData(typeof(MultipleFakeEntityData))]
+		public async Task ReplaceBulkAsync_Prep(List<FakeEntity> fakeEntities)
 		{
 			// Ensure context exists and is initialized.
-			var context = DiiCosmosContext.Get();
+			TestHelpers.PrepContextAndOptimizer();
 
-			Assert.NotNull(context);
-			Assert.NotNull(context.TableMappings[typeof(FakeEntityTwo)]);
+			var savedFakeEntities = await _adapterFixture.FakeEntityAdapter.CreateBulkAsync(fakeEntities).ConfigureAwait(false);
 
-			var optimizer = Optimizer.Get();
-
-			Assert.NotNull(optimizer);
-			Assert.NotNull(optimizer.Tables.FirstOrDefault(x => x.TableName == nameof(FakeEntityTwo)));
-			Assert.NotNull(optimizer.TableMappings[typeof(FakeEntityTwo)]);
-
-			var fakeEntityTwo1 = new FakeEntityTwo
+			foreach (var fakeEntity in fakeEntities)
 			{
-				Id = DateTime.Now.Ticks.ToString(),
-				FakeEntityTwoId = DateTime.Now.AddMinutes(-1).Ticks.ToString(),
-				SearchableStringValue = $"fakeEntityTwo1: {nameof(FakeEntityTwo.SearchableStringValue)}",
-				CompressedStringValue = $"fakeEntityTwo1: {nameof(FakeEntityTwo.CompressedStringValue)}"
-			};
+				TestHelpers.AssertFakeEntitiesMatch(fakeEntity, savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity.Id));
+			}
 
-			var fakeEntityTwo2 = new FakeEntityTwo
-			{
-				Id = DateTime.Now.AddMinutes(-2).Ticks.ToString(),
-				FakeEntityTwoId = DateTime.Now.AddMinutes(-3).Ticks.ToString(),
-				SearchableStringValue = $"fakeEntityTwo2: {nameof(FakeEntityTwo.SearchableStringValue)}",
-				CompressedStringValue = $"fakeEntityTwo2: {nameof(FakeEntityTwo.CompressedStringValue)}"
-			};
-
-			var fakeEntityTwo3 = new FakeEntityTwo
-			{
-				Id = DateTime.Now.AddMinutes(-4).Ticks.ToString(),
-				FakeEntityTwoId = DateTime.Now.AddMinutes(-5).Ticks.ToString(),
-				SearchableStringValue = $"fakeEntityTwo3: {nameof(FakeEntityTwo.SearchableStringValue)}",
-				CompressedStringValue = $"fakeEntityTwo3: {nameof(FakeEntityTwo.CompressedStringValue)}"
-			};
-
-			var entitiesToCreate = new List<FakeEntityTwo>
-			{
-				fakeEntityTwo1,
-				fakeEntityTwo2,
-				fakeEntityTwo3
-			};
-
-			var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.CreateBulkAsync(entitiesToCreate).ConfigureAwait(false);
-
-			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo1, savedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo1.Id));
-			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo2, savedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo2.Id));
-			TestHelpers.AssertFakeEntityTwosMatch(fakeEntityTwo3, savedFakeEntityTwos.FirstOrDefault(x => x.Id == fakeEntityTwo3.Id));
-
-			_adapterFixture.CreatedFakeEntityTwos.AddRange(savedFakeEntityTwos);
+			_adapterFixture.CreatedFakeEntities.AddRange(savedFakeEntities);
 		}
 
 		[Fact, TestPriorityOrder(201)]
 		public async Task ReplaceBulkAsync_Success()
 		{
-			var fakeEntityTwo1 = _adapterFixture.CreatedFakeEntityTwos[0];
-			var fakeEntityTwo2 = _adapterFixture.CreatedFakeEntityTwos[1];
-			var fakeEntityTwo3 = _adapterFixture.CreatedFakeEntityTwos[2];
+			var fakeEntity1 = _adapterFixture.CreatedFakeEntities[0];
+			var fakeEntity2 = _adapterFixture.CreatedFakeEntities[1];
+			var fakeEntity3 = _adapterFixture.CreatedFakeEntities[2];
 
-			var replacementFakeEntityTwo1 = new FakeEntityTwo
+			var replacementFakeEntity1 = new FakeEntity
 			{
-				Id = fakeEntityTwo1.Id,
-				FakeEntityTwoId = fakeEntityTwo1.FakeEntityTwoId,
-				SearchableStringValue = $"replacementFakeEntityTwo1: {nameof(FakeEntityTwo.SearchableStringValue)}",
-				CompressedStringValue = $"replacementFakeEntityTwo1: {nameof(FakeEntityTwo.CompressedStringValue)}"
+				Id = fakeEntity1.Id,
+				FakeEntityId = fakeEntity1.FakeEntityId,
+				SearchableIntegerValue = 2,
+				SearchableDecimalValue = 2.02m,
+				SearchableStringValue = $"replacementFakeEntity1: {nameof(FakeEntity.SearchableStringValue)}",
+				SearchableGuidValue = Guid.NewGuid(),
+				SearchableListValue = new List<string>
+					{
+						$"replacementFakeEntity1: {nameof(FakeEntity.SearchableListValue)}[0]",
+						$"replacementFakeEntity1: {nameof(FakeEntity.SearchableListValue)}[1]"
+					},
+				SearchableDateTimeValue = DateTime.UtcNow.AddDays(2),
+				SearchableEnumValue = FakeEnum.Second,
+				CompressedPackedEntity = new FakeMessagePackEntity
+				{
+					PackedIntegerValue = 200,
+					PackedDecimalValue = 200.02m,
+					PackedStringValue = $"replacementFakeEntity1: {nameof(FakeEntity.CompressedPackedEntity.PackedStringValue)}",
+					PackedGuidValue = Guid.NewGuid(),
+					PackedListValue = new List<string>
+						{
+							$"replacementFakeEntity1: {nameof(FakeEntity.CompressedPackedEntity.PackedListValue)}[0]",
+							$"replacementFakeEntity1: {nameof(FakeEntity.CompressedPackedEntity.PackedListValue)}[1]"
+						},
+					PackedDateTimeValue = DateTime.UtcNow.AddDays(200),
+					PackedEnumValue = FakeEnum.Fourth
+				},
+				CompressedIntegerValue = 20,
+				CompressedDecimalValue = 20.02m,
+				CompressedStringValue = $"replacementFakeEntity1: {nameof(FakeEntity.CompressedStringValue)}",
+				CompressedGuidValue = Guid.NewGuid(),
+				CompressedListValue = new List<string>
+					{
+						$"replacementFakeEntity1: {nameof(FakeEntity.CompressedListValue)}[0]",
+						$"replacementFakeEntity1: {nameof(FakeEntity.CompressedListValue)}[1]"
+					},
+				CompressedDateTimeValue = DateTime.UtcNow.AddDays(20),
+				CompressedEnumValue = FakeEnum.Third,
+				ComplexSearchable = new FakeSearchableEntity
+				{
+					Soaps = "Dove1",
+					Tacos = "Bell1"
+				}
 			};
 
-			var replacementFakeEntityTwo2 = new FakeEntityTwo
+			var replacementFakeEntity2 = new FakeEntity
 			{
-				Id = fakeEntityTwo2.Id,
-				FakeEntityTwoId = fakeEntityTwo2.FakeEntityTwoId,
-				SearchableStringValue = $"replacementFakeEntityTwo2: {nameof(FakeEntityTwo.SearchableStringValue)}",
-				CompressedStringValue = $"replacementFakeEntityTwo2: {nameof(FakeEntityTwo.CompressedStringValue)}"
+				Id = fakeEntity2.Id,
+				FakeEntityId = fakeEntity2.FakeEntityId,
+				SearchableIntegerValue = 3,
+				SearchableDecimalValue = 3.03m,
+				SearchableStringValue = $"replacementFakeEntity2: {nameof(FakeEntity.SearchableStringValue)}",
+				SearchableGuidValue = Guid.NewGuid(),
+				SearchableListValue = new List<string>
+				{
+					$"replacementFakeEntity2: {nameof(FakeEntity.SearchableListValue)}[0]",
+					$"replacementFakeEntity2: {nameof(FakeEntity.SearchableListValue)}[1]"
+				},
+				SearchableDateTimeValue = DateTime.UtcNow.AddDays(3),
+				SearchableEnumValue = FakeEnum.Third,
+				CompressedPackedEntity = new FakeMessagePackEntity
+				{
+					PackedIntegerValue = 300,
+					PackedDecimalValue = 300.03m,
+					PackedStringValue = $"replacementFakeEntity2: {nameof(FakeEntity.CompressedPackedEntity.PackedStringValue)}",
+					PackedGuidValue = Guid.NewGuid(),
+					PackedListValue = new List<string>
+					{
+						$"replacementFakeEntity2: {nameof(FakeEntity.CompressedPackedEntity.PackedListValue)}[0]",
+						$"replacementFakeEntity2: {nameof(FakeEntity.CompressedPackedEntity.PackedListValue)}[1]"
+					},
+					PackedDateTimeValue = DateTime.UtcNow.AddDays(300),
+					PackedEnumValue = FakeEnum.Fifth
+				},
+				CompressedIntegerValue = 30,
+				CompressedDecimalValue = 30.03m,
+				CompressedStringValue = $"replacementFakeEntity2: {nameof(FakeEntity.CompressedStringValue)}",
+				CompressedGuidValue = Guid.NewGuid(),
+				CompressedListValue = new List<string>
+				{
+					$"replacementFakeEntity2: {nameof(FakeEntity.CompressedListValue)}[0]",
+					$"replacementFakeEntity2: {nameof(FakeEntity.CompressedListValue)}[1]"
+				},
+				CompressedDateTimeValue = DateTime.UtcNow.AddDays(30),
+				CompressedEnumValue = FakeEnum.Fourth,
+				ComplexSearchable = new FakeSearchableEntity
+				{
+					Soaps = "Dove2",
+					Tacos = "Bell2"
+				}
 			};
 
-			var replacementFakeEntityTwo3 = new FakeEntityTwo
+            var replacementFakeEntity3 = new FakeEntity
 			{
-				Id = fakeEntityTwo3.Id,
-				FakeEntityTwoId = fakeEntityTwo3.FakeEntityTwoId,
-				SearchableStringValue = $"replacementFakeEntityTwo3: {nameof(FakeEntityTwo.SearchableStringValue)}",
-				CompressedStringValue = $"replacementFakeEntityTwo3: {nameof(FakeEntityTwo.CompressedStringValue)}"
+				Id = fakeEntity3.Id,
+				FakeEntityId = fakeEntity3.FakeEntityId,
+				SearchableIntegerValue = 4,
+				SearchableDecimalValue = 4.04m,
+				SearchableStringValue = $"replacementFakeEntity3: {nameof(FakeEntity.SearchableStringValue)}",
+				SearchableGuidValue = Guid.NewGuid(),
+				SearchableListValue = new List<string>
+				{
+					$"replacementFakeEntity3: {nameof(FakeEntity.SearchableListValue)}[0]",
+					$"replacementFakeEntity3: {nameof(FakeEntity.SearchableListValue)}[1]"
+				},
+				SearchableDateTimeValue = DateTime.UtcNow.AddDays(4),
+				SearchableEnumValue = FakeEnum.Fourth,
+				CompressedPackedEntity = new FakeMessagePackEntity
+				{
+					PackedIntegerValue = 400,
+					PackedDecimalValue = 400.04m,
+					PackedStringValue = $"replacementFakeEntity3: {nameof(FakeEntity.CompressedPackedEntity.PackedStringValue)}",
+					PackedGuidValue = Guid.NewGuid(),
+					PackedListValue = new List<string>
+					{
+						$"replacementFakeEntity3: {nameof(FakeEntity.CompressedPackedEntity.PackedListValue)}[0]",
+						$"replacementFakeEntity3: {nameof(FakeEntity.CompressedPackedEntity.PackedListValue)}[1]"
+					},
+					PackedDateTimeValue = DateTime.UtcNow.AddDays(400),
+					PackedEnumValue = FakeEnum.Sixth
+				},
+				CompressedIntegerValue = 40,
+				CompressedDecimalValue = 40.04m,
+				CompressedStringValue = $"replacementFakeEntity3: {nameof(FakeEntity.CompressedStringValue)}",
+				CompressedGuidValue = Guid.NewGuid(),
+				CompressedListValue = new List<string>
+				{
+					$"replacementFakeEntity3: {nameof(FakeEntity.CompressedListValue)}[0]",
+					$"replacementFakeEntity3: {nameof(FakeEntity.CompressedListValue)}[1]"
+				},
+				CompressedDateTimeValue = DateTime.UtcNow.AddDays(40),
+				CompressedEnumValue = FakeEnum.Fifth,
+				ComplexSearchable = new FakeSearchableEntity
+				{
+					Soaps = "Dove3",
+					Tacos = "Bell3"
+				}
 			};
 
-			var entitiesToReplace = new List<FakeEntityTwo>
+			var entitiesToReplace = new List<FakeEntity>
 			{
-				replacementFakeEntityTwo1,
-				replacementFakeEntityTwo2,
-				replacementFakeEntityTwo3
+				replacementFakeEntity1,
+				replacementFakeEntity2,
+				replacementFakeEntity3
 			};
 
-			var savedFakeEntityTwos = await _adapterFixture.FakeEntityTwoAdapter.ReplaceBulkAsync(entitiesToReplace).ConfigureAwait(false);
+			var savedFakeEntities = await _adapterFixture.FakeEntityAdapter.ReplaceBulkAsync(entitiesToReplace).ConfigureAwait(false);
 
-			TestHelpers.AssertFakeEntityTwosMatch(replacementFakeEntityTwo1, savedFakeEntityTwos.FirstOrDefault(x => x.Id == replacementFakeEntityTwo1.Id));
-			TestHelpers.AssertFakeEntityTwosMatch(replacementFakeEntityTwo2, savedFakeEntityTwos.FirstOrDefault(x => x.Id == replacementFakeEntityTwo2.Id));
-			TestHelpers.AssertFakeEntityTwosMatch(replacementFakeEntityTwo3, savedFakeEntityTwos.FirstOrDefault(x => x.Id == replacementFakeEntityTwo3.Id));
+			TestHelpers.AssertFakeEntitiesMatch(replacementFakeEntity1, savedFakeEntities.FirstOrDefault(x => x.Id == replacementFakeEntity1.Id));
+			TestHelpers.AssertFakeEntitiesMatch(replacementFakeEntity2, savedFakeEntities.FirstOrDefault(x => x.Id == replacementFakeEntity2.Id));
+			TestHelpers.AssertFakeEntitiesMatch(replacementFakeEntity3, savedFakeEntities.FirstOrDefault(x => x.Id == replacementFakeEntity3.Id));
 
-			_adapterFixture.CreatedFakeEntityTwos[0] = savedFakeEntityTwos.FirstOrDefault(x => x.Id == replacementFakeEntityTwo1.Id);
-			_adapterFixture.CreatedFakeEntityTwos[1] = savedFakeEntityTwos.FirstOrDefault(x => x.Id == replacementFakeEntityTwo2.Id);
-			_adapterFixture.CreatedFakeEntityTwos[2] = savedFakeEntityTwos.FirstOrDefault(x => x.Id == replacementFakeEntityTwo3.Id);
+			_adapterFixture.CreatedFakeEntities[0] = savedFakeEntities.FirstOrDefault(x => x.Id == replacementFakeEntity1.Id);
+			_adapterFixture.CreatedFakeEntities[1] = savedFakeEntities.FirstOrDefault(x => x.Id == replacementFakeEntity2.Id);
+			_adapterFixture.CreatedFakeEntities[2] = savedFakeEntities.FirstOrDefault(x => x.Id == replacementFakeEntity3.Id);
 		}
 
 		[Fact, TestPriorityOrder(202)]
 		public async Task ReplaceBulkAsync_Idempotency()
 		{
-			var toUpdate = _adapterFixture.Optimizer.UnpackageFromJson<FakeEntityTwo>(_adapterFixture.Optimizer.PackageToJson(_adapterFixture.CreatedFakeEntityTwos[0]));
+			var toUpdate = _adapterFixture.Optimizer.UnpackageFromJson<FakeEntity>(_adapterFixture.Optimizer.PackageToJson(_adapterFixture.CreatedFakeEntities[0]));
 
-			_adapterFixture.CreatedFakeEntityTwos[0].SearchableLongValue = 999999L;
+			_adapterFixture.CreatedFakeEntities[0].SearchableIntegerValue = 999999;
 
-			var entitiesToReplace = new List<FakeEntityTwo>
+			var entitiesToReplace = new List<FakeEntity>
 			{
-				_adapterFixture.CreatedFakeEntityTwos[0]
+				_adapterFixture.CreatedFakeEntities[0]
 			};
 
-			var result = await _adapterFixture.FakeEntityTwoAdapter.ReplaceBulkAsync(entitiesToReplace).ConfigureAwait(false);
+			var result = await _adapterFixture.FakeEntityAdapter.ReplaceBulkAsync(entitiesToReplace).ConfigureAwait(false);
 			var updatedEntity = result.FirstOrDefault();
 
 			Assert.NotEqual(toUpdate.DataVersion, updatedEntity.DataVersion);
-			Assert.Equal(999999L, _adapterFixture.CreatedFakeEntityTwos[0].SearchableLongValue);
+			Assert.Equal(999999L, _adapterFixture.CreatedFakeEntities[0].SearchableIntegerValue);
 
-			toUpdate.SearchableLongValue = 888888L;
+			toUpdate.SearchableIntegerValue = 888888;
 
-			entitiesToReplace = new List<FakeEntityTwo>
+			entitiesToReplace = new List<FakeEntity>
 			{
 				toUpdate
 			};
 
-			var exception = await Assert.ThrowsAsync<CosmosException>(() => { return _adapterFixture.FakeEntityTwoAdapter.ReplaceBulkAsync(entitiesToReplace); }).ConfigureAwait(false);
+			var exception = await Assert.ThrowsAsync<CosmosException>(() => { return _adapterFixture.FakeEntityAdapter.ReplaceBulkAsync(entitiesToReplace); }).ConfigureAwait(false);
 
 			Assert.NotNull(exception);
 			Assert.Equal(HttpStatusCode.PreconditionFailed, exception.StatusCode);
@@ -240,7 +343,7 @@ namespace dii.cosmos.tests.CosmosTests
 		[Fact, TestPriorityOrder(203)]
 		public async Task ReplaceBulkAsync_Post()
 		{
-			await TestHelpers.DeleteAllFakeEntityTwosAsync(_adapterFixture).ConfigureAwait(false);
+			await TestHelpers.DeleteAllFakeEntitiesAsync(_adapterFixture).ConfigureAwait(false);
 		}
 		#endregion ReplaceBulkAsync
 

@@ -1,6 +1,6 @@
 ﻿using dii.cosmos.tests.Fixtures;
 using dii.cosmos.tests.Models;
-using Microsoft.Azure.Cosmos;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Xunit;
@@ -12,37 +12,41 @@ namespace dii.cosmos.tests.Utilities
 		#region Private Fields
 		private static BindingFlags _privateBindingFlags = BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance;
 		private static BindingFlags _publicBindingFlags = BindingFlags.Static | BindingFlags.Public | BindingFlags.Instance;
-		#endregion Private Fields
+        #endregion Private Fields
 
-		#region Public Methods
+        #region Public Methods
 
-		#region Teardown
-		public static async Task DeleteAllFakeEntitiesAsync(AdapterFixture adapterFixture)
+        #region Init
+
+		public static void PrepContextAndOptimizer()
+        {
+			var context = DiiCosmosContext.Get();
+
+			Assert.NotNull(context);
+			Assert.NotNull(context.TableMappings[typeof(FakeEntity)]);
+
+			var optimizer = Optimizer.Get();
+
+			Assert.NotNull(optimizer);
+			Assert.NotNull(optimizer.Tables.FirstOrDefault(x => x.TableName == nameof(FakeEntity)));
+			Assert.NotNull(optimizer.TableMappings[typeof(FakeEntity)]);
+		}
+
+        #endregion Init
+
+        #region Teardown
+        public static async Task DeleteAllFakeEntitiesAsync(AdapterFixture adapterFixture)
 		{
 			for (var i = 0; i < adapterFixture.CreatedFakeEntities.Count; i++)
 			{
-				var success = await adapterFixture.FakeEntityAdapter.DeleteAsync(adapterFixture.CreatedFakeEntities[i]).ConfigureAwait(false);
-				var shouldBeNull = await adapterFixture.FakeEntityAdapter.GetByIdsAsync(adapterFixture.CreatedFakeEntities[i].Id, adapterFixture.CreatedFakeEntities[i].FakeEntityId).ConfigureAwait(false);
+				var success = await adapterFixture.FakeEntityAdapter.DeleteEntityAsync(adapterFixture.CreatedFakeEntities[i]).ConfigureAwait(false);
+				var shouldBeNull = await adapterFixture.FakeEntityAdapter.GetAsync(adapterFixture.CreatedFakeEntities[i].Id, adapterFixture.CreatedFakeEntities[i].FakeEntityId).ConfigureAwait(false);
 
 				Assert.True(success);
 				Assert.Null(shouldBeNull);
 			}
 
-			adapterFixture.CreatedFakeEntityTwos.Clear();
-		}
-
-		public static async Task DeleteAllFakeEntityTwosAsync(AdapterFixture adapterFixture)
-		{
-			for (var i = 0; i < adapterFixture.CreatedFakeEntityTwos.Count; i++)
-			{
-				var success = await adapterFixture.FakeEntityTwoAdapter.DeleteAsync(adapterFixture.CreatedFakeEntityTwos[i].Id, adapterFixture.CreatedFakeEntityTwos[i].FakeEntityTwoId).ConfigureAwait(false);
-				var shouldBeNull = await adapterFixture.FakeEntityTwoAdapter.GetByIdsAsync(adapterFixture.CreatedFakeEntityTwos[i].Id, adapterFixture.CreatedFakeEntityTwos[i].FakeEntityTwoId).ConfigureAwait(false);
-
-				Assert.True(success);
-				Assert.Null(shouldBeNull);
-			}
-
-			adapterFixture.CreatedFakeEntityTwos.Clear();
+			adapterFixture.CreatedFakeEntities.Clear();
 		}
 
 		public static async Task TeardownCosmosDbAsync()
@@ -157,22 +161,6 @@ namespace dii.cosmos.tests.Utilities
 
 			Assert.Equal(expected.CompressedPackedEntity.PackedDateTimeValue, actual.CompressedPackedEntity.PackedDateTimeValue);
 			Assert.Equal(expected.CompressedPackedEntity.PackedEnumValue, actual.CompressedPackedEntity.PackedEnumValue);
-		}
-
-		public static void AssertFakeEntityTwosMatch(FakeEntityTwo expected, FakeEntityTwo actual, bool checkPrimitiveProperties = false)
-		{
-			// Searchable Fields
-			Assert.Equal(expected.FakeEntityTwoId, actual.FakeEntityTwoId);
-			Assert.Equal(expected.Id, actual.Id);
-			Assert.Equal(expected.SearchableStringValue, actual.SearchableStringValue);
-
-			if (checkPrimitiveProperties)
-			{
-				Assert.Equal(expected.DataVersion, actual.DataVersion);
-			}
-
-			// Compressed Top Level Fields
-			Assert.Equal(expected.CompressedStringValue, actual.CompressedStringValue);
 		}
 		#endregion Assert
 

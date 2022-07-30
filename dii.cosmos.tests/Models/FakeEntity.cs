@@ -113,5 +113,11 @@ namespace dii.cosmos.tests.Models
 		/// </summary>
 		[Compress(7)]
 		public FakeEnum CompressedEnumValue { get; set; }
+
+		/// <summary>
+		/// A value to test complex recursive nesting.
+		/// </summary>
+		[Searchable("xnesting")]
+		public FakeSearchableEntity ComplexSearchable { get; set; }
 	}
 }
