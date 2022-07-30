@@ -428,9 +428,9 @@ namespace dii.cosmos.tests
         {
             var optimizer = Optimizer.Get();
 
-            var exception = Assert.Throws<ArgumentNullException>(() => { optimizer.FromEntity<FakeEntityTwo>(null); });
-            Assert.NotNull(exception);
-            Assert.Equal("Value cannot be null. (Parameter 'obj')", exception.Message);
+            var unpackedEntity = optimizer.FromEntity<FakeInvalidEntity>(null);
+
+            Assert.Null(unpackedEntity);
         }
 
         [Fact, TestPriorityOrder(29)]
