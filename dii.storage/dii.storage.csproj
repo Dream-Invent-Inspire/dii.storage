@@ -4,10 +4,10 @@
     <TargetFramework>net5.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Company>Dream Invent Inspire, Inc</Company>
-    <Description>A framework for managing entities to be stored in CosmosDB. Supports object compression, property name abbreviation, and encryption by annotation.</Description>
+    <Description>A framework for managing entities in storage. Supports object compression, property name abbreviation, and encryption by annotation.</Description>
     <PackageLicenseFile>COPYING.LESSER.txt</PackageLicenseFile>
     <RepositoryUrl>https://github.com/Dream-Invent-Inspire/dii.storage</RepositoryUrl>
-    <PackageTags>Cosmos;CosmosDB;MessagePack;Storage;Compression</PackageTags>
+    <PackageTags>Database;MessagePack;Storage;Compression</PackageTags>
     <Authors>Andrew Beers &amp; Pat MacMannis</Authors>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageId>dii.storage</PackageId>
