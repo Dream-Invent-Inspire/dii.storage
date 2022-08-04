@@ -35,7 +35,7 @@ namespace dii.storage.cosmos.tests.Utilities
 				optimizer = Optimizer.Init(types);
 			}
 
-			context.InitTables(optimizer.Tables.ToArray()).Wait();
+			context.InitTables(optimizer.Tables).Wait();
 
 			return optimizer;
 		}

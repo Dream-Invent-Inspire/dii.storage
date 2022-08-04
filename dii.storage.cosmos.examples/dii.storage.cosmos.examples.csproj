@@ -1,13 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
 
     <IsPackable>false</IsPackable>
-
-    <AssemblyName>dii.storage.tests</AssemblyName>
-
-    <RootNamespace>dii.storage.tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\dii.storage.cosmos\dii.storage.cosmos.csproj" />
     <ProjectReference Include="..\dii.storage\dii.storage.csproj" />
   </ItemGroup>
 

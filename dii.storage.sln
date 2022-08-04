@@ -14,9 +14,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		LICENSE.txt = LICENSE.txt
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dii.storage.cosmos", "dii.storage.cosmos\dii.storage.cosmos.csproj", "{CE352E10-4F1C-4F70-9A8D-F2A5E6D9D123}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dii.storage.cosmos", "dii.storage.cosmos\dii.storage.cosmos.csproj", "{CE352E10-4F1C-4F70-9A8D-F2A5E6D9D123}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dii.storage.cosmos.tests", "dii.storage.cosmos.tests\dii.storage.cosmos.tests.csproj", "{873E2939-3716-45D6-8409-0B28F718F03A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dii.storage.cosmos.tests", "dii.storage.cosmos.tests\dii.storage.cosmos.tests.csproj", "{873E2939-3716-45D6-8409-0B28F718F03A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dii.storage.cosmos.examples", "dii.storage.cosmos.examples\dii.storage.cosmos.examples.csproj", "{F0BA0768-404B-4A05-BCE8-47F346161575}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -40,6 +42,10 @@ Global
 		{873E2939-3716-45D6-8409-0B28F718F03A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{873E2939-3716-45D6-8409-0B28F718F03A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{873E2939-3716-45D6-8409-0B28F718F03A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F0BA0768-404B-4A05-BCE8-47F346161575}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F0BA0768-404B-4A05-BCE8-47F346161575}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F0BA0768-404B-4A05-BCE8-47F346161575}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F0BA0768-404B-4A05-BCE8-47F346161575}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
