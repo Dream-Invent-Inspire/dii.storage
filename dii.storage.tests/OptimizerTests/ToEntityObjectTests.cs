@@ -27,52 +27,55 @@ namespace dii.storage.tests.OptimizerTests
 
             var fakeSearchableEntity = new FakeSearchableEntity
             {
-                Tacos = "Bell",
-                Soaps = "Dove"
-            };
-
-            var entity = (dynamic)optimizer.ToEntityObject<FakeSearchableEntity>(fakeSearchableEntity);
-
-            Assert.NotNull(entity);
-
-            var xtacos = entity.xtacos as string;
-            var xsoaps = entity.xsoaps as string;
-
-            Assert.Equal(fakeSearchableEntity.Tacos, xtacos);
-            Assert.Equal(fakeSearchableEntity.Soaps, xsoaps);
-        }
-
-        [Fact(Skip = "Outstanding nested sub-entity bug test."), TestPriorityOrder(102)]
-        public void ToEntityObject_SuccessNested()
-        {
-            var optimizer = Optimizer.Get();
-
-            var fakeSearchableEntity = new FakeSearchableEntity
-            {
-                Tacos = "Bell",
-                Soaps = "Dove",
-                Nesting = new FakeSearchableEntity
+                SearchableStringValue = $"fakeSearchableEntity: {nameof(FakeSearchableEntity.SearchableStringValue)}",
+                CompressedStringValue = $"fakeSearchableEntity: {nameof(FakeSearchableEntity.CompressedStringValue)}",
+                ComplexSearchable = new FakeSearchableEntityTwo
                 {
-                    Tacos = "Grande",
-                    Soaps = "Ivy"
+                    SearchableStringValue = $"fakeSearchableEntity: {nameof(FakeSearchableEntity.ComplexSearchable)}.{nameof(FakeSearchableEntity.ComplexSearchable.SearchableStringValue)}",
+                    CompressedStringValue = $"fakeSearchableEntity: {nameof(FakeSearchableEntity.ComplexSearchable)}.{nameof(FakeSearchableEntity.ComplexSearchable.CompressedStringValue)}"
                 }
             };
 
             var entity = (dynamic)optimizer.ToEntityObject<FakeSearchableEntity>(fakeSearchableEntity);
 
+            var searchableStringValue = entity.@string as string;
+            var compressedStringValue = entity.p as string;
+            var complexSearchableStringValue = entity.complex.@string as string;
+            var complexCompressedStringValue = entity.complex.p as string;
+
+            Assert.Equal(fakeSearchableEntity.SearchableStringValue, searchableStringValue);
+            Assert.Equal("kdkrZmFrZVNlYXJjaGFibGVFbnRpdHk6IENvbXByZXNzZWRTdHJpbmdWYWx1ZQ==", compressedStringValue);
+            Assert.Equal(fakeSearchableEntity.ComplexSearchable.SearchableStringValue, complexSearchableStringValue);
+            Assert.Equal("kdk9ZmFrZVNlYXJjaGFibGVFbnRpdHk6IENvbXBsZXhTZWFyY2hhYmxlLkNvbXByZXNzZWRTdHJpbmdWYWx1ZQ==", complexCompressedStringValue);
+        }
+
+        [Fact(Skip = "Outstanding recursive sub-entity bug test."), TestPriorityOrder(102)]
+        public void ToEntityObject_SuccessRecursive()
+        {
+            var optimizer = Optimizer.Get();
+
+            var fakeSearchableEntityThree = new FakeSearchableEntityThree
+            {
+                SearchableStringValue = $"fakeSearchableEntityThree: {nameof(FakeSearchableEntityThree.SearchableStringValue)}",
+                CompressedStringValue = $"fakeSearchableEntityThree: {nameof(FakeSearchableEntityThree.CompressedStringValue)}",
+                RecursiveTypeReference = new FakeSearchableEntityThree
+                {
+                    SearchableStringValue = $"fakeSearchableEntityThree: {nameof(FakeSearchableEntityThree.RecursiveTypeReference)}.{nameof(FakeSearchableEntityThree.RecursiveTypeReference.SearchableStringValue)}",
+                    CompressedStringValue = $"fakeSearchableEntityThree: {nameof(FakeSearchableEntityThree.RecursiveTypeReference)}.{nameof(FakeSearchableEntityThree.RecursiveTypeReference.CompressedStringValue)}"
+                }
+            };
+
+            var entity = (dynamic)optimizer.ToEntityObject<FakeSearchableEntityThree>(fakeSearchableEntityThree);
+
             Assert.NotNull(entity);
 
-            var xtacos = entity.xtacos as string;
-            var xsoaps = entity.xsoaps as string;
+            var searchableStringValue = entity.@string as string;
 
             // This may not work. Needs tested when bug is fixed.
-            var xnesting_xtacos = entity.xnesting.xtacos as string;
-            var xnesting_xsoaps = entity.xnesting.xsoaps as string;
+            var complexSearchableStringValue = entity.complex.@string as string;
 
-            Assert.Equal(fakeSearchableEntity.Tacos, xtacos);
-            Assert.Equal(fakeSearchableEntity.Soaps, xsoaps);
-            Assert.Equal(fakeSearchableEntity.Nesting.Tacos, xnesting_xtacos);
-            Assert.Equal(fakeSearchableEntity.Nesting.Soaps, xnesting_xsoaps);
+            Assert.Equal(fakeSearchableEntityThree.SearchableStringValue, searchableStringValue);
+            Assert.Equal(fakeSearchableEntityThree.RecursiveTypeReference.SearchableStringValue, complexSearchableStringValue);
         }
 
         [Fact, TestPriorityOrder(103)]

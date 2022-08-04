@@ -25,7 +25,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
         }
 
 		#region DeleteEntityAsync
-		[Theory, TestPriorityOrder(100), ClassData(typeof(SingleFakeEntityData))]
+		[Theory, TestPriorityOrder(100), ClassData(typeof(CreateFakeEntityData))]
 		public async Task DeleteEntityAsync_Prep(FakeEntity fakeEntity)
 		{
 			// Ensure context exists and is initialized.
@@ -56,7 +56,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
 		#endregion DeleteEntityAsync
 
 		#region DeleteAsync
-		[Theory, TestPriorityOrder(200), ClassData(typeof(SingleFakeEntityData))]
+		[Theory, TestPriorityOrder(200), ClassData(typeof(CreateFakeEntityData))]
 		public async Task DeleteAsync_Prep(FakeEntity fakeEntity)
 		{
 			// Ensure context exists and is initialized.
@@ -87,7 +87,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
 		#endregion DeleteAsync
 
 		#region DeleteEntitiesBulkAsync
-		[Theory, TestPriorityOrder(300), ClassData(typeof(MultipleFakeEntityData))]
+		[Theory, TestPriorityOrder(300), ClassData(typeof(CreateBulkFakeEntityData))]
 		public async Task DeleteEntitiesBulkAsync_Prep(List<FakeEntity> fakeEntities)
 		{
 			// Ensure context exists and is initialized.
@@ -130,7 +130,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
 		#endregion DeleteEntitiesBulkAsync
 
 		#region DeleteBulkAsync
-		[Theory, TestPriorityOrder(400), ClassData(typeof(MultipleFakeEntityData))]
+		[Theory, TestPriorityOrder(400), ClassData(typeof(CreateBulkFakeEntityData))]
 		public async Task DeleteBulkAsync_Prep(List<FakeEntity> fakeEntities)
 		{
 			// Ensure context exists and is initialized.

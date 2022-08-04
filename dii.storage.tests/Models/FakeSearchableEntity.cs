@@ -5,21 +5,21 @@ namespace dii.storage.tests.Models
     public class FakeSearchableEntity
 	{
 		/// <summary>
-		/// The Unique Id for the <see cref="FakeInvalidEntity"/>.
+		/// A <see cref="string"/> value to be searched.
 		/// </summary>
-		[Searchable("xtacos")]
-		public string Tacos { get; set; }
+		[Searchable("string")]
+		public string SearchableStringValue { get; set; }
 
 		/// <summary>
-		/// A <see cref="string"/> value to be searched..
+		/// A <see cref="string"/> value to be compressed.
 		/// </summary>
-		[Searchable("xsoaps")]
-		public string Soaps { get; set; }
+		[Compress(0)]
+		public string CompressedStringValue { get; set; }
 
 		/// <summary>
-		/// A value to test complex recursive nesting.
+		/// A value to test complex nesting.
 		/// </summary>
-		[Searchable("xnesting")]
-		public FakeSearchableEntity Nesting { get; set; }
+		[Searchable("complex")]
+		public FakeSearchableEntityTwo ComplexSearchable { get; set; }
 	}
 }

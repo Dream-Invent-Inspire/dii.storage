@@ -4,6 +4,7 @@ using dii.storage.cosmos.tests.Fixtures;
 using dii.storage.cosmos.tests.Models;
 using dii.storage.cosmos.tests.Orderer;
 using dii.storage.cosmos.tests.Utilities;
+using Microsoft.Azure.Cosmos;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,14 +33,30 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
 			TestHelpers.AssertContextAndOptimizerAreInitialized();
 		}
 
-		[Theory, TestPriorityOrder(101), ClassData(typeof(SingleFakeEntityData))]
-		public async Task CreateAsync_Success(FakeEntity fakeEntity)
+        [Theory, TestPriorityOrder(101), ClassData(typeof(CreateFakeEntityDataWithResponseFlag))]
+		public async Task CreateAsync_Success(FakeEntity fakeEntity, bool returnResult)
 		{
-			var savedFakeEntity = await _adapterFixture.FakeEntityAdapter.CreateAsync(fakeEntity).ConfigureAwait(false);
+			ItemRequestOptions requestOptions = null;
+			
+			if (!returnResult)
+            {
+				requestOptions = new ItemRequestOptions { EnableContentResponseOnWrite = false };
+			}
 
-			TestHelpers.AssertFakeEntitiesMatch(fakeEntity, savedFakeEntity);
+			var savedFakeEntity = await _adapterFixture.FakeEntityAdapter.CreateAsync(fakeEntity, requestOptions).ConfigureAwait(false);
 
-			_adapterFixture.CreatedFakeEntities.Add(savedFakeEntity);
+			if (returnResult)
+			{
+				TestHelpers.AssertFakeEntitiesMatch(fakeEntity, savedFakeEntity);
+
+                _adapterFixture.CreatedFakeEntities.Add(savedFakeEntity);
+			}
+			else
+			{
+				Assert.Null(savedFakeEntity);
+
+                _adapterFixture.CreatedFakeEntities.Add(fakeEntity);
+			}
 		}
 
 		[Fact, TestPriorityOrder(102)]
@@ -57,17 +74,38 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
 			TestHelpers.AssertContextAndOptimizerAreInitialized();
 		}
 
-		[Theory, TestPriorityOrder(201), ClassData(typeof(MultipleFakeEntityData))]
-		public async Task CreateBulkAsync_Success(List<FakeEntity> fakeEntities)
+		[Theory, TestPriorityOrder(201), ClassData(typeof(CreateBulkFakeEntityDataWithResponseFlag))]
+		public async Task CreateBulkAsync_Success(List<FakeEntity> fakeEntities, bool returnResult)
 		{
-			var savedFakeEntities = await _adapterFixture.FakeEntityAdapter.CreateBulkAsync(fakeEntities).ConfigureAwait(false);
+			ItemRequestOptions requestOptions = null;
+
+			if (!returnResult)
+			{
+				requestOptions = new ItemRequestOptions { EnableContentResponseOnWrite = false };
+			}
+
+			var savedFakeEntities = await _adapterFixture.FakeEntityAdapter.CreateBulkAsync(fakeEntities, requestOptions).ConfigureAwait(false);
 
 			foreach (var fakeEntity in fakeEntities)
 			{
-				TestHelpers.AssertFakeEntitiesMatch(fakeEntity, savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity.Id));
+				if (returnResult)
+				{
+					TestHelpers.AssertFakeEntitiesMatch(fakeEntity, savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity.Id));
+				}
+                else
+				{
+					Assert.Null(savedFakeEntities);
+				}
 			}
 
-			_adapterFixture.CreatedFakeEntities.AddRange(savedFakeEntities);
+			if (returnResult)
+			{
+				_adapterFixture.CreatedFakeEntities.AddRange(savedFakeEntities);
+			}
+			else
+			{
+				_adapterFixture.CreatedFakeEntities.AddRange(fakeEntities);
+			}
 		}
 
 		[Fact, TestPriorityOrder(202)]

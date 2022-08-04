@@ -43,7 +43,7 @@ namespace dii.storage.cosmos
 		/// The entity.
 		/// </returns>
 		/// <remarks>
-		/// 
+		/// <see cref="ItemRequestOptions.EnableContentResponseOnWrite"/> is ignored.
 		/// </remarks>
 		protected async Task<T> GetAsync(string id, string partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
@@ -82,9 +82,9 @@ namespace dii.storage.cosmos
 		/// This is meant to perform better latency-wise than a query with IN statements to fetch
 		/// a large number of independent entities.
 		/// </remarks>
-		protected async Task<ICollection<T>> GetManyAsync(IReadOnlyList<(string id, string partitionKey)> idAndPks, ReadManyRequestOptions readManyRequestOptions = null, CancellationToken cancellationToken = default)
+		protected async Task<List<T>> GetManyAsync(IReadOnlyList<(string id, string partitionKey)> idAndPks, ReadManyRequestOptions readManyRequestOptions = null, CancellationToken cancellationToken = default)
 		{
-			var diiEntities = default(ICollection<T>);
+			var diiEntities = default(List<T>);
 
 			if (idAndPks == default)
 			{
@@ -215,9 +215,16 @@ namespace dii.storage.cosmos
 		protected async Task<T> CreateAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			var packedEntity = _optimizer.ToEntity(diiEntity);
-			var partitionKey = _optimizer.GetPartitionKey<T, PartitionKey>(diiEntity);
+			var partitionKey = _optimizer.GetPartitionKey(diiEntity);
 
-			var returnedEntity  = await _container.CreateItemAsync(packedEntity, partitionKey, requestOptions, cancellationToken).ConfigureAwait(false);
+			var returnedEntity  = await _container.CreateItemAsync(packedEntity, new PartitionKey(partitionKey), requestOptions, cancellationToken).ConfigureAwait(false);
+
+			var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
+
+			if (!returnResult)
+            {
+				return default(T);
+            }
 
 			var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
 
@@ -237,9 +244,9 @@ namespace dii.storage.cosmos
 		/// When <see cref="CosmosClientOptions.AllowBulkExecution"/> is set to <see langword="true"/>, allows optimistic batching of requests
 		/// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
 		/// </remarks>
-		protected async Task<ICollection<T>> CreateBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		protected async Task<List<T>> CreateBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
-			var unpackedEntities = default(ICollection<T>);
+			var unpackedEntities = default(List<T>);
 
 			if (diiEntities == null || !diiEntities.Any())
             {
@@ -248,7 +255,7 @@ namespace dii.storage.cosmos
 
 			var packedEntities = diiEntities.Select(x => new
 			{
-				PartitionKey = _optimizer.GetPartitionKey<T, PartitionKey>(x),
+				PartitionKey = _optimizer.GetPartitionKey(x),
 				Entity = _optimizer.ToEntity(x)
 			});
 
@@ -256,11 +263,18 @@ namespace dii.storage.cosmos
 
 			foreach (var packedEntity in packedEntities)
 			{
-				var task = _container.CreateItemAsync(packedEntity.Entity, packedEntity.PartitionKey, requestOptions, cancellationToken);
+				var task = _container.CreateItemAsync(packedEntity.Entity, new PartitionKey(packedEntity.PartitionKey), requestOptions, cancellationToken);
 				concurrentTasks.Add(task);
 			}
 
 			var itemResponses = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+
+			var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
+
+			if (!returnResult)
+			{
+				return unpackedEntities;
+			}
 
 			unpackedEntities = itemResponses.Select(x => _optimizer.FromEntity<T>(x.Resource)).ToList();
 
@@ -293,10 +307,17 @@ namespace dii.storage.cosmos
 			}
 
 			var packedEntity = _optimizer.ToEntity(diiEntity);
-			var partitionKey = _optimizer.GetPartitionKey<T, PartitionKey>(diiEntity);
+			var partitionKey = _optimizer.GetPartitionKey(diiEntity);
 			var id = _optimizer.GetId(diiEntity);
 
-			var returnedEntity = await _container.ReplaceItemAsync(packedEntity, id, partitionKey, requestOptions, cancellationToken).ConfigureAwait(false);
+			var returnedEntity = await _container.ReplaceItemAsync(packedEntity, id, new PartitionKey(partitionKey), requestOptions, cancellationToken).ConfigureAwait(false);
+
+			var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
+
+			if (!returnResult)
+			{
+				return default(T);
+			}
 
 			var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
 
@@ -323,9 +344,9 @@ namespace dii.storage.cosmos
 		/// This operation does not work on entities that use the same value for both the id and parition key.
 		/// </para>
 		/// </remarks>
-		protected async Task<ICollection<T>> ReplaceBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		protected async Task<List<T>> ReplaceBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
-			var unpackedEntities = default(ICollection<T>);
+			var unpackedEntities = default(List<T>);
 
 			if (diiEntities == null || !diiEntities.Any())
 			{
@@ -335,7 +356,7 @@ namespace dii.storage.cosmos
 			var packedEntities = diiEntities.Select(x => new
 			{
 				Id = _optimizer.GetId(x),
-				PartitionKey = _optimizer.GetPartitionKey<T, PartitionKey>(x),
+				PartitionKey = _optimizer.GetPartitionKey(x),
 				Entity = _optimizer.ToEntity(x),
 				UnpackedEntity = x
 			});
@@ -350,7 +371,7 @@ namespace dii.storage.cosmos
 					requestOptions = new ItemRequestOptions { IfMatchEtag = packedEntity.UnpackedEntity.DataVersion };
 				}
 
-				var task = _container.ReplaceItemAsync(packedEntity.Entity, packedEntity.Id, packedEntity.PartitionKey, requestOptions, cancellationToken);
+				var task = _container.ReplaceItemAsync(packedEntity.Entity, packedEntity.Id, new PartitionKey(packedEntity.PartitionKey), requestOptions, cancellationToken);
 				concurrentTasks.Add(task);
 
 				if (generateRequestOptions)
@@ -360,6 +381,13 @@ namespace dii.storage.cosmos
 			}
 
 			var itemResponses = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+
+			var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
+
+			if (!returnResult)
+			{
+				return unpackedEntities;
+			}
 
 			unpackedEntities = itemResponses.Select(x => _optimizer.FromEntity<T>(x.Resource)).ToList();
 
@@ -388,9 +416,16 @@ namespace dii.storage.cosmos
 			}
 
 			var packedEntity = _optimizer.ToEntity(diiEntity);
-			var partitionKey = _optimizer.GetPartitionKey<T, PartitionKey>(diiEntity);
+			var partitionKey = _optimizer.GetPartitionKey(diiEntity);
 
-			var returnedEntity = await _container.UpsertItemAsync(packedEntity, partitionKey, requestOptions, cancellationToken).ConfigureAwait(false);
+			var returnedEntity = await _container.UpsertItemAsync(packedEntity, new PartitionKey(partitionKey), requestOptions, cancellationToken).ConfigureAwait(false);
+
+			var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
+
+			if (!returnResult)
+			{
+				return default(T);
+			}
 
 			var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
 
@@ -410,9 +445,9 @@ namespace dii.storage.cosmos
 		/// When <see cref="CosmosClientOptions.AllowBulkExecution"/> is set to <see langword="true"/>, allows optimistic batching of requests
 		/// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
 		/// </remarks>
-		protected async Task<ICollection<T>> UpsertBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		protected async Task<List<T>> UpsertBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
-			var unpackedEntities = default(ICollection<T>);
+			var unpackedEntities = default(List<T>);
 
 			if (diiEntities == null || !diiEntities.Any())
 			{
@@ -421,7 +456,7 @@ namespace dii.storage.cosmos
 
 			var packedEntities = diiEntities.Select(x => new
 			{
-				PartitionKey = _optimizer.GetPartitionKey<T, PartitionKey>(x),
+				PartitionKey = _optimizer.GetPartitionKey(x),
 				Entity = _optimizer.ToEntity(x),
 				UnpackedEntity = x
 			});
@@ -436,7 +471,7 @@ namespace dii.storage.cosmos
 					requestOptions = new ItemRequestOptions { IfMatchEtag = packedEntity.UnpackedEntity.DataVersion };
 				}
 
-				var task = _container.UpsertItemAsync(packedEntity.Entity, packedEntity.PartitionKey, requestOptions, cancellationToken);
+				var task = _container.UpsertItemAsync(packedEntity.Entity, new PartitionKey(packedEntity.PartitionKey), requestOptions, cancellationToken);
 				concurrentTasks.Add(task);
 
 				if (generateRequestOptions)
@@ -446,6 +481,13 @@ namespace dii.storage.cosmos
 			}
 
 			var itemResponses = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+
+			var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
+
+			if (!returnResult)
+			{
+				return unpackedEntities;
+			}
 
 			unpackedEntities = itemResponses.Select(x => _optimizer.FromEntity<T>(x.Resource)).ToList();
 
@@ -476,6 +518,13 @@ namespace dii.storage.cosmos
 		{
 			var returnedEntity = await _container.PatchItemAsync<object>(id, new PartitionKey(partitionKey), patchOperations, requestOptions, cancellationToken).ConfigureAwait(false);
 
+			var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
+
+			if (!returnResult)
+			{
+				return default(T);
+			}
+
 			var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
 
 			return unpackedEntity;
@@ -501,9 +550,9 @@ namespace dii.storage.cosmos
 		/// flag to false.
 		/// </para>
 		/// </remarks>
-		protected async Task<ICollection<T>> PatchBulkAsync(IReadOnlyList<(string id, string partitionKey, IReadOnlyList<PatchOperation> listOfPatchOperations)> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+		protected async Task<List<T>> PatchBulkAsync(IReadOnlyList<(string id, string partitionKey, IReadOnlyList<PatchOperation> listOfPatchOperations)> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
-			var unpackedEntities = default(ICollection<T>);
+			var unpackedEntities = default(List<T>);
 
 			if (patchOperations == null || !patchOperations.Any())
 			{
@@ -519,6 +568,13 @@ namespace dii.storage.cosmos
 			}
 
 			var itemResponses = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+
+			var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
+
+			if (!returnResult)
+			{
+				return unpackedEntities;
+			}
 
 			unpackedEntities = itemResponses.Select(x => _optimizer.FromEntity<T>(x.Resource)).ToList();
 
@@ -537,7 +593,7 @@ namespace dii.storage.cosmos
 		/// The success status of the operation.
 		/// </returns>
 		/// <remarks>
-		/// 
+		/// <see cref="ItemRequestOptions.EnableContentResponseOnWrite"/> is ignored.
 		/// </remarks>
 		protected Task<bool> DeleteEntityAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
@@ -558,7 +614,7 @@ namespace dii.storage.cosmos
 		/// The success status of the operation.
 		/// </returns>
 		/// <remarks>
-		/// 
+		/// <see cref="ItemRequestOptions.EnableContentResponseOnWrite"/> is ignored.
 		/// </remarks>
 		protected async Task<bool> DeleteAsync(string id, string partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
@@ -579,6 +635,7 @@ namespace dii.storage.cosmos
 		/// <remarks>
 		/// When <see cref="CosmosClientOptions.AllowBulkExecution"/> is set to <see langword="true"/>, allows optimistic batching of requests
 		/// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
+		/// <see cref="ItemRequestOptions.EnableContentResponseOnWrite"/> is ignored.
 		/// </remarks>
 		protected Task<bool> DeleteEntitiesBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
@@ -603,6 +660,7 @@ namespace dii.storage.cosmos
 		/// <remarks>
 		/// When <see cref="CosmosClientOptions.AllowBulkExecution"/> is set to <see langword="true"/>, allows optimistic batching of requests
 		/// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
+		/// <see cref="ItemRequestOptions.EnableContentResponseOnWrite"/> is ignored.
 		/// </remarks>
 		protected async Task<bool> DeleteBulkAsync(IReadOnlyList<(string id, string partitionKey)> idAndPks, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{

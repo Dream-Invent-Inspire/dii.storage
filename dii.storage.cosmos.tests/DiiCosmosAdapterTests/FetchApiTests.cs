@@ -25,7 +25,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
         }
 
 		#region GetAsync
-		[Theory, TestPriorityOrder(100), ClassData(typeof(SingleFakeEntityData))]
+		[Theory, TestPriorityOrder(100), ClassData(typeof(CreateFakeEntityData))]
 		public async Task GetAsync_Prep(FakeEntity fakeEntity)
 		{
             // Ensure context exists and is initialized.
@@ -55,7 +55,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
         #endregion GetAsync
 
         #region GetManyAsync
-        [Theory, TestPriorityOrder(200), ClassData(typeof(MultipleFakeEntityData))]
+        [Theory, TestPriorityOrder(200), ClassData(typeof(CreateBulkFakeEntityData))]
         public async Task GetManyAsync_Prep(List<FakeEntity> fakeEntities)
         {
             // Ensure context exists and is initialized.
@@ -99,7 +99,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
         #endregion GetManyAsync
 
         #region GetPagedAsync (w/QueryDefinition)
-        [Theory, TestPriorityOrder(300), ClassData(typeof(MultipleFakeEntityData))]
+        [Theory, TestPriorityOrder(300), ClassData(typeof(CreateBulkFakeEntityData))]
         public async Task GetPagedAsync_QueryDefinition_Prep(List<FakeEntity> fakeEntities)
         {
             // Ensure context exists and is initialized.
@@ -137,7 +137,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
         #endregion GetPagedAsync (w/QueryDefinition)
 
         #region GetPagedAsync (w/Query Text)
-        [Theory, TestPriorityOrder(400), ClassData(typeof(MultipleFakeEntityData))]
+        [Theory, TestPriorityOrder(400), ClassData(typeof(CreateBulkFakeEntityData))]
         public async Task GetPagedAsync_QueryText_Prep(List<FakeEntity> fakeEntities)
         {
             // Ensure context exists and is initialized.

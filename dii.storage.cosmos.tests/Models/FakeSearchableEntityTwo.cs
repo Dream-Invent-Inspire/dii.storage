@@ -2,7 +2,7 @@
 
 namespace dii.storage.cosmos.tests.Models
 {
-    public class FakeSearchableEntity
+    public class FakeSearchableEntityTwo
 	{
 		/// <summary>
 		/// A <see cref="string"/> value to be searched.
@@ -15,11 +15,5 @@ namespace dii.storage.cosmos.tests.Models
 		/// </summary>
 		[Compress(0)]
 		public string CompressedStringValue { get; set; }
-
-		/// <summary>
-		/// A value to test complex recursive nesting.
-		/// </summary>
-		[Searchable("complex")]
-		public FakeSearchableEntityTwo ComplexSearchable { get; set; }
 	}
 }

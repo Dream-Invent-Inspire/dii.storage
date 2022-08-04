@@ -26,7 +26,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
         }
 
 		#region PatchAsync
-		[Theory, TestPriorityOrder(100), ClassData(typeof(SingleFakeEntityData))]
+		[Theory, TestPriorityOrder(100), ClassData(typeof(CreateFakeEntityData))]
 		public async Task PatchAsync_Prep(FakeEntity fakeEntity)
 		{
 			// Ensure context exists and is initialized.
@@ -39,29 +39,41 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
 			_adapterFixture.CreatedFakeEntities.Add(savedFakeEntity);
 		}
 
-		[Fact, TestPriorityOrder(101)]
-		public async Task PatchAsync_Success()
+		[Theory, TestPriorityOrder(101), ClassData(typeof(PatchDataWithResponseFlag))]
+		public async Task PatchAsync_Success(List<(PatchOperation patchOperation, string expectedValue)> patchOperations, bool returnResult)
 		{
 			var fakeEntity = _adapterFixture.CreatedFakeEntities[0];
-			var newValue = "fakeEntity: UPDATED";
 
-			var patchOperations = new List<PatchOperation>()
+			PatchItemRequestOptions requestOptions = null;
+
+			if (!returnResult)
 			{
-				PatchOperation.Replace("/string", newValue),
-			};
+				requestOptions = new PatchItemRequestOptions { EnableContentResponseOnWrite = false };
+			}
 
-			var patchedFakeEntity = await _adapterFixture.FakeEntityAdapter.PatchAsync(fakeEntity.Id, fakeEntity.FakeEntityId, patchOperations).ConfigureAwait(false);
+			var patchedFakeEntity = await _adapterFixture.FakeEntityAdapter.PatchAsync(fakeEntity.Id, fakeEntity.FakeEntityId, patchOperations.Select(x => x.patchOperation).ToList(), requestOptions).ConfigureAwait(false);
 
-			Assert.Equal(newValue, patchedFakeEntity.SearchableStringValue);
+			if (returnResult)
+			{
+				Assert.Equal(patchOperations.Select(x => x.expectedValue).FirstOrDefault(), patchedFakeEntity.SearchableStringValue);
 
-			_adapterFixture.CreatedFakeEntities[0] = patchedFakeEntity;
+				_adapterFixture.CreatedFakeEntities[0] = patchedFakeEntity;
+			}
+			else
+			{
+				Assert.Null(patchedFakeEntity);
+
+				fakeEntity.SearchableStringValue = patchOperations.Select(x => x.expectedValue).FirstOrDefault();
+
+				_adapterFixture.CreatedFakeEntities[0] = fakeEntity;
+			}
 		}
 
 		[Fact, TestPriorityOrder(102)]
 		public async Task PatchAsync_SuccessSequential()
 		{
 			var fakeEntity = _adapterFixture.CreatedFakeEntities[0];
-			var newString = "fakeEntity: UPDATED Again";
+			var newString = "fakeEntity: UPDATED Yet Again";
 			var increment = 17;
 
 			var patchOperations = new List<PatchOperation>()
@@ -89,7 +101,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
 		#endregion PatchAsync
 
 		#region PatchBulkAsync
-		[Theory, TestPriorityOrder(200), ClassData(typeof(MultipleFakeEntityData))]
+		[Theory, TestPriorityOrder(200), ClassData(typeof(CreateBulkFakeEntityData))]
 		public async Task PatchBulkAsync_Prep(List<FakeEntity> fakeEntities)
 		{
 			// Ensure context exists and is initialized.
@@ -105,48 +117,51 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
 			_adapterFixture.CreatedFakeEntities.AddRange(savedFakeEntities);
 		}
 
-		[Fact, TestPriorityOrder(201)]
-		public async Task PatchBulkAsync_Success()
+		[Theory, TestPriorityOrder(201), ClassData(typeof(PatchBulkDataWithResponseFlag))]
+		public async Task PatchBulkAsync_Success(List<(List<PatchOperation> patchOperation, string expectedValue)> patchOperations, bool returnResult)
 		{
 			var fakeEntity1 = _adapterFixture.CreatedFakeEntities[0];
 			var fakeEntity2 = _adapterFixture.CreatedFakeEntities[1];
 			var fakeEntity3 = _adapterFixture.CreatedFakeEntities[2];
 
-			var newValue1 = "fakeEntity1: UPDATED";
-			var newValue2 = "fakeEntity2: UPDATED";
-			var newValue3 = "fakeEntity3: UPDATED";
+			var patchBulkOperations = new List<(string id, string partitionKey, IReadOnlyList<PatchOperation> listOfPatchOperations)>
+            {
+                (fakeEntity1.Id, fakeEntity1.FakeEntityId, patchOperations[0].patchOperation),
+                (fakeEntity2.Id, fakeEntity2.FakeEntityId, patchOperations[1].patchOperation),
+                (fakeEntity3.Id, fakeEntity3.FakeEntityId, patchOperations[2].patchOperation)
+            };
 
-			var patchOperations1 = new List<PatchOperation>()
+			PatchItemRequestOptions requestOptions = null;
+
+			if (!returnResult)
 			{
-				PatchOperation.Replace("/string", newValue1),
-			};
+				requestOptions = new PatchItemRequestOptions { EnableContentResponseOnWrite = false };
+			}
 
-			var patchOperations2 = new List<PatchOperation>()
+			var savedFakeEntities = await _adapterFixture.FakeEntityAdapter.PatchBulkAsync(patchBulkOperations, requestOptions).ConfigureAwait(false);
+
+			if (returnResult)
 			{
-				PatchOperation.Replace("/string", newValue2),
-			};
+				Assert.Equal(patchOperations[0].expectedValue, savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity1.Id).SearchableStringValue);
+				Assert.Equal(patchOperations[1].expectedValue, savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity2.Id).SearchableStringValue);
+				Assert.Equal(patchOperations[2].expectedValue, savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity3.Id).SearchableStringValue);
 
-			var patchOperations3 = new List<PatchOperation>()
+				_adapterFixture.CreatedFakeEntities[0] = savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity1.Id);
+				_adapterFixture.CreatedFakeEntities[1] = savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity2.Id);
+				_adapterFixture.CreatedFakeEntities[2] = savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity3.Id);
+			}
+			else
 			{
-				PatchOperation.Replace("/string", newValue3),
-			};
+				Assert.Null(savedFakeEntities);
 
-			var patchOperations = new List<(string id, string partitionKey, IReadOnlyList<PatchOperation> listOfPatchOperations)>
-			{
-				(fakeEntity1.Id, fakeEntity1.FakeEntityId, patchOperations1),
-				(fakeEntity2.Id, fakeEntity2.FakeEntityId, patchOperations2),
-				(fakeEntity3.Id, fakeEntity3.FakeEntityId, patchOperations3)
-			};
+				fakeEntity1.SearchableStringValue = patchOperations[0].expectedValue;
+				fakeEntity2.SearchableStringValue = patchOperations[1].expectedValue;
+				fakeEntity3.SearchableStringValue = patchOperations[2].expectedValue;
 
-			var savedFakeEntities = await _adapterFixture.FakeEntityAdapter.PatchBulkAsync(patchOperations).ConfigureAwait(false);
-
-			Assert.Equal(newValue1, savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity1.Id).SearchableStringValue);
-			Assert.Equal(newValue2, savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity2.Id).SearchableStringValue);
-			Assert.Equal(newValue3, savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity3.Id).SearchableStringValue);
-
-			_adapterFixture.CreatedFakeEntities[0] = savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity1.Id);
-			_adapterFixture.CreatedFakeEntities[1] = savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity2.Id);
-			_adapterFixture.CreatedFakeEntities[2] = savedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity3.Id);
+				_adapterFixture.CreatedFakeEntities[0] = fakeEntity1;
+				_adapterFixture.CreatedFakeEntities[1] = fakeEntity2;
+				_adapterFixture.CreatedFakeEntities[2] = fakeEntity3;
+			}
 		}
 
 		[Fact, TestPriorityOrder(202)]

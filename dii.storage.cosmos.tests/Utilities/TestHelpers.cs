@@ -12,8 +12,8 @@ namespace dii.storage.cosmos.tests.Utilities
     public static class TestHelpers
     {
 		#region Private Fields
-		private static BindingFlags _privateBindingFlags = BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance;
-		private static BindingFlags _publicBindingFlags = BindingFlags.Static | BindingFlags.Public | BindingFlags.Instance;
+		private static readonly BindingFlags _privateBindingFlags = BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance;
+		private static readonly BindingFlags _publicBindingFlags = BindingFlags.Static | BindingFlags.Public | BindingFlags.Instance;
         #endregion Private Fields
 
         #region Public Methods

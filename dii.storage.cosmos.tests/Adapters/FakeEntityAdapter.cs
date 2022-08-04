@@ -15,7 +15,7 @@ namespace dii.storage.cosmos.tests.Adapters
             return base.GetAsync(id, partitionKey, requestOptions, cancellationToken);
         }
 
-        Task<ICollection<FakeEntity>> IFakeAdapter<FakeEntity>.GetManyAsync(IReadOnlyList<(string id, string partitionKey)> idAndPks, ReadManyRequestOptions readManyRequestOptions, CancellationToken cancellationToken)
+        Task<List<FakeEntity>> IFakeAdapter<FakeEntity>.GetManyAsync(IReadOnlyList<(string id, string partitionKey)> idAndPks, ReadManyRequestOptions readManyRequestOptions, CancellationToken cancellationToken)
         {
             return base.GetManyAsync(idAndPks, readManyRequestOptions, cancellationToken);
         }
@@ -35,7 +35,7 @@ namespace dii.storage.cosmos.tests.Adapters
             return base.CreateAsync(diiEntity, requestOptions, cancellationToken);
         }
 
-        Task<ICollection<FakeEntity>> IFakeAdapter<FakeEntity>.CreateBulkAsync(IReadOnlyList<FakeEntity> diiEntities, ItemRequestOptions requestOptions, CancellationToken cancellationToken)
+        Task<List<FakeEntity>> IFakeAdapter<FakeEntity>.CreateBulkAsync(IReadOnlyList<FakeEntity> diiEntities, ItemRequestOptions requestOptions, CancellationToken cancellationToken)
         {
             return base.CreateBulkAsync(diiEntities, requestOptions, cancellationToken);
         }
@@ -45,7 +45,7 @@ namespace dii.storage.cosmos.tests.Adapters
             return base.ReplaceAsync(diiEntity, requestOptions, cancellationToken);
         }
 
-        Task<ICollection<FakeEntity>> IFakeAdapter<FakeEntity>.ReplaceBulkAsync(IReadOnlyList<FakeEntity> diiEntities, ItemRequestOptions requestOptions, CancellationToken cancellationToken)
+        Task<List<FakeEntity>> IFakeAdapter<FakeEntity>.ReplaceBulkAsync(IReadOnlyList<FakeEntity> diiEntities, ItemRequestOptions requestOptions, CancellationToken cancellationToken)
         {
             return base.ReplaceBulkAsync(diiEntities, requestOptions, cancellationToken);
         }
@@ -55,7 +55,7 @@ namespace dii.storage.cosmos.tests.Adapters
             return base.UpsertAsync(diiEntity, requestOptions, cancellationToken);
         }
 
-        Task<ICollection<FakeEntity>> IFakeAdapter<FakeEntity>.UpsertBulkAsync(IReadOnlyList<FakeEntity> diiEntities, ItemRequestOptions requestOptions, CancellationToken cancellationToken)
+        Task<List<FakeEntity>> IFakeAdapter<FakeEntity>.UpsertBulkAsync(IReadOnlyList<FakeEntity> diiEntities, ItemRequestOptions requestOptions, CancellationToken cancellationToken)
         {
             return base.UpsertBulkAsync(diiEntities, requestOptions, cancellationToken);
         }
@@ -65,7 +65,7 @@ namespace dii.storage.cosmos.tests.Adapters
             return base.PatchAsync(id, partitionKey, patchOperations, requestOptions, cancellationToken);
         }
 
-        Task<ICollection<FakeEntity>> IFakeAdapter<FakeEntity>.PatchBulkAsync(IReadOnlyList<(string id, string partitionKey, IReadOnlyList<PatchOperation> listOfPatchOperations)> patchOperations, PatchItemRequestOptions requestOptions, CancellationToken cancellationToken)
+        Task<List<FakeEntity>> IFakeAdapter<FakeEntity>.PatchBulkAsync(IReadOnlyList<(string id, string partitionKey, IReadOnlyList<PatchOperation> listOfPatchOperations)> patchOperations, PatchItemRequestOptions requestOptions, CancellationToken cancellationToken)
         {
             return base.PatchBulkAsync(patchOperations, requestOptions, cancellationToken);
         }
