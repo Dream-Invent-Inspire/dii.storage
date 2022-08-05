@@ -19,7 +19,7 @@ namespace dii.storage.cosmos.examples.Fixtures
 
         public ExamplePersonAdapterFixture()
         {
-            NoSqlDatabaseConfig = new CosmosDatabaseConfig();
+            NoSqlDatabaseConfig = new ExampleConfig();
 
             var context = DiiCosmosContext.Init(NoSqlDatabaseConfig);
 

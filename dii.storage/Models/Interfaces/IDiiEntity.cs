@@ -2,6 +2,9 @@
 
 namespace dii.storage.Models.Interfaces
 {
+	/// <summary>
+	/// The contract to ensure clean interaction with <see cref="Optimizer"/>.
+	/// </summary>
     public interface IDiiEntity
 	{
 		/// <summary>

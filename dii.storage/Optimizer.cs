@@ -14,7 +14,12 @@ using System.Text.Json.Serialization;
 
 namespace dii.storage
 {
-    public class Optimizer
+    /// <summary>
+    /// The dii.storage engine that dynamically creates and registers all types used for storage.
+    /// Only one instance of the <see cref="Optimizer"/> can exist at a time.
+    /// This class cannot be inherited.
+    /// </summary>
+    public sealed class Optimizer
 	{
 		#region Private Fields
 		private static Optimizer _instance;
@@ -37,12 +42,36 @@ namespace dii.storage
 		#endregion Private Fields
 
 		#region Public Fields
+		/// <summary>
+		/// A collection of <see cref="TableMetaData"/> initialized with this instance of the <see cref="Optimizer"/>.
+		/// </summary>
 		public readonly List<TableMetaData> Tables;
+
+		/// <summary>
+		/// A <see cref="Dictionary{TKey, TValue}"/> of concrete <see cref="Type"/> mapped to their <see cref="TableMetaData"/>
+		/// record initialized with this instance of the <see cref="Optimizer"/>.
+		/// <para>
+		/// All types within this collection implement the <see cref="IDiiEntity"/> interface.
+		/// </para>
+		/// </summary>
 		public readonly Dictionary<Type, TableMetaData> TableMappings;
+
+		/// <summary>
+		/// A <see cref="Dictionary{TKey, TValue}"/> of concrete <see cref="Type"/> mapped to their <see cref="TableMetaData"/>
+		/// record initialized with this instance of the <see cref="Optimizer"/>.
+		/// <para>
+		/// All types within this collection do not implement the <see cref="IDiiEntity"/> interface. They are
+		/// user-defined objects that are typically found as properties within the objects found in <see cref="Tables"/>.
+		/// </para>
+		/// </summary>
 		public readonly Dictionary<Type, Type> SubPropertyMapping;
 		#endregion Public Fields
 
 		#region Constructors
+		/// <summary>
+		/// Initializes an instance of <see cref="Optimizer"/>.
+		/// </summary>
+		/// <param name="types">An array of <see cref="Type"/> to register. All types must implement the <see cref="IDiiEntity"/> interface.</param>
 		private Optimizer(params Type[] types)
 		{
 			_packing = new Dictionary<Type, Serializer>();
@@ -62,11 +91,26 @@ namespace dii.storage
 		#endregion Constructors
 
 		#region Public Methods
+		/// <summary>
+		/// Creates a singleton of the <see cref="Optimizer"/>.
+		/// </summary>
+		/// <param name="types">An array of <see cref="Type"/> to register. All types must implement the <see cref="IDiiEntity"/> interface.</param>
+		/// <returns>
+		/// The instance of <see cref="Optimizer"/>.
+		/// </returns>
 		public static Optimizer Init(params Type[] types)
 		{
 			return InitializeOptimizer(types);
 		}
 
+		/// <summary>
+		/// Creates a singleton of the <see cref="Optimizer"/>.
+		/// </summary>
+		/// <param name="ignoreInvalidDiiEntities">When <see langword="true" />, invalid <see cref="Type"/> will be ignored and not throw an exception.</param>
+		/// <param name="types">An array of <see cref="Type"/> to register. All types must implement the <see cref="IDiiEntity"/> interface.</param>
+		/// <returns>
+		/// The instance of <see cref="Optimizer"/>.
+		/// </returns>
 		public static Optimizer Init(bool ignoreInvalidDiiEntities = false, params Type[] types)
 		{
 			_ignoreInvalidDiiEntities = ignoreInvalidDiiEntities;
@@ -74,6 +118,17 @@ namespace dii.storage
 			return InitializeOptimizer(types);
 		}
 
+		/// <summary>
+		/// Creates a singleton of the <see cref="Optimizer"/>.
+		/// </summary>
+		/// <param name="autoDetectTypes">
+		/// When <see langword="true" />, the <see cref="Optimizer"/> will search all assemblies for any objects
+		/// that implement the <see cref="IDiiEntity"/> interface and attempt to register them.
+		/// </param>
+		/// <param name="ignoreInvalidDiiEntities">When <see langword="true" />, invalid <see cref="Type"/> will be ignored and not throw an exception.</param>
+		/// <returns>
+		/// The instance of <see cref="Optimizer"/>.
+		/// </returns>
 		public static Optimizer Init(bool autoDetectTypes = false, bool ignoreInvalidDiiEntities = false)
 		{
 			_autoDetectTypes = autoDetectTypes;
@@ -82,6 +137,15 @@ namespace dii.storage
 			return InitializeOptimizer();
 		}
 
+		/// <summary>
+		/// Returns the singleton of the <see cref="Optimizer"/>.
+		/// </summary>
+		/// <exception cref="DiiNotInitializedException">
+		/// The <see cref="Optimizer"/> has not been initialized yet.
+		/// </exception>
+		/// <returns>
+		/// The instance of <see cref="Optimizer"/> or throws an exception if it does not exist.
+		/// </returns>
 		public static Optimizer Get()
 		{
 			if (_instance == null)
@@ -92,6 +156,16 @@ namespace dii.storage
 			return _instance;
 		}
 
+		/// <summary>
+		/// Attempts to register an array of <see cref="Type"/> to the <see cref="Optimizer"/>.
+		/// Any <see cref="Type"/> that is already registered will be ignored.
+		/// </summary>
+		/// <param name="types">An array of <see cref="Type"/> to register. All types must implement the <see cref="IDiiEntity"/> interface.</param>
+		/// <remarks>
+		/// When <see cref="Init(bool, bool)"/> has been used with autoDetectTypes = <see langword="true" />,
+		/// the <see cref="Optimizer"/> will search all assemblies for any objects that implement the 
+		/// <see cref="IDiiEntity"/> interface and attempt to register them.
+		/// </remarks>
 		public void ConfigureTypes(params Type[] types)
 		{
 			if (_autoDetectTypes)
@@ -132,16 +206,45 @@ namespace dii.storage
 			}
 		}
 
+		/// <summary>
+		/// Identified whether a <see cref="Type"/> is already registered with the <see cref="Optimizer"/>
+		/// as a concrete type.
+		/// </summary>
+		/// <param name="type">The <see cref="Type"/> to check.</param>
+		/// <returns>
+		/// Returns <see langword="true" /> when the <see cref="Type"/> is registered with the instance
+		/// of <see cref="Optimizer"/> as a concrete type.
+		/// </returns>
 		public bool IsKnownConcreteType(Type type)
 		{
 			return _packing.ContainsKey(type);
 		}
 
+		/// <summary>
+		/// Identified whether a <see cref="Type"/> is already registered with the <see cref="Optimizer"/>
+		/// as an emit type.
+		/// </summary>
+		/// <param name="type">The <see cref="Type"/> to check.</param>
+		/// <returns>
+		/// Returns <see langword="true" /> when the <see cref="Type"/> is registered with the instance
+		/// of <see cref="Optimizer"/> as an emit type.
+		/// </returns>
 		public bool IsKnownEmitType(Type type)
 		{
 			return _unpacking.ContainsKey(type);
 		}
 
+		/// <summary>
+		/// Parses an entity of type <typeparamref name="T"/> to a packaged object.
+		/// </summary>
+		/// <typeparam name="T">The <see cref="Type"/> to package.</typeparam>
+		/// <param name="obj">The object to be packaged.</param>
+		/// <exception cref="ArgumentNullException">
+		/// The entity to package is null.
+		/// </exception>
+		/// <returns>
+		/// The packaged object.
+		/// </returns>
 		public object ToEntity<T>(T obj)
 		{
 			if (obj == null)
@@ -159,6 +262,17 @@ namespace dii.storage
 			return default(object);
 		}
 
+		/// <summary>
+		/// Parses an entity of type <see cref="object"/> to a packaged object.
+		/// </summary>
+		/// <typeparam name="T">The <see cref="Type"/> to package.</typeparam>
+		/// <param name="obj">The object to be packaged.</param>
+		/// <exception cref="ArgumentNullException">
+		/// The entity to package is null.
+		/// </exception>
+		/// <returns>
+		/// The packaged object.
+		/// </returns>
 		public object ToEntityObject<T>(object obj)
 		{
 			if (obj == null)
@@ -176,6 +290,14 @@ namespace dii.storage
 			return default(object);
 		}
 
+		/// <summary>
+		/// Parses an entity of type <see cref="object"/> to an unpackaged <typeparamref name="T"/>.
+		/// </summary>
+		/// <typeparam name="T">The <see cref="Type"/> to unpackage the object to.</typeparam>
+		/// <param name="obj">The object to be unpackaged.</param>
+		/// <returns>
+		/// The unpackaged entity.
+		/// </returns>
 		public T FromEntity<T>(object obj) where T : new()
 		{
 			if (obj == null)
@@ -200,6 +322,17 @@ namespace dii.storage
 			return default(T);
 		}
 
+		/// <summary>
+		/// Parses an entity of type <typeparamref name="T"/> to a json string.
+		/// </summary>
+		/// <typeparam name="T">The <see cref="Type"/> to package.</typeparam>
+		/// <param name="obj">The object to be packaged.</param>
+		/// <exception cref="ArgumentNullException">
+		/// The object to parse to a json string is null.
+		/// </exception>
+		/// <returns>
+		/// The packaged object as a json string.
+		/// </returns>
 		public string PackageToJson<T>(T obj)
 		{
 			if (obj == null)
@@ -217,6 +350,17 @@ namespace dii.storage
 			return default(string);
 		}
 
+		/// <summary>
+		/// Parses a json string to an entity of type <typeparamref name="T"/>.
+		/// </summary>
+		/// <typeparam name="T">The <see cref="Type"/> to unpackage the object to.</typeparam>
+		/// <param name="json">The json string to be unpackaged.</param>
+		/// <exception cref="ArgumentNullException">
+		/// The json string to unpackage is null, empty or whitespace.
+		/// </exception>
+		/// <returns>
+		/// The unpackaged entity.
+		/// </returns>
 		public T UnpackageFromJson<T>(string json) where T : new()
 		{
 			if (string.IsNullOrWhiteSpace(json))
@@ -235,6 +379,19 @@ namespace dii.storage
 			return default(T);
 		}
 
+		/// <summary>
+		/// Returns the partition key for the entity cast as the type provided.
+		/// This should match the <see cref="Type"/> provided to the <see cref="PartitionKeyAttribute.PartitionKeyType"/>.
+		/// </summary>
+		/// <typeparam name="T">The <see cref="Type"/> of the entity.</typeparam>
+		/// <typeparam name="TKey">The <see cref="Type"/> to cast the partition key as.</typeparam>
+		/// <param name="obj">The entity to extract the partition key from.</param>
+		/// <exception cref="ArgumentNullException">
+		/// The entity to extract the partition key from is null.
+		/// </exception>
+		/// <returns>
+		/// The parition key cast as type <typeparamref name="TKey"/>.
+		/// </returns>
 		public TKey GetPartitionKey<T, TKey>(T obj)
 		{
 			if (obj == null)
@@ -264,6 +421,17 @@ namespace dii.storage
 			return default(TKey);
 		}
 
+		/// <summary>
+		/// Returns the partition key for the entity as a <see cref="string"/>.
+		/// </summary>
+		/// <typeparam name="T">The <see cref="Type"/> of the entity.</typeparam>
+		/// <param name="obj">The entity to extract the partition key from.</param>
+		/// <exception cref="ArgumentNullException">
+		/// The entity to extract the partition key from is null.
+		/// </exception>
+		/// <returns>
+		/// The parition key as a <see cref="string"/>.
+		/// </returns>
 		public string GetPartitionKey<T>(T obj)
 		{
 			if (obj == null)
@@ -288,6 +456,17 @@ namespace dii.storage
 			return default(string);
 		}
 
+		/// <summary>
+		/// Returns the id for the entity as a <see cref="string"/>.
+		/// </summary>
+		/// <typeparam name="T">The <see cref="Type"/> of the entity.</typeparam>
+		/// <param name="obj">The entity to extract the id from.</param>
+		/// <exception cref="ArgumentNullException">
+		/// The entity to extract the id from is null.
+		/// </exception>
+		/// <returns>
+		/// The id as a <see cref="string"/>.
+		/// </returns>
 		public string GetId<T>(T obj)
 		{
 			if (obj == null)
@@ -312,6 +491,14 @@ namespace dii.storage
 			return default(string);
 		}
 
+		/// <summary>
+		/// Returns the partition key type.
+		/// This should match the <see cref="Type"/> provided to the <see cref="PartitionKeyAttribute.PartitionKeyType"/>.
+		/// </summary>
+		/// <typeparam name="T">The <see cref="Type"/> of the entity.</typeparam>
+		/// <returns>
+		/// The <see cref="Type"/> of the partition key, as provided to the <see cref="PartitionKeyAttribute.PartitionKeyType"/>.
+		/// </returns>
 		public Type GetPartitionKeyType<T>()
 		{
 			var type = typeof(T);
@@ -354,6 +541,7 @@ namespace dii.storage
 		{
 			var jsonMap = new PackingMapper();
 			var compressMap = new PackingMapper();
+			var isSelfReferencing = false;
 
 			var typeBuilder = _builder.DefineType(source.Name, TypeAttributes.Public);
 			var typeConst = typeBuilder.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
@@ -363,12 +551,12 @@ namespace dii.storage
 			var msgPkAttrConst = typeof(MessagePackObjectAttribute).GetConstructor(new Type[] { typeof(bool) });
 			compressBuilder.SetCustomAttribute(new CustomAttributeBuilder(msgPkAttrConst, new object[] { false }));
 
-			var partitionSeparator = Constants.DefaultPartitionDelimitor;
-			var partitionFields = new SortedList<int, PropertyInfo>();
+			var partitionSeparator = Constants.DefaultPartitionKeyDelimitor;
+			var partitionFields = new Dictionary<int, PropertyInfo>();
 			var partitionKeyType = typeof(string);
 
 			var idSeparator = Constants.DefaultIdDelimitor;
-			var idFields = new SortedList<int, PropertyInfo>();
+			var idFields = new Dictionary<int, PropertyInfo>();
 
 			var jsonAttrConstructor = typeof(JsonPropertyNameAttribute).GetConstructor(new Type[] { typeof(string) });
 			var compressAttrConstructor = typeof(KeyAttribute).GetConstructor(new Type[] { typeof(int) });
@@ -378,9 +566,24 @@ namespace dii.storage
 				var partitionKey = property.GetCustomAttribute<PartitionKeyAttribute>();
 				if (partitionKey != null)
 				{
+					if (partitionFields.ContainsKey(partitionKey.Order))
+					{
+						if (_ignoreInvalidDiiEntities)
+						{
+							// Do not create the entity to be used, but do not throw an exception.
+							return null;
+						}
+						else
+						{
+							// Throw an exception when an invalid type is attempted.
+							throw new DiiPartitionKeyDuplicateOrderException(partitionFields[partitionKey.Order].Name, property.Name, partitionKey.Order);
+						}
+					}
+
 					partitionFields.Add(partitionKey.Order, property);
 
-					if (!char.IsWhiteSpace(partitionKey.Separator))
+					// First PartitionKeyAttribute to change the separator wins.
+					if (!char.IsWhiteSpace(partitionKey.Separator) && partitionSeparator == Constants.DefaultPartitionKeyDelimitor)
                     {
 						partitionSeparator = partitionKey.Separator;
 					}
@@ -396,9 +599,24 @@ namespace dii.storage
 				var id = property.GetCustomAttribute<IdAttribute>();
 				if (id != null)
 				{
+					if (idFields.ContainsKey(id.Order))
+					{
+						if (_ignoreInvalidDiiEntities)
+						{
+							// Do not create the entity to be used, but do not throw an exception.
+							return null;
+						}
+						else
+						{
+							// Throw an exception when an invalid type is attempted.
+							throw new DiiIdDuplicateOrderException(idFields[id.Order].Name, property.Name, id.Order);
+						}
+					}
+
 					idFields.Add(id.Order, property);
 
-					if (!char.IsWhiteSpace(id.Separator))
+					// First IdAttribute to change the separator wins.
+					if (!char.IsWhiteSpace(id.Separator) && idSeparator == Constants.DefaultIdDelimitor)
 					{
 						idSeparator = id.Separator;
 					}
@@ -433,6 +651,10 @@ namespace dii.storage
 							var storageType = GenerateType(property.PropertyType, true);
 							SubPropertyMapping[property.PropertyType] = storageType;
 							_ = AddProperty(typeBuilder, search.Abbreviation, SubPropertyMapping[property.PropertyType], jsonAttr);
+						}
+						else
+						{
+							isSelfReferencing = true;
 						}
 					}
 					else
@@ -504,7 +726,6 @@ namespace dii.storage
 				PartitionKey = partitionKeyInfo,
 				PartitionKeyProperties = partitionFields
 					.OrderBy(x => x.Key)
-					.ThenBy(x => x.Value.Name)
 					.Select(x => x.Value)
 					.ToList(),
 				PartitionKeySeparator = partitionSeparator.ToString(),
@@ -512,7 +733,6 @@ namespace dii.storage
 				Id = idInfo,
 				IdProperties = idFields
 					.OrderBy(x => x.Key)
-					.ThenBy(x => x.Value.Name)
 					.Select(x => x.Value)
 					.ToList(),
 				IdSeparator = idSeparator.ToString(),
@@ -568,9 +788,13 @@ namespace dii.storage
 
 			return prop;
 		}
-        #endregion Private Methods
+		#endregion Private Methods
 
-        #region Internal Serializer Class
+		#region Internal Serializer Class
+		/// <summary>
+		/// 
+		/// This class cannot be inherited.
+		/// </summary>
 		internal sealed class Serializer
 		{
 			#region Private Fields
@@ -579,17 +803,64 @@ namespace dii.storage
 			#endregion Private Fields
 
 			#region Public Properties
+			/// <summary>
+			/// The <see cref="PropertyInfo"/> for the property designated by the <see cref="PartitionKeyAttribute"/>.
+			/// </summary>
 			public PropertyInfo PartitionKey { get; set; }
+
+			/// <summary>
+			/// The <see cref="PropertyInfo"/> for all properties designated by the <see cref="PartitionKeyAttribute"/>.
+			/// </summary>
 			public List<PropertyInfo> PartitionKeyProperties { get; set; }
+
+			/// <summary>
+			/// The character used to delimiter multiple partition key values as set in the <see cref="PartitionKeyAttribute.Separator"/>.
+			/// </summary>
 			public string PartitionKeySeparator { get; set; }
+
+			/// <summary>
+			/// The <see cref="Type"/> of the parition key as set in the <see cref="PartitionKeyAttribute.PartitionKeyType"/>.
+			/// </summary>
 			public Type PartitionKeyType { get; set; }
+
+			/// <summary>
+			/// The <see cref="PropertyInfo"/> for the property designated by the <see cref="IdAttribute"/>.
+			/// </summary>
 			public PropertyInfo Id { get; set; }
+
+			/// <summary>
+			/// The <see cref="PropertyInfo"/> for all properties designated by the <see cref="IdAttribute"/>.
+			/// </summary>
 			public List<PropertyInfo> IdProperties { get; set; }
+
+			/// <summary>
+			/// The character used to delimiter multiple id values as set in the <see cref="IdAttribute.Separator"/>.
+			/// </summary>
 			public string IdSeparator { get; set; }
+
+			/// <summary>
+			/// The <see cref="PropertyInfo"/> for the compressed object property.
+			/// </summary>
 			public PropertyInfo Attachment { get; set; }
+
+			/// <summary>
+			/// The mapping of concrete types to their json properties.
+			/// </summary>
 			public PackingMapper StoredEntityMapping { get; set; }
+
+			/// <summary>
+			/// The mapping of concrete types to their compressed properties. 
+			/// </summary>
 			public PackingMapper CompressedEntityMapping { get; set; }
+
+			/// <summary>
+			/// The dynamically created <see cref="Type"/> to represent the searchable object.
+			/// </summary>
 			public Type StoredEntityType { get; set; }
+
+			/// <summary>
+			/// The dynamically created <see cref="Type"/> to represent the compressed object.
+			/// </summary>
 			public Type CompressedEntityType { get; set; }
 			#endregion Public Properties
 
@@ -604,6 +875,17 @@ namespace dii.storage
 			#endregion Constructors
 
 			#region Public Methods
+
+			/// <summary>
+			/// Packages an object with compression.
+			/// </summary>
+			/// <param name="unpackedObject">The object to be packaged.</param>
+			/// <exception cref="ArgumentNullException">
+			/// The object to package is null.
+			/// </exception>
+			/// <returns>
+			/// The packaged object.
+			/// </returns>
 			public object Package(object unpackedObject)
 			{
 				if (unpackedObject == null)
@@ -704,6 +986,20 @@ namespace dii.storage
 				return packedObject;
 			}
 
+			/// <summary>
+			/// Unpackages an object to an unpackaged as <typeparamref name="T"/>.
+			/// </summary>
+			/// <typeparam name="T">The <see cref="Type"/> to unpackage the object to.</typeparam>
+			/// <param name="packedObject">The object to unpack.</param>
+			/// <exception cref="ArgumentNullException">
+			/// The object to unpackage is null.
+			/// </exception>
+			/// <exception cref="ArgumentException">
+			/// The packaged object contained no properties.
+			/// </exception>
+			/// <returns>
+			/// The unpackaged entity.
+			/// </returns>
 			public T Unpackage<T>(object packedObject) where T : new()
 			{
 				if (packedObject == null)

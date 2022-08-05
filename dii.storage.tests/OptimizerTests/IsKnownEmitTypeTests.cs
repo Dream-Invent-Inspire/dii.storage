@@ -36,7 +36,7 @@ namespace dii.storage.tests.OptimizerTests
         {
             var optimizer = Optimizer.Get();
 
-            Assert.False(optimizer.IsKnownEmitType(typeof(FakeInvalidEntity)));
+            Assert.False(optimizer.IsKnownEmitType(typeof(InvalidSearchableKeyEntity)));
         }
 
         [Fact, TestPriorityOrder(103)]

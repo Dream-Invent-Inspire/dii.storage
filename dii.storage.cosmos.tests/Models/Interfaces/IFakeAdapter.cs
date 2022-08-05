@@ -1,4 +1,4 @@
-﻿using dii.storage.Models;
+﻿using dii.storage.cosmos.Models;
 using dii.storage.Models.Interfaces;
 using Microsoft.Azure.Cosmos;
 using System.Collections.Generic;

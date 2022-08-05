@@ -42,13 +42,13 @@ namespace dii.storage.tests.OptimizerTests
         {
             var optimizer = Optimizer.Get();
 
-            var unregisteredEntity = new FakeInvalidEntity
+            var unregisteredEntity = new InvalidSearchableKeyEntity
             {
                 Id = Guid.NewGuid().ToString(),
-                FakeInvalidEntityId = Guid.NewGuid().ToString()
+                InvalidSearchableKeyEntityId = Guid.NewGuid().ToString()
             };
 
-            var unpackedEntity = optimizer.GetPartitionKey<FakeInvalidEntity, Guid>(unregisteredEntity);
+            var unpackedEntity = optimizer.GetPartitionKey<InvalidSearchableKeyEntity, Guid>(unregisteredEntity);
 
             Assert.Equal(default, unpackedEntity);
         }
@@ -88,10 +88,10 @@ namespace dii.storage.tests.OptimizerTests
         {
             var optimizer = Optimizer.Get();
 
-            var unregisteredEntity = new FakeInvalidEntity
+            var unregisteredEntity = new InvalidSearchableKeyEntity
             {
                 Id = Guid.NewGuid().ToString(),
-                FakeInvalidEntityId = Guid.NewGuid().ToString()
+                InvalidSearchableKeyEntityId = Guid.NewGuid().ToString()
             };
 
             var unpackedEntity = optimizer.GetPartitionKey(unregisteredEntity);

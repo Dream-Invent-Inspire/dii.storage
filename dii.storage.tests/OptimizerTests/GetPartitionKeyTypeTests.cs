@@ -35,7 +35,7 @@ namespace dii.storage.tests.OptimizerTests
         {
             var optimizer = Optimizer.Get();
 
-            var type = optimizer.GetPartitionKeyType<FakeInvalidEntity>();
+            var type = optimizer.GetPartitionKeyType<InvalidSearchableKeyEntity>();
 
             Assert.Null(type);
         }

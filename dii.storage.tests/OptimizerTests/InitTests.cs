@@ -44,7 +44,7 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(103)]
         public void Init_PassedTypesIgnoreInvalidDiiEntities()
         {
-            _ = Optimizer.Init(true, typeof(FakeInvalidEntity));
+            _ = Optimizer.Init(true, typeof(InvalidSearchableKeyEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
 
@@ -54,10 +54,10 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(104)]
         public void Init_PassedTypesThrowOnInvalidDiiEntities()
         {
-            var exception = Assert.Throws<DiiReservedSearchableKeyException>(() => { Optimizer.Init(false, typeof(FakeInvalidEntity)); });
+            var exception = Assert.Throws<DiiReservedSearchableKeyException>(() => { Optimizer.Init(false, typeof(InvalidSearchableKeyEntity)); });
 
             Assert.NotNull(exception);
-            Assert.Equal(new DiiReservedSearchableKeyException(Constants.ReservedCompressedKey, nameof(FakeInvalidEntity.InvalidSearchableKeyStringPValue), nameof(FakeInvalidEntity)).Message, exception.Message);
+            Assert.Equal(new DiiReservedSearchableKeyException(Constants.ReservedCompressedKey, nameof(InvalidSearchableKeyEntity.InvalidSearchableKeyStringPValue), nameof(InvalidSearchableKeyEntity)).Message, exception.Message);
         }
 
         [Fact, TestPriorityOrder(105)]
@@ -66,7 +66,7 @@ namespace dii.storage.tests.OptimizerTests
             var exception = Assert.Throws<DiiReservedSearchableKeyException>(() => { Optimizer.Init(true); });
 
             Assert.NotNull(exception);
-            Assert.Equal(new DiiReservedSearchableKeyException(Constants.ReservedCompressedKey, nameof(FakeInvalidEntity.InvalidSearchableKeyStringPValue), nameof(FakeInvalidEntity)).Message, exception.Message);
+            Assert.Equal(new DiiReservedSearchableKeyException(Constants.ReservedCompressedKey, nameof(InvalidSearchableKeyEntity.InvalidSearchableKeyStringPValue), nameof(InvalidSearchableKeyEntity)).Message, exception.Message);
         }
 
         [Fact, TestPriorityOrder(106)]

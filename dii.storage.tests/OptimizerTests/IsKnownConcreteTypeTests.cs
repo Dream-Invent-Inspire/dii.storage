@@ -33,7 +33,7 @@ namespace dii.storage.tests.OptimizerTests
         {
             var optimizer = Optimizer.Get();
 
-            Assert.False(optimizer.IsKnownConcreteType(typeof(FakeInvalidEntity)));
+            Assert.False(optimizer.IsKnownConcreteType(typeof(InvalidSearchableKeyEntity)));
         }
 
         [Fact, TestPriorityOrder(103)]

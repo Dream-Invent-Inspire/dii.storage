@@ -8,10 +8,10 @@ namespace dii.storage.tests.OptimizerTests.Data
     {
         public FromEntityReturnDefaultData()
         {
-            Add(new FakeInvalidEntity
+            Add(new InvalidSearchableKeyEntity
             {
-                FakeInvalidEntityId = Guid.NewGuid().ToString(),
-                InvalidSearchableKeyStringPValue = $"fakeInvalidEntity: {nameof(FakeInvalidEntity.InvalidSearchableKeyStringPValue)}"
+                InvalidSearchableKeyEntityId = Guid.NewGuid().ToString(),
+                InvalidSearchableKeyStringPValue = $"fakeInvalidEntity: {nameof(InvalidSearchableKeyEntity.InvalidSearchableKeyStringPValue)}"
             });
             Add(null);
             Add(new object());

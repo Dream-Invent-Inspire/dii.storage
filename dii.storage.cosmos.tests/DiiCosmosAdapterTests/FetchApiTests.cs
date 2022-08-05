@@ -4,6 +4,7 @@ using dii.storage.cosmos.tests.Fixtures;
 using dii.storage.cosmos.tests.Models;
 using dii.storage.cosmos.tests.Orderer;
 using dii.storage.cosmos.tests.Utilities;
+using Microsoft.Azure.Cosmos;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -119,13 +120,17 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
         public async Task GetPagedAsync_QueryDefinition_Success()
         {
             var fakeEntity1 = _adapterFixture.CreatedFakeEntities[0];
+            var fakeEntity2 = _adapterFixture.CreatedFakeEntities[1];
             var fakeEntity3 = _adapterFixture.CreatedFakeEntities[2];
 
-            var fetchedFakeEntities = await _adapterFixture.FakeEntityAdapter.GetManyAsync(new List<(string, string)>{(fakeEntity1.Id, fakeEntity1.FakeEntityId), (fakeEntity3.Id, fakeEntity3.FakeEntityId)}).ConfigureAwait(false);
+            var queryText = new QueryDefinition("SELECT * FROM fakeentity fe WHERE fe.int >= 1");
+
+            var fetchedFakeEntities = await _adapterFixture.FakeEntityAdapter.GetPagedAsync(queryText).ConfigureAwait(false);
 
             Assert.NotNull(fetchedFakeEntities);
-            Assert.Equal(2, fetchedFakeEntities.Count);
+            Assert.Equal(3, fetchedFakeEntities.Count);
             TestHelpers.AssertFakeEntitiesMatch(fakeEntity1, fetchedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity1.Id), true);
+            TestHelpers.AssertFakeEntitiesMatch(fakeEntity2, fetchedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity2.Id), true);
             TestHelpers.AssertFakeEntitiesMatch(fakeEntity3, fetchedFakeEntities.FirstOrDefault(x => x.Id == fakeEntity3.Id), true);
         }
 
@@ -160,7 +165,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
             var fakeEntity2 = _adapterFixture.CreatedFakeEntities[1];
             var fakeEntity3 = _adapterFixture.CreatedFakeEntities[2];
 
-            var queryText = $"SELECT * FROM fakeentity fe WHERE fe.int >= 1";
+            var queryText = "SELECT * FROM fakeentity fe WHERE fe.int >= 1";
 
             var fetchedFakeEntities = await _adapterFixture.FakeEntityAdapter.GetPagedAsync(queryText).ConfigureAwait(false);
 

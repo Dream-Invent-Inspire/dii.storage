@@ -1,48 +1,45 @@
 ﻿namespace dii.storage.Models.Interfaces
 {
-    public interface INoSqlDatabaseConfig
+	/// <summary>
+	/// The configuration necessary to create and connect to a NoSQL database.
+	/// </summary>
+	public interface INoSqlDatabaseConfig
 	{
 		/// <summary>
-		/// The Uri of the database.
+		/// The uri of the database.
 		/// </summary>
 		string Uri { get; set; }
 
 		/// <summary>
-		/// The Key for the Uri Connection.
+		/// The key for the Uri Connection.
 		/// </summary>
 		string Key { get; set; }
 
 		/// <summary>
-		/// The Id of the database.
+		/// The id of the database.
 		/// </summary>
 		string DatabaseId { get; set; }
 
 		/// <summary>
-		/// Auto-create the database if it does not exist.
+		/// Auto-creates the database and/or containers if they do not exist.
 		/// </summary>
 		bool AutoCreate { get; set; }
 
 		/// <summary>
-		/// The configuration set Max RU/sec.
+		/// The max RU/sec.
 		/// </summary>
 		int MaxRUPerSecond { get; set; }
 
 		/// <summary>
-		/// If the Database Exists and the Max RU/sec is different
-		/// alters the Max RU/sec to the configured value.
+		/// When true, the <see cref="DiiContext"/> should attempt to change
+		/// the existing database RU/sec throughput provisioning if it is different
+		/// than what is set in <see cref="MaxRUPerSecond"/>.
 		/// </summary>
 		bool AutoAdjustMaxRUPerSecond { get; set; }
 
 		/// <summary>
-		/// Allow autoscaling.
+		/// When true, RU throughput provisioning will be set to autoscale. 
 		/// </summary>
 		bool AutoScaling { get; set; }
-
-		/// <summary>
-		/// Allows optimistic batching of requests to service. Setting this option might
-		/// impact the latency of the operations. Hence this option is recommended for non-latency
-		/// sensitive scenarios only.
-		/// </summary>
-		bool? AllowBulkExecution { get; set; }
 	}
 }

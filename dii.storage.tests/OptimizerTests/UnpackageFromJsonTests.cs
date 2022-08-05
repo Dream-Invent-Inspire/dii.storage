@@ -42,7 +42,7 @@ namespace dii.storage.tests.OptimizerTests
         {
             var optimizer = Optimizer.Get();
 
-            var entity = optimizer.UnpackageFromJson<FakeInvalidEntity>(json);
+            var entity = optimizer.UnpackageFromJson<InvalidSearchableKeyEntity>(json);
 
             Assert.Equal(default, entity);
         }

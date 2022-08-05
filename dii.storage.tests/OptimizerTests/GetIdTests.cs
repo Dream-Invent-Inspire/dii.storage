@@ -41,10 +41,10 @@ namespace dii.storage.tests.OptimizerTests
         {
             var optimizer = Optimizer.Get();
 
-            var unregisteredEntity = new FakeInvalidEntity
+            var unregisteredEntity = new InvalidSearchableKeyEntity
             {
                 Id = Guid.NewGuid().ToString(),
-                FakeInvalidEntityId = Guid.NewGuid().ToString()
+                InvalidSearchableKeyEntityId = Guid.NewGuid().ToString()
             };
 
             var unpackedEntity = optimizer.GetId(unregisteredEntity);

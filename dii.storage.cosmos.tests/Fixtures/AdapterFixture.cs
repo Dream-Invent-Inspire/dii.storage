@@ -22,7 +22,7 @@ namespace dii.storage.cosmos.tests.Fixtures
         {
             NoSqlDatabaseConfig = new FakeCosmosDatabaseConfig();
 
-            var initContextAndOptimizerTask = TestHelpers.InitContextAndOptimizerAsync(NoSqlDatabaseConfig, Optimizer, new[] { typeof(FakeEntity), typeof(FakeEntityTwo) });
+            var initContextAndOptimizerTask = TestHelpers.InitContextAndOptimizerAsync(NoSqlDatabaseConfig, Optimizer, new[] { typeof(FakeEntity) });
             initContextAndOptimizerTask.Wait();
 
             Optimizer = initContextAndOptimizerTask.Result;

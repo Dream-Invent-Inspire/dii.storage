@@ -15,7 +15,7 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(100)]
         public void ToEntityObject_Prep()
         {
-            _ = Optimizer.Init(typeof(FakeEntityTwo));
+            _ = Optimizer.Init(typeof(FakeEntityFour));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
@@ -50,6 +50,42 @@ namespace dii.storage.tests.OptimizerTests
         }
 
         [Fact(Skip = "Outstanding recursive sub-entity bug test."), TestPriorityOrder(102)]
+        public void ToEntityObject_SuccessMultipleSameSubEntity()
+        {
+            var optimizer = Optimizer.Get();
+
+            var fakeSearchableEntityFour = new FakeSearchableEntityFour
+            {
+                SearchableStringValue = $"fakeSearchableEntityFour: {nameof(FakeSearchableEntityFour.SearchableStringValue)}",
+                CompressedStringValue = $"fakeSearchableEntityFour: {nameof(FakeSearchableEntityFour.CompressedStringValue)}",
+                ComplexSearchable1 = new FakeSearchableEntityTwo
+                {
+                    SearchableStringValue = $"fakeSearchableEntityFour: {nameof(FakeSearchableEntityFour.ComplexSearchable1)}.{nameof(FakeSearchableEntityFour.ComplexSearchable1.SearchableStringValue)}",
+                    CompressedStringValue = $"fakeSearchableEntityFour: {nameof(FakeSearchableEntityFour.ComplexSearchable1)}.{nameof(FakeSearchableEntityFour.ComplexSearchable1.CompressedStringValue)}"
+                },
+                ComplexSearchable2 = new FakeSearchableEntityTwo
+                {
+                    SearchableStringValue = $"fakeSearchableEntityFour: {nameof(FakeSearchableEntityFour.ComplexSearchable2)}.{nameof(FakeSearchableEntityFour.ComplexSearchable2.SearchableStringValue)}",
+                    CompressedStringValue = $"fakeSearchableEntityFour: {nameof(FakeSearchableEntityFour.ComplexSearchable2)}.{nameof(FakeSearchableEntityFour.ComplexSearchable2.CompressedStringValue)}"
+                }
+            };
+
+            var entity = (dynamic)optimizer.ToEntityObject<FakeSearchableEntityFour>(fakeSearchableEntityFour);
+
+            Assert.NotNull(entity);
+
+            var searchableStringValue = entity.@string as string;
+
+            // This may not work. Needs tested when bug is fixed.
+            var complex1SearchableStringValue = entity.complex1.@string as string;
+            var complex2SearchableStringValue = entity.complex2.@string as string;
+
+            Assert.Equal(fakeSearchableEntityFour.SearchableStringValue, searchableStringValue);
+            Assert.Equal(fakeSearchableEntityFour.ComplexSearchable1.SearchableStringValue, complex1SearchableStringValue);
+            Assert.Equal(fakeSearchableEntityFour.ComplexSearchable2.SearchableStringValue, complex2SearchableStringValue);
+        }
+
+        [Fact(Skip = "Outstanding recursive sub-entity bug test."), TestPriorityOrder(103)]
         public void ToEntityObject_SuccessRecursive()
         {
             var optimizer = Optimizer.Get();
@@ -78,15 +114,15 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(fakeSearchableEntityThree.RecursiveTypeReference.SearchableStringValue, complexSearchableStringValue);
         }
 
-        [Fact, TestPriorityOrder(103)]
+        [Fact, TestPriorityOrder(104)]
         public void ToEntityObject_UnregisteredType()
         {
             var optimizer = Optimizer.Get();
 
-            var unregisteredEntity = new FakeInvalidEntity
+            var unregisteredEntity = new InvalidSearchableKeyEntity
             {
-                FakeInvalidEntityId = Guid.NewGuid().ToString(),
-                InvalidSearchableKeyStringPValue = $"fakeInvalidEntity: {nameof(FakeInvalidEntity.InvalidSearchableKeyStringPValue)}"
+                InvalidSearchableKeyEntityId = Guid.NewGuid().ToString(),
+                InvalidSearchableKeyStringPValue = $"fakeInvalidEntity: {nameof(InvalidSearchableKeyEntity.InvalidSearchableKeyStringPValue)}"
             };
 
             var entity = optimizer.ToEntityObject<FakeSearchableEntity>(unregisteredEntity);
@@ -94,7 +130,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Null(entity);
         }
 
-        [Fact, TestPriorityOrder(104)]
+        [Fact, TestPriorityOrder(105)]
         public void ToEntityObject_Null()
         {
             var optimizer = Optimizer.Get();

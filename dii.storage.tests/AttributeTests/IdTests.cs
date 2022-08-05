@@ -15,17 +15,31 @@ namespace dii.storage.tests.AttributeTests
         [Fact, TestPriorityOrder(100)]
         public void Id_Prep()
         {
-            _ = Optimizer.Init(typeof(FakeEntityThree));
+            _ = Optimizer.Init(typeof(MultipleIdEntity), typeof(FirstIdSeparatorWinsEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
-        [Theory, TestPriorityOrder(101), ClassData(typeof(FakeEntityThreeIdData))]
-        public void Id_Success(FakeEntityThree fakeEntityThree, string expected)
+        [Theory, TestPriorityOrder(101), ClassData(typeof(MultipleIdEntityData))]
+        public void Id_Success(MultipleIdEntity multipleIdEntity, string expected)
         {
             var optimizer = Optimizer.Get();
 
-            var entity = (dynamic)optimizer.ToEntity(fakeEntityThree);
+            var entity = (dynamic)optimizer.ToEntity(multipleIdEntity);
+
+            Assert.NotNull(entity);
+
+            var id = entity.id as string;
+
+            Assert.Equal(expected, id);
+        }
+
+        [Theory, TestPriorityOrder(102), ClassData(typeof(FirstIdSeparatorWinsEntityData))]
+        public void Id_FirstSeparatorWins(FirstIdSeparatorWinsEntity firstIdSeparatorWinsEntity, string expected)
+        {
+            var optimizer = Optimizer.Get();
+
+            var entity = (dynamic)optimizer.ToEntity(firstIdSeparatorWinsEntity);
 
             Assert.NotNull(entity);
 

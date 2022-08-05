@@ -2,16 +2,16 @@
 
 namespace dii.storage.tests.Models
 {
-    public class FakeInvalidEntity : FakeDiiEntity
+    public class InvalidSearchableKeyEntity : FakeDiiEntity
 	{
 		/// <summary>
-		/// The Unique Id for the <see cref="FakeInvalidEntity"/>.
+		/// The Unique Id for the <see cref="InvalidSearchableKeyEntity"/>.
 		/// </summary>
 		[PartitionKey()]
-		public string FakeInvalidEntityId { get; set; }
+		public string InvalidSearchableKeyEntityId { get; set; }
 
 		[Id()]
-		public string Id { get { return FakeInvalidEntityId; } set { FakeInvalidEntityId = value; } }
+		public string Id { get { return InvalidSearchableKeyEntityId; } set { InvalidSearchableKeyEntityId = value; } }
 
 		/// <summary>
 		/// A <see cref="string"/> value to be searched. This property has an invalid search key of 'p'.

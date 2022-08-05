@@ -5,6 +5,7 @@ using System;
 
 namespace dii.storage.cosmos.Models
 {
+    /// <inheritdoc/>
     public abstract class DiiCosmosEntity : IDiiEntity
 	{
 		/// <inheritdoc/>

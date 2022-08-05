@@ -51,7 +51,7 @@ namespace dii.storage.tests.OptimizerTests
         {
             var optimizer = Optimizer.Get();
 
-            var unpackedEntity = optimizer.FromEntity<FakeInvalidEntity>(entity);
+            var unpackedEntity = optimizer.FromEntity<InvalidSearchableKeyEntity>(entity);
 
             Assert.Equal(default, unpackedEntity);
         }

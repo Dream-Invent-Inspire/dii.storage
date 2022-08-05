@@ -1,6 +1,6 @@
-﻿using dii.storage.cosmos.tests.Models;
+﻿using dii.storage.cosmos.Models;
+using dii.storage.cosmos.tests.Models;
 using dii.storage.cosmos.tests.Models.Interfaces;
-using dii.storage.Models;
 using Microsoft.Azure.Cosmos;
 using System.Collections.Generic;
 using System.Threading;

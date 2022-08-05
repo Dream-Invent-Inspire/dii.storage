@@ -1,16 +1,15 @@
 ﻿using dii.storage.Attributes;
-using dii.storage.cosmos.Models;
-using Microsoft.Azure.Cosmos;
+using System;
 
-namespace dii.storage.cosmos.tests.Models
+namespace dii.storage.tests.Models
 {
-	public class FakeEntityTwo : DiiCosmosEntity
+    public class FakeEntityFour : FakeDiiEntity
 	{
 		/// <summary>
-		/// The Unique Id for the <see cref="FakeEntityTwo"/>.
+		/// The Unique Id for the <see cref="FakeEntityFour"/>.
 		/// </summary>
-		[PartitionKey(typeof(PartitionKey))]
-		public string FakeEntityTwoId { get; set; }
+		[PartitionKey(typeof(Guid))]
+		public string FakeEntityFourId { get; set; }
 
 		[Id()]
 		public string Id { get; set; }
@@ -36,8 +35,14 @@ namespace dii.storage.cosmos.tests.Models
 		/// <summary>
 		/// A test object for complex nesting of objects to be searchable.
 		/// </summary>
-		[Searchable("complex")]
-		public FakeSearchableEntity ComplexSearchable { get; set; }
+		[Searchable("complex1")]
+		public FakeSearchableEntity ComplexSearchable1 { get; set; }
+
+		/// <summary>
+		/// A test object for complex nesting of objects to be searchable.
+		/// </summary>
+		[Searchable("complex2")]
+		public FakeSearchableEntityFour ComplexSearchable2 { get; set; }
 
 	}
 }

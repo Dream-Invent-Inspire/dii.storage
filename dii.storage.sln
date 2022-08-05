@@ -12,6 +12,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitignore = .gitignore
 		COPYING.LESSER.txt = COPYING.LESSER.txt
 		LICENSE.txt = LICENSE.txt
+		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dii.storage.cosmos", "dii.storage.cosmos\dii.storage.cosmos.csproj", "{CE352E10-4F1C-4F70-9A8D-F2A5E6D9D123}"

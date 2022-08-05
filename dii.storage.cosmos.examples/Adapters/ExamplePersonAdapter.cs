@@ -1,6 +1,6 @@
 ﻿using dii.storage.cosmos.examples.Models;
 using dii.storage.cosmos.examples.Models.Interfaces;
-using dii.storage.Models;
+using dii.storage.cosmos.Models;
 using Microsoft.Azure.Cosmos;
 using System.Collections.Generic;
 using System.Linq;

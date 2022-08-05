@@ -45,7 +45,6 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
             Assert.Equal(context.Config.Uri, context.Client.Endpoint.OriginalString);
             Assert.Equal(context.Config.DatabaseId, context.Db.Id);
             Assert.Equal(context.Config.MaxRUPerSecond, context.DbThroughput);
-            Assert.Equal(context.Config.AllowBulkExecution, context.Client.ClientOptions.AllowBulkExecution);
         }
 
         #region Teardown

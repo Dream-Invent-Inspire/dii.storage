@@ -45,10 +45,10 @@ namespace dii.storage.tests.OptimizerTests
         {
             var optimizer = Optimizer.Get();
 
-            var unregisteredEntity = new FakeInvalidEntity
+            var unregisteredEntity = new InvalidSearchableKeyEntity
             {
-                FakeInvalidEntityId = Guid.NewGuid().ToString(),
-                InvalidSearchableKeyStringPValue = $"fakeInvalidEntity: {nameof(FakeInvalidEntity.InvalidSearchableKeyStringPValue)}"
+                InvalidSearchableKeyEntityId = Guid.NewGuid().ToString(),
+                InvalidSearchableKeyStringPValue = $"fakeInvalidEntity: {nameof(InvalidSearchableKeyEntity.InvalidSearchableKeyStringPValue)}"
             };
 
             var entity = optimizer.ToEntity(unregisteredEntity);

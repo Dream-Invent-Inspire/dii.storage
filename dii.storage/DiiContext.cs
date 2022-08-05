@@ -6,12 +6,34 @@ using System.Threading.Tasks;
 
 namespace dii.storage
 {
+    /// <summary>
+    /// An contract intended to represent the necessary components of a DiiContext.
+    /// <para>
+    /// This is intended to be used with the singleton pattern.
+    /// </para>
+    /// </summary>
     public abstract class DiiContext
 	{
 		#region Public Properties
+		/// <summary>
+		/// The <see cref="INoSqlDatabaseConfig"/> configuration to be used by this context.
+		/// </summary>
 		public INoSqlDatabaseConfig Config { get; protected set; }
+
+		/// <summary>
+		/// The max RU/sec.
+		/// </summary>
 		public int? DbThroughput { get; protected set; }
+
+		/// <summary>
+		/// Indicates that this instance of the <see cref="DiiContext"/> was responsible
+		/// for the creation of the database.
+		/// </summary>
 		public bool DatabaseCreatedThisContext { get; protected set; }
+
+		/// <summary>
+		/// Represents the initialized table mappings within this instance of the <see cref="DiiContext"/>.
+		/// </summary>
 		public Dictionary<Type, TableMetaData> TableMappings { get; protected set; }
 		#endregion Public Properties
 

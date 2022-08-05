@@ -1,6 +1,8 @@
-﻿using dii.storage.Models;
+﻿using dii.storage.cosmos.Models;
+using dii.storage.Models;
 using dii.storage.Models.Interfaces;
 using Microsoft.Azure.Cosmos;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,6 +12,13 @@ using System.Threading.Tasks;
 
 namespace dii.storage.cosmos
 {
+    /// <summary>
+    /// A CosmosDB abstraction of the adapter pattern with support for <see cref="Optimizer"/> and <see cref="DiiCosmosContext"/>.
+    /// </summary>
+    /// <typeparam name="T">The <see cref="Type"/> of entity the <see cref="DiiCosmosAdapter{T}"/> is to be used for.</typeparam>
+    /// <remarks>
+    /// <typeparamref name="T"/> must implement the <see cref="IDiiEntity"/> interface.
+    /// </remarks>
     public abstract class DiiCosmosAdapter<T> where T : IDiiEntity, new()
 	{
 		#region Private Fields
@@ -20,6 +29,9 @@ namespace dii.storage.cosmos
 		#endregion Private Fields
 
 		#region Constructors
+		/// <summary>
+		/// Initializes an instance of the <see cref="DiiCosmosAdapter{T}"/>.
+		/// </summary>
 		public DiiCosmosAdapter()
 		{
 			_context = DiiCosmosContext.Get();

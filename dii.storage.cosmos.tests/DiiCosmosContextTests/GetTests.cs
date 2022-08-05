@@ -41,8 +41,6 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
             Assert.Equal(fakeCosmosDatabaseConfig.MaxRUPerSecond, fetchedContext.Config.MaxRUPerSecond);
             Assert.Equal(fakeCosmosDatabaseConfig.AutoAdjustMaxRUPerSecond, fetchedContext.Config.AutoAdjustMaxRUPerSecond);
             Assert.Equal(fakeCosmosDatabaseConfig.AutoScaling, fetchedContext.Config.AutoScaling);
-            Assert.Equal(fakeCosmosDatabaseConfig.AllowBulkExecution, fetchedContext.Config.AllowBulkExecution);
-            Assert.Equal(fakeCosmosDatabaseConfig.AllowBulkExecution, fetchedContext.Client.ClientOptions.AllowBulkExecution);
         }
 
         #region Teardown
