@@ -541,7 +541,6 @@ namespace dii.storage
 		{
 			var jsonMap = new PackingMapper();
 			var compressMap = new PackingMapper();
-			var isSelfReferencing = false;
 
 			var typeBuilder = _builder.DefineType(source.Name, TypeAttributes.Public);
 			var typeConst = typeBuilder.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
@@ -654,7 +653,20 @@ namespace dii.storage
 						}
 						else
 						{
-							isSelfReferencing = true;
+							// If the subentity has already been registered and appears again within the same object.
+							if (SubPropertyMapping[property.PropertyType] != null)
+                            {
+								_ = AddProperty(typeBuilder, search.Abbreviation, SubPropertyMapping[property.PropertyType], jsonAttr);
+							}
+							else
+							{
+								if (typeBuilder.Name == property.PropertyType.Name)
+                                {
+									// If the object has a self-reference property, pass itself in this way.
+									var selfReferencingPropertyType = _builder.GetType(typeBuilder.Name);
+									_ = AddProperty(typeBuilder, search.Abbreviation, selfReferencingPropertyType, jsonAttr);
+								}
+							}
 						}
 					}
 					else
