@@ -644,6 +644,20 @@ namespace dii.storage
 					var childProps = property.PropertyType.GetProperties();
 					if (childProps.Any(x => x.GetCustomAttribute<SearchableAttribute>() != null) || childProps.Any(x => x.GetCustomAttribute<CompressAttribute>() != null))
 					{
+						if (property.PropertyType.GetInterface(nameof(IDiiEntity)) != null)
+						{
+							if (_ignoreInvalidDiiEntities)
+							{
+								// Do not create the entity to be used, but do not throw an exception.
+								return null;
+							}
+							else
+							{
+								// Throw an exception when an invalid type is attempted.
+								throw new DiiInvalidNestingException(source.Name);
+							}
+						}
+
 						if (!SubPropertyMapping.ContainsKey(property.PropertyType))
 						{
 							SubPropertyMapping.Add(property.PropertyType, null);

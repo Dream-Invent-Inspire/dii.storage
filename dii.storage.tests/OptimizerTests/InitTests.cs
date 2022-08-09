@@ -75,14 +75,24 @@ namespace dii.storage.tests.OptimizerTests
             _ = Optimizer.Init(true, true);
 
             TestHelpers.AssertOptimizerIsInitialized();
+
+            TestHelpers.ResetOptimizerInstance();
+        }
+
+        [Fact, TestPriorityOrder(107)]
+        public void Init_InvalidNestingException()
+        {
+            var exception = Assert.Throws<DiiInvalidNestingException>(() => { Optimizer.Init(typeof(InvalidSelfReferenceEntity)); });
+
+            Assert.NotNull(exception);
+            Assert.Equal(new DiiInvalidNestingException(nameof(InvalidSelfReferenceEntity)).Message, exception.Message);
         }
 
         #region Teardown
-        [Fact, TestPriorityOrder(int.MaxValue)]
-        public void Teardown()
-        {
-            TestHelpers.ResetOptimizerInstance();
-        }
+        //[Fact, TestPriorityOrder(int.MaxValue)]
+        //public void Teardown()
+        //{
+        //}
         #endregion
     }
 }
