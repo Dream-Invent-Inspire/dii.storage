@@ -36,7 +36,7 @@ namespace dii.storage.cosmos.examples.Fixtures
                 Optimizer = Optimizer.Init(typeof(Person));
             }
 
-            context.InitTables(Optimizer.Tables).Wait();
+            context.InitTablesAsync(Optimizer.Tables).Wait();
 
             if (PersonAdapter == null)
             {

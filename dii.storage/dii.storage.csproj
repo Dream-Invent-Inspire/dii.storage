@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Company>Dream Invent Inspire, Inc</Company>
     <Description>A framework for managing entities in storage. Supports object compression, property name abbreviation, and encryption by annotation.</Description>
@@ -11,14 +11,14 @@
     <Authors>Andrew Beers &amp; Pat MacMannis</Authors>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageId>dii.storage</PackageId>
-    <Version>1.2.0</Version>
+    <Version>1.2.1</Version>
     <AssemblyName>dii.storage</AssemblyName>
     <RootNamespace>dii.storage</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MessagePack" Version="2.3.85" />
-    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.27.2" />
+    <PackageReference Include="MessagePack" Version="2.4.35" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.29.0" />
   </ItemGroup>
 
   <ItemGroup>

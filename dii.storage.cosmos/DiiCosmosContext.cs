@@ -173,7 +173,7 @@ namespace dii.storage.cosmos
 		/// <exception cref="DiiTableCreationFailedException">
 		/// One or more tables failed to create.
 		/// </exception>
-		public override async Task InitTables(ICollection<TableMetaData> tableMetaDatas)
+		public override async Task InitTablesAsync(ICollection<TableMetaData> tableMetaDatas)
 		{
 			if (tableMetaDatas == null || !tableMetaDatas.Where(x => x != null).Any())
             {
