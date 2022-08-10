@@ -62,6 +62,7 @@ namespace dii.storage.tests.OptimizerTests
             var optimizer = Optimizer.Get();
 
             var exception = Assert.Throws<ArgumentNullException>(() => { optimizer.ToEntity<FakeEntityTwo>(null); });
+
             Assert.NotNull(exception);
             Assert.Equal("Value cannot be null. (Parameter 'obj')", exception.Message);
         }

@@ -26,7 +26,7 @@ A .NET 5+ framework for managing entities in storage.
 
 ## Getting Started with dii.storage
 
-To get started with dii.storage, please check out the [Getting Started](https://github.com/Dream-Invent-Inspire/dii.storage/wiki#getting-started)
+To get started with dii.storage, please check out the [Getting Started](https://github.com/Dream-Invent-Inspire/dii.storage/wiki/Getting-Started)
 section in our [wiki](https://github.com/Dream-Invent-Inspire/dii.storage/wiki). You can also view example code in the [dii.storage.cosmos.examples](https://github.com/Dream-Invent-Inspire/dii.storage/tree/rc/1.2.0/dii.storage.cosmos.examples) project.
 
 ## Questions? Need Help?
