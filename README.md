@@ -1,24 +1,24 @@
 # dii.storage
 
-A .NET 5+ framework for managing entities in storage.
+A .NET 6 framework for managing entities in storage.
 
 ## Features
 
 ### dii.storage
 
-* **Object Compression** — Specify which properties to compress into the stored object. dii.storage handles packing and unpacking of the compressed properties so you don't have to!
+* **Object Compression** â€” Specify which properties to compress into the stored object. dii.storage handles packing and unpacking of the compressed properties so you don't have to!
 
-* **Property Name Abbreviation** — Add unique property names used for stored objects while using clear names on your .NET properties.
+* **Property Name Abbreviation** â€” Add unique property names used for stored objects while using clear names on your .NET properties.
 
-* **Auto-Detect Types** — Allows auto-detection of types used for storage. Don't worry, you can explicitly pass in types too!
+* **Auto-Detect Types** â€” Allows auto-detection of types used for storage. Don't worry, you can explicitly pass in types too!
 
-* **Runtime Type Registration** — Add new types to the Optimizer without requiring a system restart.
+* **Runtime Type Registration** â€” Add new types to the Optimizer without requiring a system restart.
 
 ### dii.storage.cosmos
 
-* **Infrastructure Auto-Creation** — Allows the automatic creation of CosmosDB Database and Container at startup.
+* **Infrastructure Auto-Creation** â€” Allows the automatic creation of CosmosDB Database and Container at startup.
 
-* **Abstract Adapter** — Provides an abstract adapter optimized to take advantage of dii.storage.
+* **Abstract Adapter** â€” Provides an abstract adapter optimized to take advantage of dii.storage.
 
   * Features common access patterns with Get, Create, Replace, Upsert, Patch and Delete APIs.
 
@@ -27,7 +27,7 @@ A .NET 5+ framework for managing entities in storage.
 ## Getting Started with dii.storage
 
 To get started with dii.storage, please check out the [Getting Started](https://github.com/Dream-Invent-Inspire/dii.storage/wiki/Getting-Started)
-section in our [wiki](https://github.com/Dream-Invent-Inspire/dii.storage/wiki). You can also view example code in the [dii.storage.cosmos.examples](https://github.com/Dream-Invent-Inspire/dii.storage/tree/rc/1.2.0/dii.storage.cosmos.examples) project.
+section in our [wiki](https://github.com/Dream-Invent-Inspire/dii.storage/wiki). You can also view example code in the [dii.storage.cosmos.examples](https://github.com/Dream-Invent-Inspire/dii.storage/tree/main/dii.storage.cosmos.examples) project.
 
 ## Questions? Need Help?
 
