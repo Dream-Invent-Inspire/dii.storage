@@ -4,8 +4,6 @@ A .NET 6 framework for managing entities in storage.
 
 ## Features
 
-### dii.storage
-
 * **Object Compression** — Specify which properties to compress into the stored object. dii.storage handles packing and unpacking of the compressed properties so you don't have to!
 
 * **Property Name Abbreviation** — Add unique property names used for stored objects while using clear names on your .NET properties.
@@ -13,6 +11,10 @@ A .NET 6 framework for managing entities in storage.
 * **Auto-Detect Types** — Allows auto-detection of types used for storage. Don't worry, you can explicitly pass in types too!
 
 * **Runtime Type Registration** — Add new types to the Optimizer without requiring a system restart.
+
+## Extension Packages
+
+* [dii.storage.cosmos](https://www.nuget.org/packages/dii.storage.cosmos) - A .NET 6 framework for managing CosmosDB entities with dii.storage.
 
 ## Getting Started with dii.storage
 

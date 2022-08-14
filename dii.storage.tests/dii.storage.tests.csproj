@@ -2,11 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-
     <IsPackable>false</IsPackable>
-
     <AssemblyName>dii.storage.tests</AssemblyName>
-
     <RootNamespace>dii.storage.tests</RootNamespace>
   </PropertyGroup>
 

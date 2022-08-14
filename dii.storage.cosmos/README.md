@@ -1,10 +1,8 @@
-﻿# dii.storage
+﻿# dii.storage.cosmos
 
-A .NET 6 framework for managing CosmosDB entities with dii.storage.
+A .NET 6 framework for managing CosmosDB entities with [dii.storage](https://www.nuget.org/packages/dii.storage).
 
 ## Features
-
-### dii.storage.cosmos
 
 * **Infrastructure Auto-Creation** — Allows the automatic creation of CosmosDB Database and Container at startup.
 
@@ -14,7 +12,7 @@ A .NET 6 framework for managing CosmosDB entities with dii.storage.
 
   * Fully functional Bulk variants of all access patterns.
 
-## Getting Started with dii.storage
+## Getting Started with dii.storage.cosmos
 
 To get started with dii.storage.cosmos, please check out the example code in the [dii.storage.cosmos.examples](https://github.com/Dream-Invent-Inspire/dii.storage/tree/main/dii.storage.cosmos.examples) project.
 
@@ -28,4 +26,4 @@ If you've got questions about setup, features, or just want to chat with the dev
 
 ## Contributors
 
-The core optimizer of dii.storage was originally developed by [Andrew Beers](https://github.com/aquamoogle). Additional features and maintenance by Andrew and [Pat MacMannis](https://github.com/pmac627). Both original contributors are active with the project today.
+The core optimizer of [dii.storage](https://www.nuget.org/packages/dii.storage) was originally developed by [Andrew Beers](https://github.com/aquamoogle). Additional features and maintenance by Andrew and [Pat MacMannis](https://github.com/pmac627). Both original contributors are active with the project today.

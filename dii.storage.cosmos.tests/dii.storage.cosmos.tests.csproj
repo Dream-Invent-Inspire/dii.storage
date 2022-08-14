@@ -2,8 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-
     <IsPackable>false</IsPackable>
+    <AssemblyName>dii.storage.cosmos.tests</AssemblyName>
+    <RootNamespace>dii.storage.cosmos.tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
