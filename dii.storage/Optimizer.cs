@@ -14,12 +14,12 @@ using System.Text.Json.Serialization;
 
 namespace dii.storage
 {
-    /// <summary>
-    /// The dii.storage engine that dynamically creates and registers all types used for storage.
-    /// Only one instance of the <see cref="Optimizer"/> can exist at a time.
-    /// This class cannot be inherited.
-    /// </summary>
-    public sealed class Optimizer
+	/// <summary>
+	/// The dii.storage engine that dynamically creates and registers all types used for storage.
+	/// Only one instance of the <see cref="Optimizer"/> can exist at a time.
+	/// This class cannot be inherited.
+	/// </summary>
+	public sealed class Optimizer
 	{
 		#region Private Fields
 		private static Optimizer _instance;
