@@ -11,7 +11,7 @@
     <Authors>Andrew Beers &amp; Pat MacMannis</Authors>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageId>dii.storage</PackageId>
-    <Version>1.2.1.1-rc1</Version>
+    <Version>1.2.1.1-rc2</Version>
     <AssemblyName>dii.storage</AssemblyName>
     <RootNamespace>dii.storage</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -29,8 +29,8 @@
       <Pack>true</Pack>
       <PackagePath></PackagePath>
     </None>
-    <None Include="..\README.md">
-      <Pack>true</Pack>
+    <None Update="README.md">
+      <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
