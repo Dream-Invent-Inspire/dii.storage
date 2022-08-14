@@ -18,7 +18,7 @@ namespace dii.storage.Attributes
 		public PartitionKeyAttribute(Type parititonKeyType = null, int order = 0, char separator = Constants.DefaultPartitionKeyDelimitor)
 		{
 			Order = order;
-			Separator = separator;
+			Separator = char.IsWhiteSpace(separator) ? Constants.DefaultPartitionKeyDelimitor : separator; ;
 			PartitionKeyType = parititonKeyType ?? typeof(string);
 		}
 

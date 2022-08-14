@@ -2,6 +2,9 @@
 
 namespace dii.storage
 {
+    /// <summary>
+    /// A dictionary of constant values used by dii.storage.
+    /// </summary>
     public static class Constants
     {
         /// <summary>

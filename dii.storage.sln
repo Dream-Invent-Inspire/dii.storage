@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.32510.428
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32804.467
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dii.storage", "dii.storage\dii.storage.csproj", "{A65C5098-5AD3-403E-8A2B-9CBCE8713A37}"
 EndProject
@@ -19,7 +19,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dii.storage.cosmos", "dii.s
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dii.storage.cosmos.tests", "dii.storage.cosmos.tests\dii.storage.cosmos.tests.csproj", "{873E2939-3716-45D6-8409-0B28F718F03A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dii.storage.cosmos.examples", "dii.storage.cosmos.examples\dii.storage.cosmos.examples.csproj", "{F0BA0768-404B-4A05-BCE8-47F346161575}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dii.storage.cosmos.examples", "dii.storage.cosmos.examples\dii.storage.cosmos.examples.csproj", "{F0BA0768-404B-4A05-BCE8-47F346161575}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

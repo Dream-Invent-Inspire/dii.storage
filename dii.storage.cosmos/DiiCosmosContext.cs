@@ -18,7 +18,7 @@ namespace dii.storage.cosmos
 	{
 		#region Private Fields
 		private static DiiCosmosContext _instance;
-		private static object _instanceLock = new object();
+		private static readonly object _instanceLock = new object();
 		#endregion Private Fields
 
 		#region Public Fields

@@ -14,10 +14,10 @@ namespace dii.storage.Attributes
 		/// </summary>
 		/// <param name="order">The immutable order which the field or property should be used to form the composite id.</param>
 		/// <param name="separator">The immutable separator to be used when forming the composite id.</param>
-		public IdAttribute(int order = 0, char separator = Constants.DefaultPartitionKeyDelimitor)
+		public IdAttribute(int order = 0, char separator = Constants.DefaultIdDelimitor)
 		{
 			Order = order;
-			Separator = separator;
+			Separator = char.IsWhiteSpace(separator) ? Constants.DefaultIdDelimitor : separator;
 		}
 
 		/// <summary>

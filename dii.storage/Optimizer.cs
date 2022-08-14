@@ -23,7 +23,7 @@ namespace dii.storage
 	{
 		#region Private Fields
 		private static Optimizer _instance;
-		private static object _instanceLock = new object();
+		private static readonly object _instanceLock = new object();
 		private static bool _autoDetectTypes;
 		private static bool _ignoreInvalidDiiEntities;
 

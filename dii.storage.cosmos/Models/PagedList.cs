@@ -4,7 +4,7 @@ namespace dii.storage.cosmos.Models
 {
 	/// <summary>
 	/// <inheritdoc cref="List{T}" path="//summary" />
-	/// Also provides paging properties
+	/// Also provides paging properties.
 	/// </summary>
 	/// <typeparam name="T"><inheritdoc cref="List{T}" path="//typeparam" /></typeparam>
 	public class PagedList<T> : List<T>
