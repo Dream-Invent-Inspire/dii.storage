@@ -12,6 +12,17 @@ A .NET 6 framework for managing CosmosDB entities with [dii.storage](https://www
 
   * Fully functional Bulk variants of all access patterns.
 
+## Dependencies
+
+_**net5.0**_
+* For use with .NET 5, use up to [v1.2.0](https://www.nuget.org/packages/dii.storage.cosmos/1.2.0):
+  * [dii.storage](https://www.nuget.org/packages/dii.storage/1.2.0) (<= 1.2.0)
+
+_**net6.0**_
+* For use with .NET 6, use [latest](https://www.nuget.org/packages/dii.storage.cosmos).
+  * [dii.storage](https://www.nuget.org/packages/dii.storage) (>= 1.2.1)
+  * [Microsoft.Azure.Cosmos](https://www.nuget.org/packages/Microsoft.Azure.Cosmos/) (>= 3.27.2)
+
 ## Getting Started with dii.storage.cosmos
 
 To get started with dii.storage.cosmos, please check out the example code in the [dii.storage.cosmos.examples](https://github.com/Dream-Invent-Inspire/dii.storage/tree/main/dii.storage.cosmos.examples) project.
