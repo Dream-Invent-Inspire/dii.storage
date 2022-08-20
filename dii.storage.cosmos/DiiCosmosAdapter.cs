@@ -209,22 +209,22 @@ namespace dii.storage.cosmos
 
 			return results;
 		}
-		#endregion Fetch APIs
+        #endregion Fetch APIs
 
-		#region Create APIs
-		/// <summary>
-		/// Creates an entity as an asynchronous operation.
-		/// </summary>
-		/// <param name="diiEntity">The <see cref="T"/> to create.</param>
-		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
-		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
-		/// <returns>
-		/// The entity that was created.
-		/// </returns>
-		/// <remarks>
-		/// 
-		/// </remarks>
-		protected async Task<T> CreateAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        #region Create APIs
+        /// <summary>
+        /// Creates an entity as an asynchronous operation.
+        /// </summary>
+        /// <param name="diiEntity">The <typeparamref name="T"/> to create.</param>
+        /// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+        /// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+        /// <returns>
+        /// The entity that was created.
+        /// </returns>
+        /// <remarks>
+        /// 
+        /// </remarks>
+        protected async Task<T> CreateAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			var packedEntity = _optimizer.ToEntity(diiEntity);
 			var partitionKey = _optimizer.GetPartitionKey(diiEntity);
@@ -292,26 +292,26 @@ namespace dii.storage.cosmos
 
 			return unpackedEntities;
 		}
-		#endregion Create APIs
+        #endregion Create APIs
 
-		#region Replace APIs
-		/// <summary>
-		/// Replaces an entity as an asynchronous operation.
-		/// </summary>
-		/// <param name="diiEntity">The <see cref="T"/> to replace.</param>
-		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
-		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
-		/// <returns>
-		/// The entity that was updated.
-		/// </returns>
-		/// <remarks>
-		/// The entity's partition key value is immutable. To change an entity's partition key
-		/// value you must delete the original entity and insert a new entity.
-		/// <para>
-		/// This operation does not work on entities that use the same value for both the id and parition key.
-		/// </para>
-		/// </remarks>
-		protected async Task<T> ReplaceAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        #region Replace APIs
+        /// <summary>
+        /// Replaces an entity as an asynchronous operation.
+        /// </summary>
+        /// <param name="diiEntity">The <typeparamref name="T"/> to replace.</param>
+        /// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+        /// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+        /// <returns>
+        /// The entity that was updated.
+        /// </returns>
+        /// <remarks>
+        /// The entity's partition key value is immutable. To change an entity's partition key
+        /// value you must delete the original entity and insert a new entity.
+        /// <para>
+        /// This operation does not work on entities that use the same value for both the id and parition key.
+        /// </para>
+        /// </remarks>
+        protected async Task<T> ReplaceAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			if (requestOptions == null && !string.IsNullOrEmpty(diiEntity.DataVersion))
 			{
@@ -405,22 +405,22 @@ namespace dii.storage.cosmos
 
 			return unpackedEntities;
 		}
-		#endregion Replace APIs
+        #endregion Replace APIs
 
-		#region Upsert APIs
-		/// <summary>
-		/// Upserts an entity as an asynchronous operation.
-		/// </summary>
-		/// <param name="diiEntity">The <see cref="T"/> to upsert.</param>
-		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
-		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
-		/// <returns>
-		/// The entity that was upserted.
-		/// </returns>
-		/// <remarks>
-		/// 
-		/// </remarks>
-		protected async Task<T> UpsertAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        #region Upsert APIs
+        /// <summary>
+        /// Upserts an entity as an asynchronous operation.
+        /// </summary>
+        /// <param name="diiEntity">The <typeparamref name="T"/> to upsert.</param>
+        /// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+        /// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+        /// <returns>
+        /// The entity that was upserted.
+        /// </returns>
+        /// <remarks>
+        /// 
+        /// </remarks>
+        protected async Task<T> UpsertAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			if (requestOptions == null && !string.IsNullOrEmpty(diiEntity.DataVersion))
 			{
@@ -592,22 +592,22 @@ namespace dii.storage.cosmos
 
 			return unpackedEntities;
 		}
-		#endregion Patch APIs
+        #endregion Patch APIs
 
-		#region Delete APIs
-		/// <summary>
-		/// Delete an entity as an asynchronous operation.
-		/// </summary>
-		/// <param name="diiEntity">The <see cref="T"/> to delete.</param>
-		/// <param name="requestOptions">(Optional) The options for the entity query request.</param>
-		/// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
-		/// <returns>
-		/// The success status of the operation.
-		/// </returns>
-		/// <remarks>
-		/// <see cref="ItemRequestOptions.EnableContentResponseOnWrite"/> is ignored.
-		/// </remarks>
-		protected Task<bool> DeleteEntityAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        #region Delete APIs
+        /// <summary>
+        /// Delete an entity as an asynchronous operation.
+        /// </summary>
+        /// <param name="diiEntity">The <typeparamref name="T"/> to delete.</param>
+        /// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+        /// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+        /// <returns>
+        /// The success status of the operation.
+        /// </returns>
+        /// <remarks>
+        /// <see cref="ItemRequestOptions.EnableContentResponseOnWrite"/> is ignored.
+        /// </remarks>
+        protected Task<bool> DeleteEntityAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
 		{
 			var partitionKey = _optimizer.GetPartitionKey(diiEntity);
 			var id = _optimizer.GetId(diiEntity);
