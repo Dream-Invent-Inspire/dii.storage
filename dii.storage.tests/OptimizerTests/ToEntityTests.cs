@@ -15,7 +15,7 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(100)]
         public void ToEntity_Prep()
         {
-            _ = Optimizer.Init(typeof(FakeEntityTwo));
+            _ = Optimizer.Init(typeof(FakeEntityTwo), typeof(FakeEntityFive));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
@@ -41,6 +41,27 @@ namespace dii.storage.tests.OptimizerTests
         }
 
         [Fact, TestPriorityOrder(102)]
+        public void ToEntity_SuccessWithSameIdAndPKProperty()
+        {
+            var optimizer = Optimizer.Get();
+
+            var fakeEntityFive = new FakeEntityFive
+            {
+                FakeEntityFiveId = Guid.NewGuid().ToString(),
+                SearchableStringValue = $"fakeEntityFive: {nameof(FakeEntityFive.SearchableStringValue)}",
+                CompressedStringValue = $"fakeEntityFive: {nameof(FakeEntityFive.CompressedStringValue)}"
+            };
+
+            var entity = (dynamic)optimizer.ToEntity(fakeEntityFive);
+
+            Assert.NotNull(entity);
+            Assert.Equal(fakeEntityFive.FakeEntityFiveId, entity.id);
+            Assert.Equal(fakeEntityFive.FakeEntityFiveId, entity.PK);
+            Assert.Equal("fakeEntityFive: SearchableStringValue", entity.@string);
+            Assert.Equal("kdklZmFrZUVudGl0eUZpdmU6IENvbXByZXNzZWRTdHJpbmdWYWx1ZQ==", entity.p);
+        }
+
+        [Fact, TestPriorityOrder(103)]
         public void ToEntity_UnregisteredType()
         {
             var optimizer = Optimizer.Get();
@@ -56,7 +77,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Null(entity);
         }
 
-        [Fact, TestPriorityOrder(103)]
+        [Fact, TestPriorityOrder(104)]
         public void ToEntity_Null()
         {
             var optimizer = Optimizer.Get();
