@@ -54,8 +54,8 @@ namespace dii.storage.tests.OptimizerTests
             var fakeEntityFive = new FakeEntityFive
             {
                 FakeEntityFiveId = Guid.NewGuid().ToString(),
-                SearchableStringValue = $"fakeEntityFive: {nameof(FakeEntityTwo.SearchableStringValue)}",
-                CompressedStringValue = $"fakeEntityFive: {nameof(FakeEntityTwo.CompressedStringValue)}"
+                SearchableStringValue = $"fakeEntityFive: {nameof(FakeEntityFive.SearchableStringValue)}",
+                CompressedStringValue = $"fakeEntityFive: {nameof(FakeEntityFive.CompressedStringValue)}"
             };
 
             var entity = optimizer.ToEntity(fakeEntityFive);
