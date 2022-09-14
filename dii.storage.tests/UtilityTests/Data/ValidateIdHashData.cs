@@ -6,7 +6,7 @@ namespace dii.storage.tests.UtilityTests.Data
     {
         public ValidateIdHashData()
         {
-            Add("U_G0BFVe2Ag", true);
+            Add("U.G0BFVe2Ag", true);
             Add("U=G0BFVe2Ag", true);
             Add("Abcdefg", true);
             Add(null, false);
