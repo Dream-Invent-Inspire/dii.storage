@@ -137,6 +137,30 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(nameof(FakeEntityTwo), optimizer.TableMappings[typeof(FakeEntityTwo)].TableName);
         }
 
+        [Fact, TestPriorityOrder(106)]
+        public void ConfigureTypes_AddNewTypeWithSameIdAndPKProperty()
+        {
+            var optimizer = Optimizer.Get();
+
+            Assert.Equal(2, optimizer.Tables.Count);
+
+            var tablesInitialized = optimizer.Tables;
+            var tableMappingsInitialized = optimizer.TableMappings;
+
+            optimizer.ConfigureTypes(typeof(FakeEntityFive));
+
+            Assert.Equal(3, optimizer.Tables.Count);
+            Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
+            Assert.Equal(nameof(FakeEntityTwo), optimizer.Tables[1].TableName);
+            Assert.Equal(nameof(FakeEntityFive), optimizer.Tables[2].TableName);
+
+            Assert.Equal(3, optimizer.TableMappings.Count);
+            Assert.Equal(tableMappingsInitialized.Count, optimizer.TableMappings.Count);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].TableName, optimizer.TableMappings[typeof(FakeEntity)].TableName);
+            Assert.Equal(nameof(FakeEntityTwo), optimizer.TableMappings[typeof(FakeEntityTwo)].TableName);
+            Assert.Equal(nameof(FakeEntityFive), optimizer.TableMappings[typeof(FakeEntityFive)].TableName);
+        }
+
         #region Teardown
         [Fact, TestPriorityOrder(int.MaxValue)]
         public void Teardown()

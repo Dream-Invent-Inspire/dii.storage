@@ -17,7 +17,7 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(100)]
         public void FromEntity_Prep()
         {
-            _ = Optimizer.Init(typeof(FakeEntityTwo));
+            _ = Optimizer.Init(typeof(FakeEntityTwo), typeof(FakeEntityFive));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
@@ -46,7 +46,31 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(fakeEntityTwo.CompressedStringValue, unpackedEntity.CompressedStringValue);
         }
 
-        [Theory, TestPriorityOrder(102), ClassData(typeof(FromEntityReturnDefaultData))]
+        [Fact, TestPriorityOrder(102)]
+        public void FromEntity_SuccessWithSameIdAndPKProperty()
+        {
+            var optimizer = Optimizer.Get();
+
+            var fakeEntityFive = new FakeEntityFive
+            {
+                FakeEntityFiveId = Guid.NewGuid().ToString(),
+                SearchableStringValue = $"fakeEntityFive: {nameof(FakeEntityFive.SearchableStringValue)}",
+                CompressedStringValue = $"fakeEntityFive: {nameof(FakeEntityFive.CompressedStringValue)}"
+            };
+
+            var entity = optimizer.ToEntity(fakeEntityFive);
+
+            Assert.NotNull(entity);
+
+            var unpackedEntity = optimizer.FromEntity<FakeEntityFive>(entity);
+
+            Assert.NotNull(unpackedEntity);
+            Assert.Equal(fakeEntityFive.FakeEntityFiveId, unpackedEntity.FakeEntityFiveId);
+            Assert.Equal(fakeEntityFive.SearchableStringValue, unpackedEntity.SearchableStringValue);
+            Assert.Equal(fakeEntityFive.CompressedStringValue, unpackedEntity.CompressedStringValue);
+        }
+
+        [Theory, TestPriorityOrder(103), ClassData(typeof(FromEntityReturnDefaultData))]
         public void FromEntity_ReturnDefault(object entity)
         {
             var optimizer = Optimizer.Get();
@@ -56,7 +80,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(default, unpackedEntity);
         }
 
-        [Fact, TestPriorityOrder(103)]
+        [Fact, TestPriorityOrder(104)]
         public void FromEntity_JsonSuccess()
         {
             var optimizer = Optimizer.Get();
@@ -84,7 +108,34 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal("\"00000000-0000-0000-79bf-5e755a3201d8\"", unpackedEntity.DataVersion);
         }
 
-        [Fact, TestPriorityOrder(104)]
+        [Fact, TestPriorityOrder(105)]
+        public void FromEntity_JsonSuccessWithSameIdAndPKProperty()
+        {
+            var optimizer = Optimizer.Get();
+
+            var id = Guid.NewGuid().ToString();
+            var fakeEntityFiveJson = $@"{{
+  ""id"": ""{id}"",
+  ""_etag"": ""\""00000000-0000-0000-79bf-5e755a3201d8\"""",
+  ""p"": ""kdklZmFrZUVudGl0eUZpdmU6IENvbXByZXNzZWRTdHJpbmdWYWx1ZQ=="",
+  ""PK"": ""{id}"",
+  ""_rid"": ""aKAHANyVWdQJAAAAAAAAAA=="",
+  ""_self"": ""dbs/aKAHAA==/colls/aKAHANyVWdQ=/docs/aKAHANyVWdQJAAAAAAAAAA==/"",
+  ""_attachments"": ""attachments/"",
+  ""_ts"": 1654531583
+}}";
+
+            var fakeEntityFive = JObject.Parse(fakeEntityFiveJson);
+
+            var unpackedEntity = optimizer.FromEntity<FakeEntityFive>(fakeEntityFive);
+
+            Assert.NotNull(unpackedEntity);
+            Assert.Equal(id, unpackedEntity.FakeEntityFiveId);
+            Assert.Equal("fakeEntityFive: CompressedStringValue", unpackedEntity.CompressedStringValue);
+            Assert.Equal("\"00000000-0000-0000-79bf-5e755a3201d8\"", unpackedEntity.DataVersion);
+        }
+
+        [Fact, TestPriorityOrder(106)]
         public void FromEntity_JsonEmpty()
         {
             var optimizer = Optimizer.Get();

@@ -562,10 +562,16 @@ namespace dii.storage
 
 			foreach (var property in source.GetProperties())
 			{
+				var isAlsoId = false;
+
 				var partitionKey = property.GetCustomAttribute<PartitionKeyAttribute>();
-				if (partitionKey != null)
+                var id = property.GetCustomAttribute<IdAttribute>();
+
+                if (partitionKey != null)
 				{
-					if (partitionFields.ContainsKey(partitionKey.Order))
+					isAlsoId = id != null;
+
+                    if (partitionFields.ContainsKey(partitionKey.Order))
 					{
 						if (_ignoreInvalidDiiEntities)
 						{
@@ -592,13 +598,15 @@ namespace dii.storage
 						partitionKeyType = partitionKey.PartitionKeyType;
 					}
 					
-					continue;
+					if (!isAlsoId)
+						continue;
 				}
 
-				var id = property.GetCustomAttribute<IdAttribute>();
 				if (id != null)
-				{
-					if (idFields.ContainsKey(id.Order))
+                {
+                    isAlsoId = false;
+
+                    if (idFields.ContainsKey(id.Order))
 					{
 						if (_ignoreInvalidDiiEntities)
 						{
@@ -620,7 +628,7 @@ namespace dii.storage
 						idSeparator = id.Separator;
 					}
 
-					continue;
+                    continue;
 				}
 
 				var search = property.GetCustomAttribute<SearchableAttribute>();
