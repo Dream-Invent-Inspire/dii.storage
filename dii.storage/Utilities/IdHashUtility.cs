@@ -27,7 +27,7 @@ namespace dii.storage.Utilities
         {
             if (!string.IsNullOrWhiteSpace(idHash))
             {
-                var validator = new Regex(@"^[a-zA-Z0-9_=]+$");
+                var validator = new Regex(@"^[a-zA-Z0-9.=]+$");
 
                 if (validator.IsMatch(idHash))
                 {
@@ -108,7 +108,7 @@ namespace dii.storage.Utilities
 
         private static string GenerateHash(byte[] bytes)
         {
-            return Convert.ToBase64String(bytes, Base64FormattingOptions.None).TrimEnd('=').Replace("/", "=").Replace("+", "_");
+            return Convert.ToBase64String(bytes, Base64FormattingOptions.None).TrimEnd('=').Replace("/", "=").Replace("+", ".");
         }
     }
 }

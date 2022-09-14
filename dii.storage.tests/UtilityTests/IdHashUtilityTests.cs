@@ -68,7 +68,7 @@ namespace dii.storage.tests.UtilityTests
                     throw new ArgumentException("Testing unsupported type for IdHashUtility.ToIdHash().");
             }
 
-            Assert.Equal("gBNEpi_Y2Qg", id);
+            Assert.Equal("gBNEpi.Y2Qg", id);
         }
 
         [Theory, TestPriorityOrder(104), ClassData(typeof(ToIdHashData))]
@@ -96,10 +96,10 @@ namespace dii.storage.tests.UtilityTests
                     id = IdHashUtility.AsIdHash(ul);
                     break;
                 default:
-                    throw new ArgumentException("Testing unsupported type for IdHashUtility.ToIdHash().");
+                    throw new ArgumentException("Testing unsupported type for IdHashUtility.AsIdHash().");
             }
 
-            Assert.Equal("gBNEpi_Y2Qg", id);
+            Assert.Equal("gBNEpi.Y2Qg", id);
         }
 
         #region Teardown
