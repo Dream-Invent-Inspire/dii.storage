@@ -37,10 +37,12 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Single(optimizer.Tables);
             Assert.Equal(tablesInitialized.Count, optimizer.Tables.Count);
             Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
+            Assert.Equal(tablesInitialized[0].ClassName, optimizer.Tables[0].ClassName);
 
             Assert.Single(optimizer.TableMappings);
             Assert.Equal(tableMappingsInitialized.Count, optimizer.TableMappings.Count);
             Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].TableName, optimizer.TableMappings[typeof(FakeEntity)].TableName);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
         }
 
         [Theory, TestPriorityOrder(102), ClassData(typeof(ConfigureTypesInvalidSearchableKeyExceptionData))]
@@ -61,10 +63,12 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Single(optimizer.Tables);
             Assert.Equal(tablesInitialized.Count, optimizer.Tables.Count);
             Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
+            Assert.Equal(tablesInitialized[0].ClassName, optimizer.Tables[0].ClassName);
 
             Assert.Single(optimizer.TableMappings);
             Assert.Equal(tableMappingsInitialized.Count, optimizer.TableMappings.Count);
             Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].TableName, optimizer.TableMappings[typeof(FakeEntity)].TableName);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
         }
 
         [Theory, TestPriorityOrder(103), ClassData(typeof(ConfigureTypesInvalidPartitionKeyOrderExceptionData))]
@@ -85,10 +89,12 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Single(optimizer.Tables);
             Assert.Equal(tablesInitialized.Count, optimizer.Tables.Count);
             Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
+            Assert.Equal(tablesInitialized[0].ClassName, optimizer.Tables[0].ClassName);
 
             Assert.Single(optimizer.TableMappings);
             Assert.Equal(tableMappingsInitialized.Count, optimizer.TableMappings.Count);
             Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].TableName, optimizer.TableMappings[typeof(FakeEntity)].TableName);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
         }
 
         [Theory, TestPriorityOrder(104), ClassData(typeof(ConfigureTypesInvalidIdOrderExceptionData))]
@@ -109,10 +115,12 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Single(optimizer.Tables);
             Assert.Equal(tablesInitialized.Count, optimizer.Tables.Count);
             Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
+            Assert.Equal(tablesInitialized[0].ClassName, optimizer.Tables[0].ClassName);
 
             Assert.Single(optimizer.TableMappings);
             Assert.Equal(tableMappingsInitialized.Count, optimizer.TableMappings.Count);
             Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].TableName, optimizer.TableMappings[typeof(FakeEntity)].TableName);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
         }
 
         [Fact, TestPriorityOrder(105)]
@@ -129,12 +137,16 @@ namespace dii.storage.tests.OptimizerTests
 
             Assert.Equal(2, optimizer.Tables.Count);
             Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
+            Assert.Equal(tablesInitialized[0].ClassName, optimizer.Tables[0].ClassName);
             Assert.Equal(nameof(FakeEntityTwo), optimizer.Tables[1].TableName);
+            Assert.Equal(nameof(FakeEntityTwo), optimizer.Tables[1].ClassName);
 
             Assert.Equal(2, optimizer.TableMappings.Count);
             Assert.Equal(tableMappingsInitialized.Count, optimizer.TableMappings.Count);
             Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].TableName, optimizer.TableMappings[typeof(FakeEntity)].TableName);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
             Assert.Equal(nameof(FakeEntityTwo), optimizer.TableMappings[typeof(FakeEntityTwo)].TableName);
+            Assert.Equal(nameof(FakeEntityTwo), optimizer.TableMappings[typeof(FakeEntityTwo)].ClassName);
         }
 
         [Fact, TestPriorityOrder(106)]
@@ -151,14 +163,20 @@ namespace dii.storage.tests.OptimizerTests
 
             Assert.Equal(3, optimizer.Tables.Count);
             Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
-            Assert.Equal(nameof(FakeEntityTwo), optimizer.Tables[1].TableName);
+            Assert.Equal(tablesInitialized[0].ClassName, optimizer.Tables[0].ClassName);
+            Assert.Equal(tablesInitialized[1].TableName, optimizer.Tables[1].TableName);
+            Assert.Equal(tablesInitialized[1].ClassName, optimizer.Tables[1].ClassName);
             Assert.Equal(nameof(FakeEntityFive), optimizer.Tables[2].TableName);
+            Assert.Equal(nameof(FakeEntityFive), optimizer.Tables[2].ClassName);
 
             Assert.Equal(3, optimizer.TableMappings.Count);
             Assert.Equal(tableMappingsInitialized.Count, optimizer.TableMappings.Count);
             Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].TableName, optimizer.TableMappings[typeof(FakeEntity)].TableName);
-            Assert.Equal(nameof(FakeEntityTwo), optimizer.TableMappings[typeof(FakeEntityTwo)].TableName);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntityTwo)].TableName, optimizer.TableMappings[typeof(FakeEntityTwo)].TableName);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntityTwo)].ClassName, optimizer.TableMappings[typeof(FakeEntityTwo)].ClassName);
             Assert.Equal(nameof(FakeEntityFive), optimizer.TableMappings[typeof(FakeEntityFive)].TableName);
+            Assert.Equal(nameof(FakeEntityFive), optimizer.TableMappings[typeof(FakeEntityFive)].ClassName);
         }
 
         #region Teardown

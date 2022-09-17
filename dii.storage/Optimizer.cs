@@ -193,7 +193,8 @@ namespace dii.storage
 						{
 							var tableMetaData = new TableMetaData
 							{
-								TableName = type.Name,
+								TableName = type.GetCustomAttribute<StorageNameAttribute>()?.Name ?? type.Name,
+                                ClassName = type.Name,
 								ConcreteType = type,
 								StorageType = storageType
 							};

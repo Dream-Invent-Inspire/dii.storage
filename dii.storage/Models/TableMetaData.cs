@@ -8,11 +8,16 @@ namespace dii.storage.Models
 	/// This class cannot be inherited.
 	/// </summary>
 	public sealed class TableMetaData
-	{
+    {
+        /// <summary>
+        /// The name of the table in storage.
+        /// </summary>
+        public string TableName { get; set; }
+
 		/// <summary>
-		/// The name of the table. This is typlically the same name you will find in your storage.
+		/// The name of the class.
 		/// </summary>
-		public string TableName { get; set; }
+		public string ClassName { get; set; }
 
 		/// <summary>
 		/// A collection of unique properties.

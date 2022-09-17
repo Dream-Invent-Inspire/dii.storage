@@ -130,12 +130,12 @@ namespace dii.storage.cosmos.tests.Utilities
 
             for (var i = 0; i < tablesInitialized.Count; i++)
 			{
-				Assert.Equal(tablesInitialized[i].TableName, optimizer.Tables[i].TableName);
+				Assert.Equal(tablesInitialized[i].ClassName, optimizer.Tables[i].ClassName);
 			}
 
 			foreach (var tableType in tableMappingsInitialized.Keys)
 			{
-				Assert.Equal(tableMappingsInitialized[tableType].TableName, optimizer.TableMappings[tableType].TableName);
+				Assert.Equal(tableMappingsInitialized[tableType].ClassName, optimizer.TableMappings[tableType].ClassName);
 			}
 		}
 
@@ -149,7 +149,7 @@ namespace dii.storage.cosmos.tests.Utilities
 			var optimizer = Optimizer.Get();
 
 			Assert.NotNull(optimizer);
-			Assert.NotNull(optimizer.Tables.FirstOrDefault(x => x.TableName == nameof(FakeEntity)));
+			Assert.NotNull(optimizer.Tables.FirstOrDefault(x => x.ClassName == nameof(FakeEntity)));
 			Assert.NotNull(optimizer.TableMappings[typeof(FakeEntity)]);
 		}
 

@@ -11,10 +11,10 @@ using System.Threading.Tasks;
 
 namespace dii.storage.cosmos
 {
-    /// <summary>
-    /// The CosmosDB implementation of <see cref="DiiContext"/>.
-    /// </summary>
-    public class DiiCosmosContext : DiiContext
+	/// <summary>
+	/// The CosmosDB implementation of <see cref="DiiContext"/>.
+	/// </summary>
+	public class DiiCosmosContext : DiiContext
 	{
 		#region Private Fields
 		private static DiiCosmosContext _instance;

@@ -6,6 +6,7 @@ using System;
 
 namespace dii.storage.cosmos.examples.Models
 {
+    [StorageName("Example-Person")]
     public class Person : IDiiEntity
 	{
 		/// <summary>

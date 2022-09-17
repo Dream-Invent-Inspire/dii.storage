@@ -5,6 +5,7 @@ using static dii.storage.tests.Models.Enums;
 
 namespace dii.storage.tests.Models
 {
+	[StorageName("Test-FakeEntity")]
     public class FakeEntity : FakeDiiEntity
 	{
 		/// <summary>

@@ -1,11 +1,9 @@
-﻿using dii.storage.tests.Models;
-using System.Linq;
-using System.Reflection;
+﻿using System.Reflection;
 using Xunit;
 
 namespace dii.storage.tests.Utilities
 {
-    public static class TestHelpers
+	public static class TestHelpers
     {
 		#region Private Fields
 		private static BindingFlags _privateBindingFlags = BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance;
@@ -63,13 +61,15 @@ namespace dii.storage.tests.Utilities
 			Assert.Equal(tableMappingsInitialized.Count, optimizer.TableMappings.Count);
 
             for (var i = 0; i < tablesInitialized.Count; i++)
-			{
-				Assert.Equal(tablesInitialized[i].TableName, optimizer.Tables[i].TableName);
+            {
+                Assert.Equal(tablesInitialized[i].TableName, optimizer.Tables[i].TableName);
+                Assert.Equal(tablesInitialized[i].ClassName, optimizer.Tables[i].ClassName);
 			}
 
 			foreach (var tableType in tableMappingsInitialized.Keys)
-			{
-				Assert.Equal(tableMappingsInitialized[tableType].TableName, optimizer.TableMappings[tableType].TableName);
+            {
+                Assert.Equal(tableMappingsInitialized[tableType].TableName, optimizer.TableMappings[tableType].TableName);
+                Assert.Equal(tableMappingsInitialized[tableType].ClassName, optimizer.TableMappings[tableType].ClassName);
 			}
 		}
 
