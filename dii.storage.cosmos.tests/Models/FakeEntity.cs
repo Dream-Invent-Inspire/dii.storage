@@ -7,6 +7,7 @@ using static dii.storage.cosmos.tests.Models.Enums;
 
 namespace dii.storage.cosmos.tests.Models
 {
+	[StorageName("Test-FakeEntity")]
     public class FakeEntity : DiiCosmosEntity
 	{
 		/// <summary>

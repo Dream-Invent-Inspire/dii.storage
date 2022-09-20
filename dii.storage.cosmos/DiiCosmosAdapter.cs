@@ -12,14 +12,14 @@ using System.Threading.Tasks;
 
 namespace dii.storage.cosmos
 {
-    /// <summary>
-    /// A CosmosDB abstraction of the adapter pattern with support for <see cref="Optimizer"/> and <see cref="DiiCosmosContext"/>.
-    /// </summary>
-    /// <typeparam name="T">The <see cref="Type"/> of entity the <see cref="DiiCosmosAdapter{T}"/> is to be used for.</typeparam>
-    /// <remarks>
-    /// <typeparamref name="T"/> must implement the <see cref="IDiiEntity"/> interface.
-    /// </remarks>
-    public abstract class DiiCosmosAdapter<T> where T : IDiiEntity, new()
+	/// <summary>
+	/// A CosmosDB abstraction of the adapter pattern with support for <see cref="Optimizer"/> and <see cref="DiiCosmosContext"/>.
+	/// </summary>
+	/// <typeparam name="T">The <see cref="Type"/> of entity the <see cref="DiiCosmosAdapter{T}"/> is to be used for.</typeparam>
+	/// <remarks>
+	/// <typeparamref name="T"/> must implement the <see cref="IDiiEntity"/> interface.
+	/// </remarks>
+	public abstract class DiiCosmosAdapter<T> where T : IDiiEntity, new()
 	{
 		#region Private Fields
 		private readonly Container _container;
