@@ -11,12 +11,11 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Xunit;
-using static dii.storage.cosmos.tests.Models.Enums;
 
 namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
 {
     [Collection(nameof(UpsertApiTests))]
-    [TestCollectionPriorityOrder(403)]
+    [TestCollectionPriorityOrder(404)]
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class UpsertApiTests : IClassFixture<AdapterFixture>
     {

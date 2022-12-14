@@ -14,7 +14,7 @@ using Xunit;
 namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
 {
     [Collection(nameof(FetchApiTests))]
-    [TestCollectionPriorityOrder(400)]
+    [TestCollectionPriorityOrder(401)]
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class FetchApiTests : IClassFixture<AdapterFixture>
     {

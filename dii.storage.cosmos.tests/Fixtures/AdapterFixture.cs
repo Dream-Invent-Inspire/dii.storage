@@ -1,10 +1,11 @@
-﻿using dii.storage.Models.Interfaces;
-using dii.storage.cosmos.tests.Adapters;
+﻿using dii.storage.cosmos.tests.Adapters;
 using dii.storage.cosmos.tests.Models;
 using dii.storage.cosmos.tests.Models.Interfaces;
 using dii.storage.cosmos.tests.Utilities;
+using dii.storage.Models.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace dii.storage.cosmos.tests.Fixtures
 {
@@ -27,9 +28,11 @@ namespace dii.storage.cosmos.tests.Fixtures
 
             Optimizer = initContextAndOptimizerTask.Result;
 
+            var databaseId = NoSqlDatabaseConfig.DatabaseConfig.DatabaseIds.FirstOrDefault();
+
             if (FakeEntityAdapter == null)
             {
-                FakeEntityAdapter = new FakeEntityAdapter();
+                FakeEntityAdapter = new FakeEntityAdapter(databaseId);
             }
 
             if (CreatedFakeEntities == null)

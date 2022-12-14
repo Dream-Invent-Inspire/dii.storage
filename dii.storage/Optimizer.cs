@@ -177,7 +177,7 @@ namespace dii.storage
 					.GetAssemblies()
 					.Where(x => !x.IsDynamic && x.FullName != currentAssemblyName)
 					.SelectMany(x => x.GetExportedTypes())
-					.Where(x => x.GetTypeInfo().ImplementedInterfaces.Any(z => z.Name == nameof(IDiiEntity)))
+					.Where(x => !x.IsAbstract && x.GetTypeInfo().ImplementedInterfaces.Any(z => z.Name == nameof(IDiiEntity)))
 					.ToArray();
 			}
 

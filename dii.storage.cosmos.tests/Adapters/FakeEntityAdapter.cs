@@ -10,6 +10,9 @@ namespace dii.storage.cosmos.tests.Adapters
 {
     public class FakeEntityAdapter : DiiCosmosAdapter<FakeEntity>, IFakeAdapter<FakeEntity>
     {
+        public FakeEntityAdapter(string databaseId)
+            : base(databaseId) { }
+
         Task<FakeEntity> IFakeAdapter<FakeEntity>.GetAsync(string id, string partitionKey, ItemRequestOptions requestOptions, CancellationToken cancellationToken)
         {
             return base.GetAsync(id, partitionKey, requestOptions, cancellationToken);

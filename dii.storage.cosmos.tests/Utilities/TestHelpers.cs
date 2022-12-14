@@ -1,6 +1,6 @@
-﻿using dii.storage.Models.Interfaces;
-using dii.storage.cosmos.tests.Fixtures;
+﻿using dii.storage.cosmos.tests.Fixtures;
 using dii.storage.cosmos.tests.Models;
+using dii.storage.Models.Interfaces;
 using System;
 using System.Linq;
 using System.Reflection;
@@ -9,7 +9,7 @@ using Xunit;
 
 namespace dii.storage.cosmos.tests.Utilities
 {
-    public static class TestHelpers
+	public static class TestHelpers
     {
 		#region Private Fields
 		private static readonly BindingFlags _privateBindingFlags = BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance;
@@ -35,7 +35,10 @@ namespace dii.storage.cosmos.tests.Utilities
 				optimizer = Optimizer.Init(types);
 			}
 
-			context.InitTablesAsync(optimizer.Tables).Wait();
+			foreach (var databaseId in context.DatabasesCreatedThisContext)
+			{
+				context.InitTablesAsync(databaseId, optimizer.Tables).Wait();
+			}
 
 			return optimizer;
 		}
@@ -60,11 +63,14 @@ namespace dii.storage.cosmos.tests.Utilities
 		{
 			var context = DiiCosmosContext.Get();
 
-			if (context.Db != null)
-			{
-				_ = await context.Db.DeleteAsync().ConfigureAwait(false);
-			}
-		}
+            if (context.Dbs != null)
+            {
+                foreach (var db in context.Dbs.Values)
+                {
+                    _ = await db.DeleteAsync().ConfigureAwait(false);
+                }
+            }
+        }
 
 		public static void ResetContextInstance()
 		{
@@ -74,12 +80,21 @@ namespace dii.storage.cosmos.tests.Utilities
 			PropertyInfo configField = type.GetProperty("Config", _publicBindingFlags);
 			configField.SetValue(instance, null);
 
-			FieldInfo clientField = type.GetField("Client", _publicBindingFlags);
-			clientField.SetValue(instance, null);
+			FieldInfo readWriteClientField = type.GetField("ReadWriteClient", _publicBindingFlags);
+            readWriteClientField.SetValue(instance, null);
 
-			FieldInfo instanceField = type.GetField("_instance", _privateBindingFlags);
+            FieldInfo readOnlyClientField = type.GetField("ReadOnlyClient", _publicBindingFlags);
+            readOnlyClientField.SetValue(instance, null);
+
+            FieldInfo instanceField = type.GetField("_instance", _privateBindingFlags);
 			instanceField.SetValue(instance, null);
-		}
+
+            FieldInfo hasReadWriteClientField = type.GetField("_hasReadWriteClient", _privateBindingFlags);
+            hasReadWriteClientField.SetValue(instance, false);
+
+            FieldInfo hasReadOnlyClientField = type.GetField("_hasReadOnlyClient", _privateBindingFlags);
+            hasReadOnlyClientField.SetValue(instance, false);
+        }
 
 		public static void ResetOptimizerInstance()
 		{
@@ -142,9 +157,10 @@ namespace dii.storage.cosmos.tests.Utilities
 		public static void AssertContextAndOptimizerAreInitialized()
 		{
 			var context = DiiCosmosContext.Get();
+			var databaseId = context.DatabasesCreatedThisContext.FirstOrDefault();
 
 			Assert.NotNull(context);
-			Assert.NotNull(context.TableMappings[typeof(FakeEntity)]);
+			Assert.NotNull(context.TableMappings[databaseId][typeof(FakeEntity)]);
 
 			var optimizer = Optimizer.Get();
 

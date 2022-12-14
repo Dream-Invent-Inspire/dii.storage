@@ -12,8 +12,8 @@ using Xunit;
 
 namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
 {
-    [Collection(nameof(DeleteApiTests))]
-    [TestCollectionPriorityOrder(405)]
+	[Collection(nameof(DeleteApiTests))]
+    [TestCollectionPriorityOrder(406)]
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class DeleteApiTests : IClassFixture<AdapterFixture>
     {

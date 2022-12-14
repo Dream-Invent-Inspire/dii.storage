@@ -4,6 +4,7 @@ using dii.storage.cosmos.tests.Models;
 using dii.storage.cosmos.tests.Orderer;
 using dii.storage.cosmos.tests.Utilities;
 using Xunit;
+using System.Linq;
 
 namespace dii.storage.cosmos.tests.DiiCosmosContextTests
 {
@@ -34,13 +35,13 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
 
             Assert.NotNull(fetchedContext);
             Assert.Equal(fakeCosmosDatabaseConfig.Uri, fetchedContext.Config.Uri);
-            Assert.Equal(fakeCosmosDatabaseConfig.Uri, fetchedContext.Client.Endpoint.OriginalString);
-            Assert.Equal(fakeCosmosDatabaseConfig.Key, fetchedContext.Config.Key);
-            Assert.Equal(fakeCosmosDatabaseConfig.DatabaseId, fetchedContext.Config.DatabaseId);
-            Assert.Equal(fakeCosmosDatabaseConfig.AutoCreate, fetchedContext.Config.AutoCreate);
-            Assert.Equal(fakeCosmosDatabaseConfig.MaxRUPerSecond, fetchedContext.Config.MaxRUPerSecond);
-            Assert.Equal(fakeCosmosDatabaseConfig.AutoAdjustMaxRUPerSecond, fetchedContext.Config.AutoAdjustMaxRUPerSecond);
-            Assert.Equal(fakeCosmosDatabaseConfig.AutoScaling, fetchedContext.Config.AutoScaling);
+            Assert.Equal(fakeCosmosDatabaseConfig.Uri, fetchedContext.ReadWriteClient.Endpoint.OriginalString);
+            Assert.Equal(fakeCosmosDatabaseConfig.DatabaseConfig.Key, fetchedContext.Config.DatabaseConfig.Key);
+            Assert.Equal(fakeCosmosDatabaseConfig.DatabaseConfig.DatabaseIds[0], fetchedContext.Config.DatabaseConfig.DatabaseIds[0]);
+            Assert.Equal(fakeCosmosDatabaseConfig.DatabaseConfig.AutoCreate, fetchedContext.Config.DatabaseConfig.AutoCreate);
+            Assert.Equal(fakeCosmosDatabaseConfig.DatabaseConfig.MaxRUPerSecond, fetchedContext.Config.DatabaseConfig.MaxRUPerSecond);
+            Assert.Equal(fakeCosmosDatabaseConfig.DatabaseConfig.AutoAdjustMaxRUPerSecond, fetchedContext.Config.DatabaseConfig.AutoAdjustMaxRUPerSecond);
+            Assert.Equal(fakeCosmosDatabaseConfig.DatabaseConfig.AutoScaling, fetchedContext.Config.DatabaseConfig.AutoScaling);
         }
 
         #region Teardown

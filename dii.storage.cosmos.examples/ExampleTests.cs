@@ -234,9 +234,12 @@ namespace dii.storage.cosmos.examples
 		{
 			var context = DiiCosmosContext.Get();
 
-			if (context.Db != null)
+			if (context.Dbs != null)
 			{
-				_ = await context.Db.DeleteAsync().ConfigureAwait(false);
+				foreach (var db in context.Dbs.Values)
+                {
+                    _ = await db.DeleteAsync().ConfigureAwait(false);
+                }
 			}
 		}
 		#endregion

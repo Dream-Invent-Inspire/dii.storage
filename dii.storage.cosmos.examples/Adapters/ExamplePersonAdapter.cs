@@ -12,6 +12,9 @@ namespace dii.storage.cosmos.examples.Adapters
 {
     public class ExamplePersonAdapter : DiiCosmosAdapter<Person>, IExamplePersonAdapter
     {
+        public ExamplePersonAdapter(string databaseId)
+            :base (databaseId) { }
+
         public Task<Person> FetchAsync(string personId, string clientId, CancellationToken cancellationToken = default)
         {
             return base.GetAsync(personId, clientId, cancellationToken: cancellationToken);
