@@ -1,4 +1,5 @@
-﻿using System;
+﻿using dii.storage.Attributes;
+using System;
 using System.Collections.Generic;
 
 namespace dii.storage.Models
@@ -12,6 +13,9 @@ namespace dii.storage.Models
         /// <summary>
         /// The name of the table in storage.
         /// </summary>
+		/// <remarks>
+		/// This value is derived from the class or struct name unless the <see cref="StorageNameAttribute" /> is present.
+		/// </remarks>
         public string TableName { get; set; }
 
 		/// <summary>
@@ -45,5 +49,17 @@ namespace dii.storage.Models
 		/// to be registered.
 		/// </summary>
 		public Type ConcreteType { get; set; }
-	}
+
+        /// <summary>
+        /// The time to live in seconds value of the table in storage.
+        /// </summary>
+		/// <remarks>
+		/// The unit of measurement is seconds. The maximum allowed value is 2147483647. A valid value must be either a nonzero positive integer, '-1' or null.
+		/// By default, DefaultTimeToLive is set to null meaning the time to live is turned off for the container.
+		/// <para>
+		/// This value is set by using the <see cref="EnableTimeToLiveAttribute" /> to a non-null, nonzero value.
+		/// </para>
+		/// </remarks>
+        public int? TimeToLiveInSeconds { get; set; }
+    }
 }

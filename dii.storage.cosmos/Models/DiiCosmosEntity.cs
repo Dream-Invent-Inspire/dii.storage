@@ -5,7 +5,9 @@ using System;
 
 namespace dii.storage.cosmos.Models
 {
-    /// <inheritdoc/>
+    /// <summary>
+    /// The abstract implementation to ensure clean interaction with <see cref="Optimizer"/>.
+    /// </summary>
     public abstract class DiiCosmosEntity : IDiiEntity
 	{
 		/// <inheritdoc/>

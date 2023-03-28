@@ -1,10 +1,10 @@
-﻿using dii.storage.Exceptions;
-using dii.storage.Models;
-using dii.storage.cosmos.tests.Attributes;
+﻿using dii.storage.cosmos.tests.Attributes;
 using dii.storage.cosmos.tests.DiiCosmosContextTests.Data;
 using dii.storage.cosmos.tests.Models;
 using dii.storage.cosmos.tests.Orderer;
 using dii.storage.cosmos.tests.Utilities;
+using dii.storage.Exceptions;
+using dii.storage.Models;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;

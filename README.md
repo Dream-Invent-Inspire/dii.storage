@@ -18,6 +18,8 @@ A .NET 6 framework for managing entities in storage.
 
 * **Infrastructure Auto-Creation** — Allows the automatic creation of CosmosDB Database and Container at startup.
 
+  * Includes support for custom container names and time-to-live (TTL) settings.
+
 * **Abstract Adapter** — Provides an abstract adapter optimized to take advantage of dii.storage.
 
   * Features common access patterns with Get, Create, Replace, Upsert, Patch and Delete APIs.
