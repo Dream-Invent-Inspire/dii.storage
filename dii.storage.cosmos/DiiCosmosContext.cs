@@ -11,10 +11,10 @@ using System.Threading.Tasks;
 
 namespace dii.storage.cosmos
 {
-	/// <summary>
-	/// The CosmosDB implementation of <see cref="DiiContext"/>.
-	/// </summary>
-	public class DiiCosmosContext : DiiContext
+    /// <summary>
+    /// The CosmosDB implementation of <see cref="DiiContext"/>.
+    /// </summary>
+    public class DiiCosmosContext : DiiContext
 	{
 		#region Private Fields
 		private static DiiCosmosContext _instance;
@@ -191,7 +191,12 @@ namespace dii.storage.cosmos
 
 				foreach (var tableMetaData in tableMetaDatas)
 				{
-					tasks.Add(Db.CreateContainerIfNotExistsAsync(new ContainerProperties(tableMetaData.TableName, tableMetaData.PartitionKeyPath)));
+                    var containerProperties = new ContainerProperties(tableMetaData.TableName, tableMetaData.PartitionKeyPath)
+                    {
+                        DefaultTimeToLive = tableMetaData.TimeToLiveInSeconds
+                    };
+
+                    tasks.Add(Db.CreateContainerIfNotExistsAsync(containerProperties));
 				}
 
 				await Task.WhenAll(tasks).ConfigureAwait(false);

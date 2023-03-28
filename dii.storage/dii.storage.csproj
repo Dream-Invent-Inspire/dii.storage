@@ -11,7 +11,7 @@
     <Authors>Andrew Beers &amp; Pat MacMannis</Authors>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageId>dii.storage</PackageId>
-    <Version>1.2.3</Version>
+    <Version>1.2.4-rc1</Version>
     <AssemblyName>dii.storage</AssemblyName>
     <RootNamespace>dii.storage</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -20,8 +20,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MessagePack" Version="2.4.35" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="MessagePack" Version="2.5.108" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <ItemGroup>

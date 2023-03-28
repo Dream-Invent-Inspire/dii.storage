@@ -11,7 +11,6 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Xunit;
-using static dii.storage.cosmos.tests.Models.Enums;
 
 namespace dii.storage.cosmos.tests.DiiCosmosAdapterTests
 {

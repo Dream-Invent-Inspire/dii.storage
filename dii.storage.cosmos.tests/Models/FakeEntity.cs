@@ -7,8 +7,9 @@ using static dii.storage.cosmos.tests.Models.Enums;
 
 namespace dii.storage.cosmos.tests.Models
 {
-	[StorageName("Test-FakeEntity")]
-    public class FakeEntity : DiiCosmosEntity
+    [StorageName("Test-FakeEntity")]
+	[EnableTimeToLive(3600)]
+    public class FakeEntity : DiiTimeToLiveCosmosEntity
 	{
 		/// <summary>
 		/// The Unique Id for the <see cref="FakeEntity"/>.

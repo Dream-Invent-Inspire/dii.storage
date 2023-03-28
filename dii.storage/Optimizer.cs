@@ -196,7 +196,8 @@ namespace dii.storage
 								TableName = type.GetCustomAttribute<StorageNameAttribute>()?.Name ?? type.Name,
                                 ClassName = type.Name,
 								ConcreteType = type,
-								StorageType = storageType
+								StorageType = storageType,
+								TimeToLiveInSeconds = type.GetCustomAttribute<EnableTimeToLiveAttribute>()?.TimeToLiveInSeconds,
 							};
 
 							Tables.Add(tableMetaData);

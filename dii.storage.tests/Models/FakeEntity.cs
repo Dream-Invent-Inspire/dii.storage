@@ -5,13 +5,14 @@ using static dii.storage.tests.Models.Enums;
 
 namespace dii.storage.tests.Models
 {
-	[StorageName("Test-FakeEntity")]
-    public class FakeEntity : FakeDiiEntity
-	{
-		/// <summary>
-		/// The Unique Id for the <see cref="FakeEntity"/>.
-		/// </summary>
-		[PartitionKey(typeof(Guid))]
+    [StorageName("Test-FakeEntity")]
+    [EnableTimeToLive(3600)]
+    public class FakeEntity : FakeDiiTimeToLiveEntity
+    {
+        /// <summary>
+        /// The Unique Id for the <see cref="FakeEntity"/>.
+        /// </summary>
+        [PartitionKey(typeof(Guid))]
 		public string FakeEntityId { get; set; }
 
 		[Id()]
