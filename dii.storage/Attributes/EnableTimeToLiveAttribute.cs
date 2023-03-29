@@ -10,6 +10,11 @@ namespace dii.storage.Attributes
 	public class EnableTimeToLiveAttribute : Attribute
 	{
         /// <summary>
+        /// TTL is enabled. The items will never expire unless specified explicitly on the individual item.
+        /// </summary>
+        public const int InfiniteTimeToLive = -1;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="EnableTimeToLiveAttribute"/> class with the
         /// time to live configurations with which the instance should be initalized.
         /// </summary>
@@ -22,7 +27,7 @@ namespace dii.storage.Attributes
         /// </para>
         /// The time to live in seconds is how many seconds after the last updated timestamp (_ts) has passed.
         /// </remarks>
-        public EnableTimeToLiveAttribute(int timeToLiveInSeconds = -1)
+        public EnableTimeToLiveAttribute(int timeToLiveInSeconds = InfiniteTimeToLive)
 		{
             if (timeToLiveInSeconds < -1 || timeToLiveInSeconds == 0)
             {
