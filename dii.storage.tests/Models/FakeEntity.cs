@@ -1,4 +1,5 @@
 ﻿using dii.storage.Attributes;
+using dii.storage.Models.Interfaces;
 using System;
 using System.Collections.Generic;
 using static dii.storage.tests.Models.Enums;
@@ -6,9 +7,19 @@ using static dii.storage.tests.Models.Enums;
 namespace dii.storage.tests.Models
 {
     [StorageName("Test-FakeEntity")]
-    [EnableTimeToLive(3600)]
-    public class FakeEntity : FakeDiiTimeToLiveEntity
+    [EnableTimeToLive(_defaultTimeToLiveInSeconds)]
+    public class FakeEntity : FakeDiiEntity, IDiiTimeToLiveEntity
     {
+		internal const int _defaultTimeToLiveInSeconds = 3600;
+
+        /// <summary>
+        /// Initalizes an instance of <see cref="FakeEntity" />.
+        /// </summary>
+        public FakeEntity()
+        {
+			TimeToLiveInSeconds = _defaultTimeToLiveInSeconds;
+        }
+
         /// <summary>
         /// The Unique Id for the <see cref="FakeEntity"/>.
         /// </summary>
@@ -18,10 +29,32 @@ namespace dii.storage.tests.Models
 		[Id()]
 		public string Id { get { return FakeEntityId; } set { FakeEntityId = value; } }
 
-		/// <summary>
-		/// A <see cref="string"/> primitive to be searched.
-		/// </summary>
-		[Searchable("_self")]
+        /// <inheritdoc/>
+        [Searchable("_ts")]
+        public long LastUpdated { get; set; }
+
+        /// <inheritdoc/>
+        [Searchable("ttl")]
+        public int TimeToLiveInSeconds { get; set; }
+
+        /// <inheritdoc/>
+        public DateTimeOffset? TimeToLiveDecayDateTime
+        {
+            get
+            {
+                if (LastUpdated > 0)
+                {
+                    return DateTimeOffset.FromUnixTimeSeconds(LastUpdated);
+                }
+
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// A <see cref="string"/> primitive to be searched.
+        /// </summary>
+        [Searchable("_self")]
 		public string SearchablePrimitive { get; set; }
 
 		/// <summary>

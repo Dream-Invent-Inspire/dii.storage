@@ -1,5 +1,6 @@
 ﻿using dii.storage.Attributes;
 using dii.storage.cosmos.Models;
+using dii.storage.Models.Interfaces;
 using Microsoft.Azure.Cosmos;
 using System;
 using System.Collections.Generic;
@@ -8,22 +9,54 @@ using static dii.storage.cosmos.tests.Models.Enums;
 namespace dii.storage.cosmos.tests.Models
 {
     [StorageName("Test-FakeEntity")]
-	[EnableTimeToLive(3600)]
-    public class FakeEntity : DiiTimeToLiveCosmosEntity
-	{
-		/// <summary>
-		/// The Unique Id for the <see cref="FakeEntity"/>.
-		/// </summary>
-		[PartitionKey(typeof(PartitionKey))]
+    [EnableTimeToLive(_defaultTimeToLiveInSeconds)]
+    public class FakeEntity : DiiCosmosEntity, IDiiTimeToLiveEntity
+    {
+        internal const int _defaultTimeToLiveInSeconds = 3600;
+
+        /// <summary>
+        /// Initalizes an instance of <see cref="FakeEntity" />.
+        /// </summary>
+        public FakeEntity()
+        {
+            TimeToLiveInSeconds = _defaultTimeToLiveInSeconds;
+        }
+
+        /// <summary>
+        /// The Unique Id for the <see cref="FakeEntity"/>.
+        /// </summary>
+        [PartitionKey(typeof(PartitionKey))]
 		public string FakeEntityId { get; set; }
 
 		[Id()]
 		public string Id { get { return FakeEntityId; } set { FakeEntityId = value; } }
 
-		/// <summary>
-		/// A <see cref="string"/> Cosmos primitive to be searched.
-		/// </summary>
-		[Searchable("_self")]
+        /// <inheritdoc/>
+        [Searchable("_ts")]
+        public long LastUpdated { get; set; }
+
+        /// <inheritdoc/>
+        [Searchable("ttl")]
+        public int TimeToLiveInSeconds { get; set; }
+
+        /// <inheritdoc/>
+        public DateTimeOffset? TimeToLiveDecayDateTime
+        {
+            get
+            {
+                if (LastUpdated > 0)
+                {
+                    return DateTimeOffset.FromUnixTimeSeconds(LastUpdated);
+                }
+
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// A <see cref="string"/> Cosmos primitive to be searched.
+        /// </summary>
+        [Searchable("_self")]
 		public string SearchableCosmosPrimitive { get; set; }
 
 		/// <summary>
