@@ -7,7 +7,7 @@ namespace dii.storage.Models
 	/// A mapping of object properties between a concrete and dynamically created object in the <see cref="Optimizer"/>.
 	/// This class cannot be inherited.
 	/// </summary>
-	internal sealed class PackingMapper
+	public class PackingMapper
 	{
 		/// <summary>
 		/// Initializes a new instance of the <see cref="PackingMapper"/> class.
