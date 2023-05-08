@@ -25,7 +25,16 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(101)]
         public void FromEntity_Success()
         {
-            var optimizer = Optimizer.Get();
+            Optimizer optimizer;
+            try
+            {
+                optimizer = Optimizer.Get();
+            }
+            catch
+            {
+                FromEntity_Prep();
+                optimizer = Optimizer.Get();
+            }
 
             var fakeEntityTwo = new FakeEntityTwo
             {
@@ -49,7 +58,16 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(102)]
         public void FromEntity_SuccessWithSameIdAndPKProperty()
         {
-            var optimizer = Optimizer.Get();
+            Optimizer optimizer;
+            try
+            {
+                optimizer = Optimizer.Get();
+            }
+            catch
+            {
+                FromEntity_Prep();
+                optimizer = Optimizer.Get();
+            }
 
             var fakeEntityFive = new FakeEntityFive
             {
@@ -73,7 +91,16 @@ namespace dii.storage.tests.OptimizerTests
         [Theory, TestPriorityOrder(103), ClassData(typeof(FromEntityReturnDefaultData))]
         public void FromEntity_ReturnDefault(object entity)
         {
-            var optimizer = Optimizer.Get();
+            Optimizer optimizer;
+            try
+            {
+                optimizer = Optimizer.Get();
+            }
+            catch
+            {
+                FromEntity_Prep();
+                optimizer = Optimizer.Get();
+            }
 
             var unpackedEntity = optimizer.FromEntity<InvalidSearchableKeyEntity>(entity);
 
@@ -83,7 +110,16 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(104)]
         public void FromEntity_JsonSuccess()
         {
-            var optimizer = Optimizer.Get();
+            Optimizer optimizer;
+            try
+            {
+                optimizer = Optimizer.Get();
+            }
+            catch
+            {
+                FromEntity_Prep();
+                optimizer = Optimizer.Get();
+            }
 
             var id = Guid.NewGuid().ToString();
             var fakeEntityTwoJson = $@"{{
@@ -111,7 +147,16 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(105)]
         public void FromEntity_JsonSuccessWithSameIdAndPKProperty()
         {
-            var optimizer = Optimizer.Get();
+            Optimizer optimizer;
+            try
+            {
+                optimizer = Optimizer.Get();
+            }
+            catch
+            {
+                FromEntity_Prep();
+                optimizer = Optimizer.Get();
+            }
 
             var id = Guid.NewGuid().ToString();
             var fakeEntityFiveJson = $@"{{
@@ -138,7 +183,16 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(106)]
         public void FromEntity_JsonEmpty()
         {
-            var optimizer = Optimizer.Get();
+            Optimizer optimizer;
+            try
+            {
+                optimizer = Optimizer.Get();
+            }
+            catch
+            {
+                FromEntity_Prep();
+                optimizer = Optimizer.Get();
+            }
 
             var fakeEntityTwoJson = "{}";
 

@@ -23,7 +23,16 @@ namespace dii.storage.tests.AttributeTests
         [Theory, TestPriorityOrder(101), ClassData(typeof(MultipleIdEntityData))]
         public void Id_Success(MultipleIdEntity multipleIdEntity, string expected)
         {
-            var optimizer = Optimizer.Get();
+            Optimizer optimizer;
+            try
+            {
+                optimizer = Optimizer.Get();
+            }
+            catch
+            {
+                Id_Prep();
+                optimizer = Optimizer.Get();
+            }
 
             var entity = (dynamic)optimizer.ToEntity(multipleIdEntity);
 
@@ -37,7 +46,16 @@ namespace dii.storage.tests.AttributeTests
         [Theory, TestPriorityOrder(102), ClassData(typeof(FirstIdSeparatorWinsEntityData))]
         public void Id_FirstSeparatorWins(FirstIdSeparatorWinsEntity firstIdSeparatorWinsEntity, string expected)
         {
-            var optimizer = Optimizer.Get();
+            Optimizer optimizer;
+            try
+            {
+                optimizer = Optimizer.Get();
+            }
+            catch
+            {
+                Id_Prep();
+                optimizer = Optimizer.Get();
+            }
 
             var entity = (dynamic)optimizer.ToEntity(firstIdSeparatorWinsEntity);
 
