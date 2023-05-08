@@ -9,17 +9,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Security.AccessControl;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace dii.storage
 {
-	/// <summary>
-	/// The dii.storage engine that dynamically creates and registers all types used for storage.
-	/// Only one instance of the <see cref="Optimizer"/> can exist at a time.
-	/// This class cannot be inherited.
-	/// </summary>
-	public sealed class Optimizer
+    /// <summary>
+    /// The dii.storage engine that dynamically creates and registers all types used for storage.
+    /// Only one instance of the <see cref="Optimizer"/> can exist at a time.
+    /// This class cannot be inherited.
+    /// </summary>
+    public sealed partial class Optimizer
 	{
 		#region Private Fields
 		private static Optimizer _instance;
@@ -187,22 +188,44 @@ namespace dii.storage
 				{
 					if (!IsKnownConcreteType(type))
 					{
-						var storageType = GenerateType(type);
-
-						if (storageType != null)
+						Serializer storageTypeSerializer;
+						try
 						{
-							var tableMetaData = new TableMetaData
-							{
-								TableName = type.GetCustomAttribute<StorageNameAttribute>()?.Name ?? type.Name,
-                                ClassName = type.Name,
-								ConcreteType = type,
-								StorageType = storageType,
-								TimeToLiveInSeconds = type.GetCustomAttribute<EnableTimeToLiveAttribute>()?.TimeToLiveInSeconds,
-							};
-
-							Tables.Add(tableMetaData);
-							TableMappings.Add(type, tableMetaData);
+							//Wiring to the new typeGenerator structure from 05/08/2023
+							var typeGenerator = new TableTypeGenerator(type, _builder, SubPropertyMapping, _ignoreInvalidDiiEntities);
+							storageTypeSerializer = typeGenerator.Generate();
 						}
+						catch
+						{
+							//Duplicate type initialization will yield this exception.
+							//This trapping is preventing Init(typeof(SameType), typeof(SameType))
+							if (_ignoreInvalidDiiEntities)
+								continue;
+							else
+								throw;
+						}
+
+						if (storageTypeSerializer != null && storageTypeSerializer.StoredEntityType != null)
+						{
+							_packing.Add(type, storageTypeSerializer);
+							_unpacking.Add(storageTypeSerializer.StoredEntityType, storageTypeSerializer);
+
+                            var storageType = storageTypeSerializer.StoredEntityType;
+                            if (storageType != null)
+                            {
+                                var tableMetaData = new TableMetaData
+                                {
+                                    TableName = type.GetCustomAttribute<StorageNameAttribute>()?.Name ?? type.Name,
+                                    ClassName = type.Name,
+                                    ConcreteType = type,
+                                    StorageType = storageType,
+                                    TimeToLiveInSeconds = type.GetCustomAttribute<EnableTimeToLiveAttribute>()?.TimeToLiveInSeconds,
+                                };
+
+                                Tables.Add(tableMetaData);
+                                TableMappings.Add(type, tableMetaData);
+                            }
+                        }
 					}
 				}
 			}
@@ -539,252 +562,6 @@ namespace dii.storage
 			return _instance;
 		}
 
-		private Type GenerateType(Type source, bool isSubEntity = false)
-		{
-			var jsonMap = new PackingMapper();
-			var compressMap = new PackingMapper();
-
-			var typeBuilder = _builder.DefineType(source.Name, TypeAttributes.Public);
-			var typeConst = typeBuilder.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
-
-			var compressBuilder = _builder.DefineType($"{source.Name}Compressed", TypeAttributes.Public);
-			var compressConst = compressBuilder.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
-			var msgPkAttrConst = typeof(MessagePackObjectAttribute).GetConstructor(new Type[] { typeof(bool) });
-			compressBuilder.SetCustomAttribute(new CustomAttributeBuilder(msgPkAttrConst, new object[] { false }));
-
-			var partitionSeparator = Constants.DefaultPartitionKeyDelimitor;
-			var partitionFields = new Dictionary<int, PropertyInfo>();
-			var partitionKeyType = typeof(string);
-
-			var idSeparator = Constants.DefaultIdDelimitor;
-			var idFields = new Dictionary<int, PropertyInfo>();
-
-			var jsonAttrConstructor = typeof(JsonPropertyNameAttribute).GetConstructor(new Type[] { typeof(string) });
-			var compressAttrConstructor = typeof(KeyAttribute).GetConstructor(new Type[] { typeof(int) });
-
-			foreach (var property in source.GetProperties())
-			{
-				var isAlsoId = false;
-
-				var partitionKey = property.GetCustomAttribute<PartitionKeyAttribute>();
-                var id = property.GetCustomAttribute<IdAttribute>();
-
-                if (partitionKey != null)
-				{
-					isAlsoId = id != null;
-
-                    if (partitionFields.ContainsKey(partitionKey.Order))
-					{
-						if (_ignoreInvalidDiiEntities)
-						{
-							// Do not create the entity to be used, but do not throw an exception.
-							return null;
-						}
-						else
-						{
-							// Throw an exception when an invalid type is attempted.
-							throw new DiiPartitionKeyDuplicateOrderException(partitionFields[partitionKey.Order].Name, property.Name, partitionKey.Order);
-						}
-					}
-
-					partitionFields.Add(partitionKey.Order, property);
-
-					// First PartitionKeyAttribute to change the separator wins.
-					if (!char.IsWhiteSpace(partitionKey.Separator) && partitionSeparator == Constants.DefaultPartitionKeyDelimitor)
-                    {
-						partitionSeparator = partitionKey.Separator;
-					}
-
-					if (partitionKey.PartitionKeyType != null && partitionKey.PartitionKeyType != typeof(string))
-                    {
-						partitionKeyType = partitionKey.PartitionKeyType;
-					}
-					
-					if (!isAlsoId)
-						continue;
-				}
-
-				if (id != null)
-                {
-                    isAlsoId = false;
-
-                    if (idFields.ContainsKey(id.Order))
-					{
-						if (_ignoreInvalidDiiEntities)
-						{
-							// Do not create the entity to be used, but do not throw an exception.
-							return null;
-						}
-						else
-						{
-							// Throw an exception when an invalid type is attempted.
-							throw new DiiIdDuplicateOrderException(idFields[id.Order].Name, property.Name, id.Order);
-						}
-					}
-
-					idFields.Add(id.Order, property);
-
-					// First IdAttribute to change the separator wins.
-					if (!char.IsWhiteSpace(id.Separator) && idSeparator == Constants.DefaultIdDelimitor)
-					{
-						idSeparator = id.Separator;
-					}
-
-                    continue;
-				}
-
-				var search = property.GetCustomAttribute<SearchableAttribute>();
-				if (search != null)
-				{
-					if (_reservedSearchableKeys.Contains(search.Abbreviation))
-					{
-						if (_ignoreInvalidDiiEntities)
-                        {
-							// Do not create the entity to be used, but do not throw an exception.
-							return null;
-                        }
-						else
-						{
-							// Throw an exception when an invalid type is attempted.
-							throw new DiiReservedSearchableKeyException(search.Abbreviation, property.Name, source.Name);
-						}
-					}
-
-					var jsonAttr = new CustomAttributeBuilder(jsonAttrConstructor, new object[] { search.Abbreviation });
-					var childProps = property.PropertyType.GetProperties();
-					if (childProps.Any(x => x.GetCustomAttribute<SearchableAttribute>() != null) || childProps.Any(x => x.GetCustomAttribute<CompressAttribute>() != null))
-					{
-						if (property.PropertyType.GetInterface(nameof(IDiiEntity)) != null)
-						{
-							if (_ignoreInvalidDiiEntities)
-							{
-								// Do not create the entity to be used, but do not throw an exception.
-								return null;
-							}
-							else
-							{
-								// Throw an exception when an invalid type is attempted.
-								throw new DiiInvalidNestingException(source.Name);
-							}
-						}
-
-						if (!SubPropertyMapping.ContainsKey(property.PropertyType))
-						{
-							SubPropertyMapping.Add(property.PropertyType, null);
-							var storageType = GenerateType(property.PropertyType, true);
-							SubPropertyMapping[property.PropertyType] = storageType;
-							_ = AddProperty(typeBuilder, search.Abbreviation, SubPropertyMapping[property.PropertyType], jsonAttr);
-						}
-						else
-						{
-							// If the subentity has already been registered and appears again within the same object.
-							if (SubPropertyMapping[property.PropertyType] != null)
-                            {
-								_ = AddProperty(typeBuilder, search.Abbreviation, SubPropertyMapping[property.PropertyType], jsonAttr);
-							}
-							else
-							{
-								if (typeBuilder.Name == property.PropertyType.Name)
-                                {
-									// If the object has a self-reference property, pass itself in this way.
-									var selfReferencingPropertyType = _builder.GetType(typeBuilder.Name);
-									_ = AddProperty(typeBuilder, search.Abbreviation, selfReferencingPropertyType, jsonAttr);
-								}
-							}
-						}
-					}
-					else
-					{
-						_ = AddProperty(typeBuilder, search.Abbreviation, property.PropertyType, jsonAttr);
-					}
-
-					jsonMap.ConcreteProperties.Add(search.Abbreviation, property);
-
-					continue;
-				}
-
-				var compress = property.GetCustomAttribute<CompressAttribute>();
-				if (compress != null)
-				{
-					var compressAttr = new CustomAttributeBuilder(compressAttrConstructor, new object[] { compress.Order });
-
-					_ = AddProperty(compressBuilder, property.Name, property.PropertyType, compressAttr);
-					compressMap.ConcreteProperties.Add(property.Name, property);
-
-					continue;
-				}
-			}
-
-			var jsonAttachmentAttr = new CustomAttributeBuilder(jsonAttrConstructor, new object[] { Constants.ReservedCompressedKey });
-			_ = AddProperty(typeBuilder, Constants.ReservedCompressedKey, typeof(string), jsonAttachmentAttr);
-			if (!isSubEntity)
-			{
-				_ = AddProperty(typeBuilder, Constants.ReservedPartitionKeyKey, typeof(string));
-				_ = AddProperty(typeBuilder, Constants.ReservedIdKey, typeof(string));
-			}
-
-			Type storageEntityType = typeBuilder.CreateTypeInfo();
-			Type compressedEntityType = compressBuilder.CreateTypeInfo();
-			PropertyInfo attachments;
-			PropertyInfo partitionKeyInfo = null;
-			PropertyInfo idInfo = null;
-
-			{
-				var instance = Activator.CreateInstance(storageEntityType);
-				storageEntityType = instance.GetType();
-
-				var props = storageEntityType.GetProperties(BindingFlags.Public | BindingFlags.Instance).ToDictionary(x => x.Name, x => x);
-				attachments = props[Constants.ReservedCompressedKey];
-				props.Remove(Constants.ReservedCompressedKey);
-
-				if (!isSubEntity)
-				{
-					partitionKeyInfo = props[Constants.ReservedPartitionKeyKey];
-					props.Remove(Constants.ReservedPartitionKeyKey);
-
-					idInfo = props[Constants.ReservedIdKey];
-					props.Remove(Constants.ReservedIdKey);
-				}
-
-				jsonMap.EmitProperties = props;
-			}
-
-			{
-				var instance = Activator.CreateInstance(compressedEntityType);
-				compressedEntityType = instance.GetType();
-				var props = compressedEntityType.GetProperties(BindingFlags.Public | BindingFlags.Instance).ToDictionary(x => x.Name, x => x);
-
-				compressMap.EmitProperties = props;
-			}
-
-			var serializer = new Serializer
-			{
-				PartitionKey = partitionKeyInfo,
-				PartitionKeyProperties = partitionFields
-					.OrderBy(x => x.Key)
-					.Select(x => x.Value)
-					.ToList(),
-				PartitionKeySeparator = partitionSeparator.ToString(),
-				PartitionKeyType = partitionKeyType,
-				Id = idInfo,
-				IdProperties = idFields
-					.OrderBy(x => x.Key)
-					.Select(x => x.Value)
-					.ToList(),
-				IdSeparator = idSeparator.ToString(),
-				Attachment = attachments,
-				StoredEntityMapping = jsonMap,
-				CompressedEntityMapping = compressMap,
-				StoredEntityType = storageEntityType,
-				CompressedEntityType = compressedEntityType
-			};
-
-			_packing.Add(source, serializer);
-			_unpacking.Add(serializer.StoredEntityType, serializer);
-
-			return serializer.StoredEntityType;
-		}
-
 		private static PropertyBuilder AddProperty(TypeBuilder typeBuilder, string name, Type propertyType, params CustomAttributeBuilder[] customAttributeBuilders)
 		{
 			var field = typeBuilder.DefineField($"_{name}", propertyType, FieldAttributes.Private);
@@ -824,291 +601,6 @@ namespace dii.storage
 
 			return prop;
 		}
-		#endregion Private Methods
-
-		#region Internal Serializer Class
-		/// <summary>
-		/// 
-		/// This class cannot be inherited.
-		/// </summary>
-		internal sealed class Serializer
-		{
-			#region Private Fields
-			private readonly MethodInfo _ptrUnpackage;
-			private readonly MethodInfo _ptrPackage;
-			#endregion Private Fields
-
-			#region Public Properties
-			/// <summary>
-			/// The <see cref="PropertyInfo"/> for the property designated by the <see cref="PartitionKeyAttribute"/>.
-			/// </summary>
-			public PropertyInfo PartitionKey { get; set; }
-
-			/// <summary>
-			/// The <see cref="PropertyInfo"/> for all properties designated by the <see cref="PartitionKeyAttribute"/>.
-			/// </summary>
-			public List<PropertyInfo> PartitionKeyProperties { get; set; }
-
-			/// <summary>
-			/// The character used to delimiter multiple partition key values as set in the <see cref="PartitionKeyAttribute.Separator"/>.
-			/// </summary>
-			public string PartitionKeySeparator { get; set; }
-
-			/// <summary>
-			/// The <see cref="Type"/> of the parition key as set in the <see cref="PartitionKeyAttribute.PartitionKeyType"/>.
-			/// </summary>
-			public Type PartitionKeyType { get; set; }
-
-			/// <summary>
-			/// The <see cref="PropertyInfo"/> for the property designated by the <see cref="IdAttribute"/>.
-			/// </summary>
-			public PropertyInfo Id { get; set; }
-
-			/// <summary>
-			/// The <see cref="PropertyInfo"/> for all properties designated by the <see cref="IdAttribute"/>.
-			/// </summary>
-			public List<PropertyInfo> IdProperties { get; set; }
-
-			/// <summary>
-			/// The character used to delimiter multiple id values as set in the <see cref="IdAttribute.Separator"/>.
-			/// </summary>
-			public string IdSeparator { get; set; }
-
-			/// <summary>
-			/// The <see cref="PropertyInfo"/> for the compressed object property.
-			/// </summary>
-			public PropertyInfo Attachment { get; set; }
-
-			/// <summary>
-			/// The mapping of concrete types to their json properties.
-			/// </summary>
-			public PackingMapper StoredEntityMapping { get; set; }
-
-			/// <summary>
-			/// The mapping of concrete types to their compressed properties. 
-			/// </summary>
-			public PackingMapper CompressedEntityMapping { get; set; }
-
-			/// <summary>
-			/// The dynamically created <see cref="Type"/> to represent the searchable object.
-			/// </summary>
-			public Type StoredEntityType { get; set; }
-
-			/// <summary>
-			/// The dynamically created <see cref="Type"/> to represent the compressed object.
-			/// </summary>
-			public Type CompressedEntityType { get; set; }
-			#endregion Public Properties
-
-			#region Constructors
-			public Serializer() 
-			{
-				var t = typeof(Optimizer);
-
-				_ptrUnpackage = t.GetMethod("FromEntity");
-				_ptrPackage = t.GetMethod("ToEntityObject");
-			}
-			#endregion Constructors
-
-			#region Public Methods
-
-			/// <summary>
-			/// Packages an object with compression.
-			/// </summary>
-			/// <param name="unpackedObject">The object to be packaged.</param>
-			/// <exception cref="ArgumentNullException">
-			/// The object to package is null.
-			/// </exception>
-			/// <returns>
-			/// The packaged object.
-			/// </returns>
-			public object Package(object unpackedObject)
-			{
-				if (unpackedObject == null)
-				{
-					throw new ArgumentNullException(nameof(unpackedObject));
-				}
-
-				var packedObject = Activator.CreateInstance(StoredEntityType);
-				var compressedEntity = Activator.CreateInstance(CompressedEntityType);
-
-				if (PartitionKey != null)
-				{
-					var partitionKeyValues = new List<object>();
-
-					foreach (var property in PartitionKeyProperties)
-					{
-						var partitionKeyValue = property.GetValue(unpackedObject);
-
-						if (property.PropertyType == typeof(string))
-						{
-							if (!string.IsNullOrWhiteSpace(partitionKeyValue as string))
-							{
-								partitionKeyValues.Add(partitionKeyValue);
-							}
-						}
-						else
-                        {
-							if (partitionKeyValue != null)
-							{
-								partitionKeyValues.Add(partitionKeyValue);
-							}
-						}
-					}
-
-					PartitionKey.SetValue(packedObject, string.Join(PartitionKeySeparator, partitionKeyValues));
-				}
-
-				if (Id != null)
-				{
-					var idValues = new List<object>();
-
-					foreach (var property in IdProperties)
-					{
-						var idValue = property.GetValue(unpackedObject);
-
-						if (property.PropertyType == typeof(string))
-						{
-							if (!string.IsNullOrWhiteSpace(idValue as string))
-							{
-								idValues.Add(idValue);
-							}
-						}
-						else
-						{
-							if (idValue != null)
-							{
-								idValues.Add(idValue);
-							}
-						}
-					}
-
-					Id.SetValue(packedObject, string.Join(IdSeparator, idValues));
-				}
-
-				foreach (var property in StoredEntityMapping.ConcreteProperties)
-				{
-					var val = property.Value.GetValue(unpackedObject);
-					if (val != null && Get().SubPropertyMapping.ContainsKey(val.GetType()))
-					{
-						try
-						{
-							var method = _ptrPackage.MakeGenericMethod(val.GetType());
-							var complexSubType = method.Invoke(Get(), new object[] { val });
-							StoredEntityMapping.EmitProperties[property.Key].SetValue(packedObject, complexSubType);
-						}
-						catch (Exception)
-						{
-							throw;
-						}
-					}
-					else if(StoredEntityMapping.EmitProperties.ContainsKey(property.Key))
-					{
-						StoredEntityMapping.EmitProperties[property.Key].SetValue(packedObject, val);
-					}
-				}
-
-				foreach (var property in CompressedEntityMapping.ConcreteProperties)
-				{
-					var val = property.Value.GetValue(unpackedObject);
-					CompressedEntityMapping.EmitProperties[property.Key].SetValue(compressedEntity, val);
-				}
-
-				var compressedBytes = MessagePackSerializer.Serialize(CompressedEntityType, compressedEntity);
-				var compressedString = Convert.ToBase64String(compressedBytes);
-
-				Attachment.SetValue(packedObject, compressedString);
-
-				return packedObject;
-			}
-
-			/// <summary>
-			/// Unpackages an object to an unpackaged as <typeparamref name="T"/>.
-			/// </summary>
-			/// <typeparam name="T">The <see cref="Type"/> to unpackage the object to.</typeparam>
-			/// <param name="packedObject">The object to unpack.</param>
-			/// <exception cref="ArgumentNullException">
-			/// The object to unpackage is null.
-			/// </exception>
-			/// <exception cref="ArgumentException">
-			/// The packaged object contained no properties.
-			/// </exception>
-			/// <returns>
-			/// The unpackaged entity.
-			/// </returns>
-			public T Unpackage<T>(object packedObject) where T : new()
-			{
-				if (packedObject == null)
-				{
-					throw new ArgumentNullException(nameof(packedObject));
-				}
-
-				var unpackedObject = new T();
-
-				var compressedString = (string)Attachment.GetValue(packedObject);
-
-				if (string.IsNullOrEmpty(compressedString))
-				{
-					throw new ArgumentException("Packed object contained no properties.", nameof(packedObject));
-				}
-
-				var compressedBytes = Convert.FromBase64String(compressedString);
-				var compressedObj = MessagePackSerializer.Deserialize(CompressedEntityType, compressedBytes);
-
-				if (PartitionKey != null)
-				{
-					// Reverse engineer parition key string.
-					var partitionKey = ((string)PartitionKey.GetValue(packedObject)).Split(new string[] { PartitionKeySeparator }, StringSplitOptions.None);
-
-					for (var i = 0; i < PartitionKeyProperties.Count; i++)
-					{
-						PartitionKeyProperties[i].SetValue(unpackedObject, partitionKey[i]);
-					}
-				}
-
-				if (Id != null)
-				{
-					// Reverse engineer id string.
-					var id = ((string)Id.GetValue(packedObject)).Split(new string[] { IdSeparator }, StringSplitOptions.None);
-
-					for (var i = 0; i < IdProperties.Count; i++)
-					{
-						IdProperties[i].SetValue(unpackedObject, id[i]);
-					}
-				}
-
-				foreach (var property in CompressedEntityMapping.EmitProperties)
-				{
-					var val = property.Value.GetValue(compressedObj);
-					CompressedEntityMapping.ConcreteProperties[property.Key].SetValue(unpackedObject, val);
-				}
-
-				foreach (var property in StoredEntityMapping.EmitProperties)
-				{
-					var val = property.Value.GetValue(packedObject);
-					if (Get().SubPropertyMapping.ContainsKey(StoredEntityMapping.ConcreteProperties[property.Key].PropertyType))
-					{
-						try
-						{
-							var mthd = _ptrUnpackage.MakeGenericMethod(StoredEntityMapping.ConcreteProperties[property.Key].PropertyType);
-							var complexSubType = mthd.Invoke(Get(), new object[] { val });
-							StoredEntityMapping.ConcreteProperties[property.Key].SetValue(unpackedObject, complexSubType);
-						}
-						catch (Exception)
-						{
-							throw;
-						}
-					}
-					else
-					{
-						StoredEntityMapping.ConcreteProperties[property.Key].SetValue(unpackedObject, val);
-					}
-				}
-
-				return unpackedObject;
-			}
-			#endregion Public Methods
-		}
-		#endregion Internal Serializer Class
+#endregion Private Methods
 	}
 }

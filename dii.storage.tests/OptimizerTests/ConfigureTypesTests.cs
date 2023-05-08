@@ -25,7 +25,16 @@ namespace dii.storage.tests.OptimizerTests
         [Theory, TestPriorityOrder(101), ClassData(typeof(ConfigureTypesNoOpData))]
         public void ConfigureTypes_NoOp(Type[] type)
         {
-            var optimizer = Optimizer.Get();
+            Optimizer optimizer;
+            try
+            {
+                optimizer = Optimizer.Get();
+            }
+            catch
+            {
+                ConfigureTypes_Prep();
+                optimizer = Optimizer.Get();
+            }
 
             Assert.Single(optimizer.Tables);
 
@@ -48,7 +57,16 @@ namespace dii.storage.tests.OptimizerTests
         [Theory, TestPriorityOrder(102), ClassData(typeof(ConfigureTypesInvalidSearchableKeyExceptionData))]
         public void ConfigureTypes_AddTypeWithInvalidSearchableKey(Type type, string key, string propertyName, string typeName)
         {
-            var optimizer = Optimizer.Get();
+            Optimizer optimizer;
+            try
+            {
+                optimizer = Optimizer.Get();
+            }
+            catch
+            {
+                ConfigureTypes_Prep();
+                optimizer = Optimizer.Get();
+            }
 
             Assert.Single(optimizer.Tables);
 
@@ -74,7 +92,16 @@ namespace dii.storage.tests.OptimizerTests
         [Theory, TestPriorityOrder(103), ClassData(typeof(ConfigureTypesInvalidPartitionKeyOrderExceptionData))]
         public void ConfigureTypes_AddTypeWithInvalidPartitionKeyOrder(Type type, string propertyName, string duplicatePropertyName, int order)
         {
-            var optimizer = Optimizer.Get();
+            Optimizer optimizer;
+            try
+            {
+                optimizer = Optimizer.Get();
+            }
+            catch
+            {
+                ConfigureTypes_Prep();
+                optimizer = Optimizer.Get();
+            }
 
             Assert.Single(optimizer.Tables);
 
@@ -100,7 +127,16 @@ namespace dii.storage.tests.OptimizerTests
         [Theory, TestPriorityOrder(104), ClassData(typeof(ConfigureTypesInvalidIdOrderExceptionData))]
         public void ConfigureTypes_AddTypeWithInvalidIdOrder(Type type, string propertyName, string duplicatePropertyName, int order)
         {
-            var optimizer = Optimizer.Get();
+            Optimizer optimizer;
+            try
+            {
+                optimizer = Optimizer.Get();
+            }
+            catch
+            {
+                ConfigureTypes_Prep();
+                optimizer = Optimizer.Get();
+            }
 
             Assert.Single(optimizer.Tables);
 
@@ -126,7 +162,16 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(105)]
         public void ConfigureTypes_AddNewType()
         {
-            var optimizer = Optimizer.Get();
+            Optimizer optimizer;
+            try
+            {
+                optimizer = Optimizer.Get();
+            }
+            catch
+            {
+                ConfigureTypes_Prep();
+                optimizer = Optimizer.Get();
+            }
 
             Assert.Single(optimizer.Tables);
 
@@ -152,7 +197,16 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(106)]
         public void ConfigureTypes_AddNewTypeWithSameIdAndPKProperty()
         {
-            var optimizer = Optimizer.Get();
+            Optimizer optimizer;
+            try
+            {
+                optimizer = Optimizer.Get();
+            }
+            catch
+            {
+                ConfigureTypes_Prep();
+                optimizer = Optimizer.Get();
+            }
 
             Assert.Equal(2, optimizer.Tables.Count);
 
