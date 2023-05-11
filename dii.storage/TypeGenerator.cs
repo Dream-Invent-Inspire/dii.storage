@@ -291,6 +291,8 @@ namespace dii.storage
                         var tmp = new TypeGenerator(p.PropertyType, moduleBuilder, SubPropertyMapping, suppressConfigErrors);
                         var tmpSer = tmp.Generate();
                         existingType = childType = tmpSer.StoredEntityType;
+                        //Register the sub-type.
+                        OptimizedTypeRegistrar.Register(p.PropertyType, tmpSer);
                     }
 
                     //There is a chance the TypeGenerator self registers the type
@@ -309,10 +311,6 @@ namespace dii.storage
                 {
                     //Map the storable type to the collection property.
                     _ = AddProperty(typeBuilder, search.Abbreviation, childType, jsonAttr);
-                }
-                else
-                {
-
                 }
             }
             else if (isEnumerable)

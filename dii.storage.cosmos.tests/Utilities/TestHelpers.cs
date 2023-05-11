@@ -89,11 +89,7 @@ namespace dii.storage.cosmos.tests.Utilities
 			FieldInfo builderField = type.GetField("_builder", _privateBindingFlags);
 			builderField.SetValue(instance, null);
 
-			FieldInfo packingField = type.GetField("_packing", _privateBindingFlags);
-			packingField.SetValue(instance, null);
-
-			FieldInfo unpackingField = type.GetField("_unpacking", _privateBindingFlags);
-			unpackingField.SetValue(instance, null);
+			OptimizedTypeRegistrar.ClearAllTypes(true);
 
 			FieldInfo ignoreField = type.GetField("_ignoreInvalidDiiEntities", _privateBindingFlags);
 			ignoreField.SetValue(instance, false);
