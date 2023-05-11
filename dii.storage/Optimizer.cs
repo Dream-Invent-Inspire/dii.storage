@@ -15,6 +15,7 @@ using System.Text.Json.Serialization;
 
 namespace dii.storage
 {
+
     /// <summary>
     /// The dii.storage engine that dynamically creates and registers all types used for storage.
     /// Only one instance of the <see cref="Optimizer"/> can exist at a time.
@@ -29,8 +30,8 @@ namespace dii.storage
 		private static bool _ignoreInvalidDiiEntities;
 
 		private readonly ModuleBuilder _builder;
-		private readonly Dictionary<Type, Serializer> _packing;
-		private readonly Dictionary<Type, Serializer> _unpacking;
+		//private readonly Dictionary<Type, Serializer> _packing;
+		//private readonly Dictionary<Type, Serializer> _unpacking;
 
 		private const string _dynamicAssemblyName = "dii.dynamic.storage";
 
@@ -75,9 +76,6 @@ namespace dii.storage
 		/// <param name="types">An array of <see cref="Type"/> to register. All types must implement the <see cref="IDiiEntity"/> interface.</param>
 		private Optimizer(params Type[] types)
 		{
-			_packing = new Dictionary<Type, Serializer>();
-			_unpacking = new Dictionary<Type, Serializer>();
-
 			Tables = new List<TableMetaData>();
 			TableMappings = new Dictionary<Type, TableMetaData>();
 			SubPropertyMapping = new Dictionary<Type, Type>();
@@ -207,8 +205,7 @@ namespace dii.storage
 
 						if (storageTypeSerializer != null && storageTypeSerializer.StoredEntityType != null)
 						{
-							_packing.Add(type, storageTypeSerializer);
-							_unpacking.Add(storageTypeSerializer.StoredEntityType, storageTypeSerializer);
+                            OptimizedTypeRegistrar.Register(type, storageTypeSerializer);
 
                             var storageType = storageTypeSerializer.StoredEntityType;
                             if (storageType != null)
@@ -242,7 +239,7 @@ namespace dii.storage
 		/// </returns>
 		public bool IsKnownConcreteType(Type type)
 		{
-			return _packing.ContainsKey(type);
+			return OptimizedTypeRegistrar.IsMapped(type);
 		}
 
 		/// <summary>
@@ -256,7 +253,7 @@ namespace dii.storage
 		/// </returns>
 		public bool IsKnownEmitType(Type type)
 		{
-			return _unpacking.ContainsKey(type);
+			return OptimizedTypeRegistrar.IsMapped(type);
 		}
 
 		/// <summary>
@@ -279,9 +276,9 @@ namespace dii.storage
 
 			var type = typeof(T);
 
-			if (_packing.ContainsKey(type))
+			if (OptimizedTypeRegistrar.IsMapped(type))
 			{
-				return _packing[type].Package(obj);
+				return OptimizedTypeRegistrar.GetPackageMapping(type)?.Package(obj);
 			}
 
 			return default(object);
@@ -307,9 +304,9 @@ namespace dii.storage
 
 			var type = typeof(T);
 
-			if (_packing.ContainsKey(type) && obj is T)
+			if (OptimizedTypeRegistrar.IsMapped(type) && obj is T)
 			{
-				return _packing[type].Package(obj);
+				return OptimizedTypeRegistrar.GetPackageMapping(type)?.Package(obj);
 			}
 
 			return default(object);
@@ -332,14 +329,19 @@ namespace dii.storage
 
 			var type = obj.GetType();
 
-			if (_unpacking.ContainsKey(type))
+			if (OptimizedTypeRegistrar.IsMapped(type))
 			{
-				return _unpacking[type].Unpackage<T>(obj);
+				var mapping = OptimizedTypeRegistrar.GetUnpackageMapping(type);
+				if(mapping == null)
+				{
+					return default(T);
+				}
+                return mapping.Unpackage<T>(obj);
 			}
 
 			type = typeof(T);
 
-			if (_packing.ContainsKey(type) && obj is JObject j)
+			if (OptimizedTypeRegistrar.IsMapped(type) && obj is JObject j)
 			{
 				return UnpackageFromJson<T>(j.ToString());
 			}
@@ -395,10 +397,10 @@ namespace dii.storage
 
 			var type = typeof(T);
 
-			if (_packing.ContainsKey(type))
+			if (OptimizedTypeRegistrar.IsMapped(type))
 			{
-				var obj = JsonSerializer.Deserialize(json, _packing[type].StoredEntityType);
-				return _packing[type].Unpackage<T>(obj);
+				var obj = JsonSerializer.Deserialize(json, OptimizedTypeRegistrar.GetPackageMapping(type).StoredEntityType);
+				return OptimizedTypeRegistrar.GetPackageMapping(type).Unpackage<T>(obj);
 			}
 
 			return default(T);
@@ -426,20 +428,20 @@ namespace dii.storage
 
 			var type = typeof(T);
 
-			if (_packing.ContainsKey(type))
+			if (OptimizedTypeRegistrar.IsMapped(type))
 			{
 				var partitionKeyValues = new List<object>();
 
-				foreach (var property in _packing[type].PartitionKeyProperties)
+				foreach (var property in OptimizedTypeRegistrar.GetPackageMapping(type).PartitionKeyProperties)
 				{
 					partitionKeyValues.Add(property.GetValue(obj));
 				}
 
-				var partitionKeyString = string.Join(_packing[type].PartitionKeySeparator, partitionKeyValues);
+				var partitionKeyString = string.Join(OptimizedTypeRegistrar.GetPackageMapping(type).PartitionKeySeparator, partitionKeyValues);
 
-				if (_packing[type].PartitionKeyType != typeof(string))
+				if (OptimizedTypeRegistrar.GetPackageMapping(type).PartitionKeyType != typeof(string))
                 {
-					return (TKey)Activator.CreateInstance(_packing[type].PartitionKeyType, partitionKeyString);
+					return (TKey)Activator.CreateInstance(OptimizedTypeRegistrar.GetPackageMapping(type).PartitionKeyType, partitionKeyString);
                 }
 			}
 
@@ -466,16 +468,16 @@ namespace dii.storage
 
 			var type = typeof(T);
 
-			if (_packing.ContainsKey(type))
+			if (OptimizedTypeRegistrar.IsMapped(type))
 			{
 				var partitionKeyValues = new List<object>();
 
-				foreach (var property in _packing[type].PartitionKeyProperties)
+				foreach (var property in OptimizedTypeRegistrar.GetPackageMapping(type).PartitionKeyProperties)
 				{
 					partitionKeyValues.Add(property.GetValue(obj));
 				}
 
-				return string.Join(_packing[type].PartitionKeySeparator, partitionKeyValues);
+				return string.Join(OptimizedTypeRegistrar.GetPackageMapping(type).PartitionKeySeparator, partitionKeyValues);
 			}
 
 			return default(string);
@@ -501,16 +503,16 @@ namespace dii.storage
 
 			var type = typeof(T);
 
-			if (_packing.ContainsKey(type))
+			if (OptimizedTypeRegistrar.IsMapped(type))
 			{
 				var idValues = new List<object>();
 
-				foreach (var property in _packing[type].IdProperties)
+				foreach (var property in OptimizedTypeRegistrar.GetPackageMapping(type).IdProperties)
 				{
 					idValues.Add(property.GetValue(obj));
 				}
 
-				return string.Join(_packing[type].IdSeparator, idValues);
+				return string.Join(OptimizedTypeRegistrar.GetPackageMapping(type).IdSeparator, idValues);
 			}
 
 			return default(string);
@@ -528,9 +530,9 @@ namespace dii.storage
 		{
 			var type = typeof(T);
 
-			if (_packing.ContainsKey(type))
+			if (OptimizedTypeRegistrar.IsMapped(type))
 			{
-				return _packing[type].PartitionKeyType;
+				return OptimizedTypeRegistrar.GetPackageMapping(type).PartitionKeyType;
 			}
 
 			return default(Type);
