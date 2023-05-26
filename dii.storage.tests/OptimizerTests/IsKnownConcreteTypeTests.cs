@@ -12,15 +12,14 @@ namespace dii.storage.tests.OptimizerTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class IsKnownConcreteTypeTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void IsKnownConcreteType_Prep()
+        public IsKnownConcreteTypeTests()
         {
             _ = Optimizer.Init(typeof(FakeEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
-        [Fact, TestPriorityOrder(101)]
+        [Fact, TestPriorityOrder(100)]
         public void IsKnownConcreteType_True()
         {
             var optimizer = Optimizer.Get();
@@ -28,7 +27,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.True(optimizer.IsKnownConcreteType(typeof(FakeEntity)));
         }
 
-        [Fact, TestPriorityOrder(102)]
+        [Fact, TestPriorityOrder(101)]
         public void IsKnownConcreteType_False()
         {
             var optimizer = Optimizer.Get();
@@ -36,7 +35,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.False(optimizer.IsKnownConcreteType(typeof(InvalidSearchableKeyEntity)));
         }
 
-        [Fact, TestPriorityOrder(103)]
+        [Fact, TestPriorityOrder(102)]
         public void IsKnownConcreteType_Null()
         {
             var optimizer = Optimizer.Get();

@@ -12,16 +12,14 @@ namespace dii.storage.tests.OptimizerTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class ToEntityObjectTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void ToEntityObject_Prep()
+        public ToEntityObjectTests()
         {
             _ = Optimizer.Init(typeof(FakeEntityThree));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
-        
-        [Fact, TestPriorityOrder(104)]
+        [Fact, TestPriorityOrder(100)]
         public void ToEntityObject_UnregisteredType()
         {
             var optimizer = Optimizer.Get();
@@ -37,7 +35,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Null(entity);
         }
 
-        [Fact, TestPriorityOrder(105)]
+        [Fact, TestPriorityOrder(101)]
         public void ToEntityObject_Null()
         {
             var optimizer = Optimizer.Get();

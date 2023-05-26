@@ -12,15 +12,14 @@ namespace dii.storage.tests.OptimizerTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class ToEntityTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void ToEntity_Prep()
+        public ToEntityTests()
         {
             _ = Optimizer.Init(typeof(FakeEntityTwo), typeof(FakeEntityFive));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
-        [Fact, TestPriorityOrder(101)]
+        [Fact, TestPriorityOrder(100)]
         public void ToEntity_Success()
         {
             var optimizer = Optimizer.Get();
@@ -40,7 +39,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal("kdkkZmFrZUVudGl0eVR3bzogQ29tcHJlc3NlZFN0cmluZ1ZhbHVl", entity.p);
         }
 
-        [Fact, TestPriorityOrder(102)]
+        [Fact, TestPriorityOrder(101)]
         public void ToEntity_SuccessWithSameIdAndPKProperty()
         {
             var optimizer = Optimizer.Get();
@@ -61,7 +60,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal("kdklZmFrZUVudGl0eUZpdmU6IENvbXByZXNzZWRTdHJpbmdWYWx1ZQ==", entity.p);
         }
 
-        [Fact, TestPriorityOrder(103)]
+        [Fact, TestPriorityOrder(102)]
         public void ToEntity_UnregisteredType()
         {
             var optimizer = Optimizer.Get();
@@ -77,7 +76,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Null(entity);
         }
 
-        [Fact, TestPriorityOrder(104)]
+        [Fact, TestPriorityOrder(103)]
         public void ToEntity_Null()
         {
             var optimizer = Optimizer.Get();
