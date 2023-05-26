@@ -12,15 +12,14 @@ namespace dii.storage.tests.OptimizerTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class GetPartitionKeyTypeTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void GetPartitionKeyType_Prep()
+        public GetPartitionKeyTypeTests()
         {
             _ = Optimizer.Init(typeof(FakeEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
-        [Fact, TestPriorityOrder(101)]
+        [Fact, TestPriorityOrder(100)]
         public void GetPartitionKeyType_Success()
         {
             var optimizer = Optimizer.Get();
@@ -30,7 +29,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(typeof(Guid), type);
         }
 
-        [Fact, TestPriorityOrder(102)]
+        [Fact, TestPriorityOrder(101)]
         public void GetPartitionKeyType_NotFound()
         {
             var optimizer = Optimizer.Get();

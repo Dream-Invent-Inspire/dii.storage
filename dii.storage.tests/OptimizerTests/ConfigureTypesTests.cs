@@ -14,27 +14,17 @@ namespace dii.storage.tests.OptimizerTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class ConfigureTypesTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void ConfigureTypes_Prep()
+        public ConfigureTypesTests()
         {
             _ = Optimizer.Init(typeof(FakeEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
-        [Theory, TestPriorityOrder(101), ClassData(typeof(ConfigureTypesNoOpData))]
+        [Theory, TestPriorityOrder(100), ClassData(typeof(ConfigureTypesNoOpData))]
         public void ConfigureTypes_NoOp(Type[] type)
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch
-            {
-                ConfigureTypes_Prep();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             Assert.Single(optimizer.Tables);
 
@@ -54,19 +44,10 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
         }
 
-        [Theory, TestPriorityOrder(102), ClassData(typeof(ConfigureTypesInvalidSearchableKeyExceptionData))]
+        [Theory, TestPriorityOrder(101), ClassData(typeof(ConfigureTypesInvalidSearchableKeyExceptionData))]
         public void ConfigureTypes_AddTypeWithInvalidSearchableKey(Type type, string key, string propertyName, string typeName)
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch
-            {
-                ConfigureTypes_Prep();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             Assert.Single(optimizer.Tables);
 
@@ -89,19 +70,10 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
         }
 
-        [Theory, TestPriorityOrder(103), ClassData(typeof(ConfigureTypesInvalidPartitionKeyOrderExceptionData))]
+        [Theory, TestPriorityOrder(102), ClassData(typeof(ConfigureTypesInvalidPartitionKeyOrderExceptionData))]
         public void ConfigureTypes_AddTypeWithInvalidPartitionKeyOrder(Type type, string propertyName, string duplicatePropertyName, int order)
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch
-            {
-                ConfigureTypes_Prep();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             Assert.Single(optimizer.Tables);
 
@@ -124,19 +96,10 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
         }
 
-        [Theory, TestPriorityOrder(104), ClassData(typeof(ConfigureTypesInvalidIdOrderExceptionData))]
+        [Theory, TestPriorityOrder(103), ClassData(typeof(ConfigureTypesInvalidIdOrderExceptionData))]
         public void ConfigureTypes_AddTypeWithInvalidIdOrder(Type type, string propertyName, string duplicatePropertyName, int order)
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch
-            {
-                ConfigureTypes_Prep();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             Assert.Single(optimizer.Tables);
 
@@ -159,19 +122,10 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
         }
 
-        [Fact, TestPriorityOrder(105)]
+        [Fact, TestPriorityOrder(104)]
         public void ConfigureTypes_AddNewType()
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch
-            {
-                ConfigureTypes_Prep();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             Assert.Single(optimizer.Tables);
 
@@ -194,19 +148,10 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(nameof(FakeEntityTwo), optimizer.TableMappings[typeof(FakeEntityTwo)].ClassName);
         }
 
-        [Fact, TestPriorityOrder(106)]
+        [Fact, TestPriorityOrder(105)]
         public void ConfigureTypes_AddNewTypeWithSameIdAndPKProperty()
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch
-            {
-                ConfigureTypes_Prep();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             Assert.Equal(2, optimizer.Tables.Count);
 

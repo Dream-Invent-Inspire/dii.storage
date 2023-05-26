@@ -12,15 +12,14 @@ namespace dii.storage.tests.OptimizerTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class GetIdTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void GetId_Prep()
+        public GetIdTests()
         {
             _ = Optimizer.Init(typeof(FakeEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
-        [Fact, TestPriorityOrder(101)]
+        [Fact, TestPriorityOrder(100)]
         public void GetId_Success()
         {
             var optimizer = Optimizer.Get();
@@ -36,7 +35,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(fakeEntity.Id, entity);
         }
 
-        [Fact, TestPriorityOrder(102)]
+        [Fact, TestPriorityOrder(101)]
         public void GetId_TypeNotFound()
         {
             var optimizer = Optimizer.Get();
@@ -52,7 +51,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(default, unpackedEntity);
         }
 
-        [Fact, TestPriorityOrder(103)]
+        [Fact, TestPriorityOrder(102)]
         public void GetId_Null()
         {
             var optimizer = Optimizer.Get();

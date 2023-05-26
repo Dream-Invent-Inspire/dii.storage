@@ -10,12 +10,7 @@ namespace dii.storage.tests.AttributeTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class StorageNameTests
     {
-        //[Fact, TestPriorityOrder(100)]
-        //public void StorageNameTests_Prep()
-        //{
-        //}
-
-        [Fact, TestPriorityOrder(101)]
+        [Fact, TestPriorityOrder(100)]
         public void StorageNameTests_Success()
         {
             var storageNameAttribute = new StorageNameAttribute("Test-Entity-Name");
@@ -23,12 +18,5 @@ namespace dii.storage.tests.AttributeTests
             Assert.NotNull(storageNameAttribute);
             Assert.Equal("Test-Entity-Name", storageNameAttribute.Name);
         }
-
-        #region Teardown
-        //[Fact, TestPriorityOrder(int.MaxValue)]
-        //public void Teardown()
-        //{
-        //}
-        #endregion
     }
 }

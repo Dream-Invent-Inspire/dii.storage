@@ -22,16 +22,12 @@ namespace dii.storage.tests.OptimizerTests
         }
 
         [Fact, TestPriorityOrder(101)]
-        public void Get_Prep()
+        public void Get_Success()
         {
             _ = Optimizer.Init(typeof(FakeEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
-        }
 
-        [Fact, TestPriorityOrder(102)]
-        public void Get_Success()
-        {
             var optimizer = Optimizer.Get();
 
             Assert.NotNull(optimizer);

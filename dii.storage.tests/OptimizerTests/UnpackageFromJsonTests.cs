@@ -13,18 +13,18 @@ namespace dii.storage.tests.OptimizerTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class UnpackageFromJsonTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void UnpackageFromJson_Prep()
+        public UnpackageFromJsonTests()
         {
             _ = Optimizer.Init(typeof(FakeEntityTwo));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
-        [Fact, TestPriorityOrder(101)]
+        [Fact, TestPriorityOrder(100)]
         public void UnpackageFromJson_Success()
         {
             var optimizer = Optimizer.Get();
+
             var id = Guid.NewGuid().ToString();
 
             var fakeEntityTwoJson = $"{{\"id\":\"{id}\",\"_etag\":null,\"p\":\"kdkkZmFrZUVudGl0eVR3bzogQ29tcHJlc3NlZFN0cmluZ1ZhbHVl\",\"PK\":\"{id}\"}}";
@@ -37,7 +37,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal("fakeEntityTwo: CompressedStringValue", entity.CompressedStringValue);
         }
 
-        [Theory, TestPriorityOrder(102), ClassData(typeof(UnpackageFromJsonReturnDefaultData))]
+        [Theory, TestPriorityOrder(101), ClassData(typeof(UnpackageFromJsonReturnDefaultData))]
         public void UnpackageFromJson_UnregisteredType(string json)
         {
             var optimizer = Optimizer.Get();
@@ -47,7 +47,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(default, entity);
         }
 
-        [Theory, TestPriorityOrder(103), ClassData(typeof(UnpackageFromJsonExceptionData))]
+        [Theory, TestPriorityOrder(102), ClassData(typeof(UnpackageFromJsonExceptionData))]
         public void UnpackageFromJson_Exception(string json, Type exceptionType, string exceptionMessage)
         {
             var optimizer = Optimizer.Get();

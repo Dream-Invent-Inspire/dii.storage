@@ -12,8 +12,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class DoesDatabaseExistTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void DoesDatabaseExistAsync_Prep()
+        public DoesDatabaseExistTests()
         {
             var fakeCosmosDatabaseConfig = new FakeCosmosDatabaseConfig();
 
@@ -22,7 +21,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
             Assert.NotNull(context);
         }
 
-        [Fact, TestPriorityOrder(101)]
+        [Fact, TestPriorityOrder(100)]
         public async Task DoesDatabaseExistAsync_Success()
         {
             var context = DiiCosmosContext.Get();

@@ -17,22 +17,23 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class InitTablesTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void InitTablesAsync_Prep()
+        public InitTablesTests()
         {
             var fakeCosmosDatabaseConfig = new FakeCosmosDatabaseConfig();
 
             var context = DiiCosmosContext.Init(fakeCosmosDatabaseConfig);
 
             Assert.NotNull(context);
-            Assert.Null(context.TableMappings);
 
-            _ = Optimizer.Init(typeof(FakeEntity));
+            if (context.TableMappings == null)
+            {
+                _ = Optimizer.Init(typeof(FakeEntity));
 
-            TestHelpers.AssertOptimizerIsInitialized();
+                TestHelpers.AssertOptimizerIsInitialized();
+            }
         }
 
-        [Theory, TestPriorityOrder(101), ClassData(typeof(ContextEmptyInitData))]
+        [Theory, TestPriorityOrder(100), ClassData(typeof(ContextEmptyInitData))]
         public async Task InitTablesAsync_NullTables(List<TableMetaData> tableMetaDatas)
         {
             var context = DiiCosmosContext.Get();
@@ -45,7 +46,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
             Assert.Equal(new ArgumentNullException("tableMetaDatas").Message, exception.Message);
         }
 
-        [Fact, TestPriorityOrder(102)]
+        [Fact, TestPriorityOrder(101)]
         public async Task InitTablesAsync_DbNotInitialized()
         {
             var context = DiiCosmosContext.Get();
@@ -62,7 +63,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
             Assert.Equal(new DiiNotInitializedException("Db").Message, exception.Message);
         }
 
-        [Fact, TestPriorityOrder(103)]
+        [Fact, TestPriorityOrder(102)]
         public async Task InitTablesAsync_Success()
         {
             var context = DiiCosmosContext.Get();
