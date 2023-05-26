@@ -93,7 +93,7 @@ namespace dii.storage
 		/// </param>
 		public static void ClearAllTypes(bool iUnderstandThisShouldOnlyBeUsedForTesting)
 		{
-			if(iUnderstandThisShouldOnlyBeUsedForTesting)
+			if (iUnderstandThisShouldOnlyBeUsedForTesting)
 			{
 				_packing.Clear();
 				_unpacking.Clear();

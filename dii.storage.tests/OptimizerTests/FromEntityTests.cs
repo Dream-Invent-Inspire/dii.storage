@@ -14,27 +14,17 @@ namespace dii.storage.tests.OptimizerTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class FromEntityTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void FromEntity_Prep()
+        public FromEntityTests()
         {
             _ = Optimizer.Init(typeof(FakeEntityTwo), typeof(FakeEntityFive));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
-        [Fact, TestPriorityOrder(101)]
+        [Fact, TestPriorityOrder(100)]
         public void FromEntity_Success()
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch
-            {
-                FromEntity_Prep();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             var fakeEntityTwo = new FakeEntityTwo
             {
@@ -55,19 +45,10 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(fakeEntityTwo.CompressedStringValue, unpackedEntity.CompressedStringValue);
         }
 
-        [Fact, TestPriorityOrder(102)]
+        [Fact, TestPriorityOrder(101)]
         public void FromEntity_SuccessWithSameIdAndPKProperty()
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch
-            {
-                FromEntity_Prep();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             var fakeEntityFive = new FakeEntityFive
             {
@@ -88,38 +69,20 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(fakeEntityFive.CompressedStringValue, unpackedEntity.CompressedStringValue);
         }
 
-        [Theory, TestPriorityOrder(103), ClassData(typeof(FromEntityReturnDefaultData))]
+        [Theory, TestPriorityOrder(102), ClassData(typeof(FromEntityReturnDefaultData))]
         public void FromEntity_ReturnDefault(object entity)
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch
-            {
-                FromEntity_Prep();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             var unpackedEntity = optimizer.FromEntity<InvalidSearchableKeyEntity>(entity);
 
             Assert.Equal(default, unpackedEntity);
         }
 
-        [Fact, TestPriorityOrder(104)]
+        [Fact, TestPriorityOrder(103)]
         public void FromEntity_JsonSuccess()
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch
-            {
-                FromEntity_Prep();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             var id = Guid.NewGuid().ToString();
             var fakeEntityTwoJson = $@"{{
@@ -144,19 +107,10 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal("\"00000000-0000-0000-79bf-5e755a3201d8\"", unpackedEntity.DataVersion);
         }
 
-        [Fact, TestPriorityOrder(105)]
+        [Fact, TestPriorityOrder(104)]
         public void FromEntity_JsonSuccessWithSameIdAndPKProperty()
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch
-            {
-                FromEntity_Prep();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             var id = Guid.NewGuid().ToString();
             var fakeEntityFiveJson = $@"{{
@@ -180,19 +134,10 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal("\"00000000-0000-0000-79bf-5e755a3201d8\"", unpackedEntity.DataVersion);
         }
 
-        [Fact, TestPriorityOrder(106)]
+        [Fact, TestPriorityOrder(105)]
         public void FromEntity_JsonEmpty()
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch
-            {
-                FromEntity_Prep();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             var fakeEntityTwoJson = "{}";
 

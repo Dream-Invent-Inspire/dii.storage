@@ -12,15 +12,14 @@ namespace dii.storage.tests.OptimizerTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class IsKnownEmitTypeTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void IsKnownEmitType_Prep()
+        public IsKnownEmitTypeTests()
         {
             _ = Optimizer.Init(typeof(FakeEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
-        [Fact, TestPriorityOrder(101)]
+        [Fact, TestPriorityOrder(100)]
         public void IsKnownEmitType_True()
         {
             var optimizer = Optimizer.Get();
@@ -31,7 +30,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.True(optimizer.IsKnownEmitType(storageType));
         }
 
-        [Fact, TestPriorityOrder(102)]
+        [Fact, TestPriorityOrder(101)]
         public void IsKnownEmitType_False()
         {
             var optimizer = Optimizer.Get();
@@ -39,7 +38,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.False(optimizer.IsKnownEmitType(typeof(InvalidSearchableKeyEntity)));
         }
 
-        [Fact, TestPriorityOrder(103)]
+        [Fact, TestPriorityOrder(102)]
         public void IsKnownEmitType_Null()
         {
             var optimizer = Optimizer.Get();

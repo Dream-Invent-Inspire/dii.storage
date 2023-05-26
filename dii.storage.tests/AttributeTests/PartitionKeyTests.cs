@@ -12,15 +12,14 @@ namespace dii.storage.tests.AttributeTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class PartitionKeyTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void PartitionKey_Prep()
+        public PartitionKeyTests()
         {
             _ = Optimizer.Init(typeof(MultiplePartitionKeyEntity), typeof(FirstPartitionKeySeparatorWinsEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
-        [Theory, TestPriorityOrder(101), ClassData(typeof(MultiplePKEntityData))]
+        [Theory, TestPriorityOrder(100), ClassData(typeof(MultiplePKEntityData))]
         public void PartitionKey_Success(MultiplePartitionKeyEntity multiplePartitionKeyEntity, string expected)
         {
             var optimizer = Optimizer.Get();
@@ -34,7 +33,7 @@ namespace dii.storage.tests.AttributeTests
             Assert.Equal(expected, pk);
         }
 
-        [Theory, TestPriorityOrder(102), ClassData(typeof(FirstPartitionKeySeparatorWinsEntityData))]
+        [Theory, TestPriorityOrder(101), ClassData(typeof(FirstPartitionKeySeparatorWinsEntityData))]
         public void PartitionKey_FirstSeparatorWins(FirstPartitionKeySeparatorWinsEntity firstPartitionKeySeparatorWinsEntity, string expected)
         {
             var optimizer = Optimizer.Get();

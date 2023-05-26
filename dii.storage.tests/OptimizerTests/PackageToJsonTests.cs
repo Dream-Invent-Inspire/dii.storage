@@ -1,5 +1,4 @@
-﻿using dii.storage.Exceptions;
-using dii.storage.tests.Attributes;
+﻿using dii.storage.tests.Attributes;
 using dii.storage.tests.Models;
 using dii.storage.tests.Orderer;
 using dii.storage.tests.Utilities;
@@ -14,27 +13,17 @@ namespace dii.storage.tests.OptimizerTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class PackageToJsonTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void PackageToJson_Prep()
+        public PackageToJsonTests()
         {
             _ = Optimizer.Init(typeof(FakeEntityTwo));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
-        [Fact, TestPriorityOrder(101)]
+        [Fact, TestPriorityOrder(100)]
         public void PackageToJson_Success()
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch
-            {
-                PackageToJson_Prep();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             var fakeEntityTwo = new FakeEntityTwo
             {
@@ -50,20 +39,10 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(expectedEntity, entity);
         }
 
-        [Fact, TestPriorityOrder(102)]
+        [Fact, TestPriorityOrder(101)]
         public void PackageToJson_CollectionComplex_Success()
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch (DiiNotInitializedException ex)
-            {
-                _ = Optimizer.Init(typeof(FakeEntityTwo));
-                TestHelpers.AssertOptimizerIsInitialized();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             var fakeEntityTwo = new FakeEntityTwo
             {

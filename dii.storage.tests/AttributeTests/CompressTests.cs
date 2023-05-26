@@ -12,12 +12,7 @@ namespace dii.storage.tests.AttributeTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class CompressTests
     {
-        //[Fact, TestPriorityOrder(100)]
-        //public void CompressTests_Prep()
-        //{
-        //}
-
-        [Theory, TestPriorityOrder(101), ClassData(typeof(CompressData))]
+        [Theory, TestPriorityOrder(100), ClassData(typeof(CompressData))]
         public void CompressTests_Success(int order)
         {
             var compressAttribute = new CompressAttribute(order);
@@ -26,7 +21,7 @@ namespace dii.storage.tests.AttributeTests
             Assert.Equal(order, compressAttribute.Order);
         }
 
-        [Theory, TestPriorityOrder(102), ClassData(typeof(CompressExceptionData))]
+        [Theory, TestPriorityOrder(101), ClassData(typeof(CompressExceptionData))]
         public void CompressTests_Exception(int order)
         {
             // Normally the property name would be derived from actual Attribute usage.
@@ -36,12 +31,5 @@ namespace dii.storage.tests.AttributeTests
             Assert.NotNull(exception);
             Assert.Equal($"The [Compress(order)] order on {propertyName} cannot be negative.", exception.Message);
         }
-
-        #region Teardown
-        //[Fact, TestPriorityOrder(int.MaxValue)]
-        //public void Teardown()
-        //{
-        //}
-        #endregion
     }
 }

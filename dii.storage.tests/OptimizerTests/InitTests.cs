@@ -87,12 +87,5 @@ namespace dii.storage.tests.OptimizerTests
             Assert.NotNull(exception);
             Assert.Equal(new DiiInvalidNestingException(nameof(InvalidSelfReferenceEntity)).Message, exception.Message);
         }
-
-        #region Teardown
-        //[Fact, TestPriorityOrder(int.MaxValue)]
-        //public void Teardown()
-        //{
-        //}
-        #endregion
     }
 }

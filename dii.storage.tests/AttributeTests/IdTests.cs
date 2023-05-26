@@ -12,27 +12,17 @@ namespace dii.storage.tests.AttributeTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class IdTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void Id_Prep()
+        public IdTests()
         {
             _ = Optimizer.Init(typeof(MultipleIdEntity), typeof(FirstIdSeparatorWinsEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
-        [Theory, TestPriorityOrder(101), ClassData(typeof(MultipleIdEntityData))]
+        [Theory, TestPriorityOrder(100), ClassData(typeof(MultipleIdEntityData))]
         public void Id_Success(MultipleIdEntity multipleIdEntity, string expected)
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch
-            {
-                Id_Prep();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             var entity = (dynamic)optimizer.ToEntity(multipleIdEntity);
 
@@ -43,19 +33,10 @@ namespace dii.storage.tests.AttributeTests
             Assert.Equal(expected, id);
         }
 
-        [Theory, TestPriorityOrder(102), ClassData(typeof(FirstIdSeparatorWinsEntityData))]
+        [Theory, TestPriorityOrder(101), ClassData(typeof(FirstIdSeparatorWinsEntityData))]
         public void Id_FirstSeparatorWins(FirstIdSeparatorWinsEntity firstIdSeparatorWinsEntity, string expected)
         {
-            Optimizer optimizer;
-            try
-            {
-                optimizer = Optimizer.Get();
-            }
-            catch
-            {
-                Id_Prep();
-                optimizer = Optimizer.Get();
-            }
+            var optimizer = Optimizer.Get();
 
             var entity = (dynamic)optimizer.ToEntity(firstIdSeparatorWinsEntity);
 
