@@ -11,7 +11,7 @@
     <Authors>Andrew Beers &amp; Pat MacMannis</Authors>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageId>dii.storage</PackageId>
-    <Version>1.2.4</Version>
+    <Version>1.2.5-rc1</Version>
     <AssemblyName>dii.storage</AssemblyName>
     <RootNamespace>dii.storage</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
