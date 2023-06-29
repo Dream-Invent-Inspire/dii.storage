@@ -196,7 +196,20 @@ namespace dii.storage.cosmos
                         DefaultTimeToLive = tableMetaData.TimeToLiveInSeconds
                     };
 
-                    tasks.Add(Db.CreateContainerIfNotExistsAsync(containerProperties));
+					//if hierarchical partition keys are defined, use them instead
+                    if (tableMetaData.HierarchicalPartitionKeys?.Any() ?? false)
+					{
+						// List of partition keys, in hierarchical order. You can have up to three levels of keys.
+						containerProperties = new ContainerProperties(
+							id: tableMetaData.TableName,
+							partitionKeyPaths: tableMetaData.HierarchicalPartitionKeys.OrderBy(x => x.Key).Select(x => $"/{x.Value}").ToList()
+                        )
+                        {
+                            DefaultTimeToLive = tableMetaData.TimeToLiveInSeconds
+                        };					
+					}
+
+					tasks.Add(Db.CreateContainerIfNotExistsAsync(containerProperties));
 				}
 
 				await Task.WhenAll(tasks).ConfigureAwait(false);
