@@ -218,6 +218,10 @@ namespace dii.storage
                                     StorageType = storageType,
                                     TimeToLiveInSeconds = type.GetCustomAttribute<EnableTimeToLiveAttribute>()?.TimeToLiveInSeconds,
                                 };
+								if (storageTypeSerializer.HierarchicalPartitionKeyProperties != null && storageTypeSerializer.HierarchicalPartitionKeyProperties.Any())
+								{
+									tableMetaData.HierarchicalPartitionKeys = storageTypeSerializer.HierarchicalPartitionKeyProperties.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value.Name);
+								}
 
                                 Tables.Add(tableMetaData);
                                 TableMappings.Add(type, tableMetaData);
@@ -467,8 +471,9 @@ namespace dii.storage
 			}
 
 			var type = typeof(T);
+			var props = OptimizedTypeRegistrar.GetPackageMapping(type).PartitionKeyProperties;
 
-			if (OptimizedTypeRegistrar.IsMapped(type))
+            if (OptimizedTypeRegistrar.IsMapped(type) && props != null && props.Any())
 			{
 				var partitionKeyValues = new List<object>();
 

@@ -2,6 +2,7 @@
 using dii.storage.cosmos.examples.Fixtures;
 using dii.storage.cosmos.examples.Models;
 using dii.storage.cosmos.examples.Orderer;
+using Microsoft.Azure.Cosmos;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +22,35 @@ namespace dii.storage.cosmos.examples
             _fixture = fixture ?? throw new ArgumentNullException(nameof(fixture));
         }
 
-		[Fact, TestPriorityOrder(100)]
+        [Fact, TestPriorityOrder(40)]
+        public async Task RunHPKExample1()
+        {
+			try
+			{
+				// Create new item
+				PersonSession session = new PersonSession()
+				{
+					ClientId = "SomeEnterprise",
+					PersonId = "8411f20f-be3e-416a-a3e7-dcd5a3c1f28b",
+					SessionId = "f7da01b0-090b-41d2-8416-dacae09fbb5e",
+					SessionStartDate = DateTime.UtcNow,
+					Catalog = "Pets"
+				};
+
+				// Create the entity with our adapter.
+				var createdPersonSession = await _fixture.PersonSessionAdapter.CreateAsync(session).ConfigureAwait(false);
+
+				var storedsession = await _fixture.PersonSessionAdapter.FetchAsync(session.PersonId, session.ClientId, session.SessionId).ConfigureAwait(false);
+
+			}
+			catch (Exception ex)
+			{
+
+			}
+
+        }
+
+        [Fact, TestPriorityOrder(100)]
 		public async Task RunExample1()
 		{
 			// Some quick dummy data.
@@ -228,8 +257,8 @@ namespace dii.storage.cosmos.examples
 			_fixture.People.Clear();
 		}
 
-		#region Teardown
-		[Fact, TestPriorityOrder(int.MaxValue)]
+        #region Teardown
+        [Fact, TestPriorityOrder(int.MaxValue)]
         public async Task Teardown()
 		{
 			var context = DiiCosmosContext.Get();

@@ -39,10 +39,18 @@ namespace dii.storage.Models
 		/// </remarks>
 		public string PartitionKeyPath { get; init; } = $"/{Constants.ReservedPartitionKeyKey}";
 
-		/// <summary>
-		/// The dynamically created type created by the <see cref="Optimizer"/>.
-		/// </summary>
-		public Type StorageType { get; set; }
+        /// <summary>
+        /// The searchable path of the partition key.
+        /// </summary>
+        /// <remarks>
+        /// Currently hardcoded as /PK.
+        /// </remarks>
+        public Dictionary<int, string> HierarchicalPartitionKeys { get; set; } = new Dictionary<int, string>();
+
+        /// <summary>
+        /// The dynamically created type created by the <see cref="Optimizer"/>.
+        /// </summary>
+        public Type StorageType { get; set; }
 
 		/// <summary>
 		/// The concrete type. This is the user-defined object that is passed into the <see cref="Optimizer"/>

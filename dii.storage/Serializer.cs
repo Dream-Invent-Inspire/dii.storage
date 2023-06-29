@@ -35,10 +35,16 @@ namespace dii.storage
 			/// </summary>
 			public List<PropertyInfo> PartitionKeyProperties { get; set; }
 
-			/// <summary>
-			/// The character used to delimiter multiple partition key values as set in the <see cref="PartitionKeyAttribute.Separator"/>.
-			/// </summary>
-			public string PartitionKeySeparator { get; set; }
+            /// <summary>
+            /// The <see cref="PropertyInfo"/> for all properties designated by the <see cref="PartitionKeyAttribute"/>.
+            /// </summary>
+            public Dictionary<int, PropertyInfo> HierarchicalPartitionKeyProperties { get; set; }
+
+
+            /// <summary>
+            /// The character used to delimiter multiple partition key values as set in the <see cref="PartitionKeyAttribute.Separator"/>.
+            /// </summary>
+            public string PartitionKeySeparator { get; set; }
 
 			/// <summary>
 			/// The <see cref="Type"/> of the parition key as set in the <see cref="PartitionKeyAttribute.PartitionKeyType"/>.
@@ -118,7 +124,15 @@ namespace dii.storage
 				var packedObject = Activator.CreateInstance(StoredEntityType);
 				var compressedEntity = Activator.CreateInstance(CompressedEntityType);
 
-				if (PartitionKey != null)
+				if (HierarchicalPartitionKeyProperties != null && HierarchicalPartitionKeyProperties.Count > 0)
+				{
+					// just add these to the Concrete types to be handled like any other property
+					foreach (var property in HierarchicalPartitionKeyProperties.Values)
+					{
+						StoredEntityMapping.ConcreteProperties.Add(property.Name, property);
+                    }
+                }
+                else if (PartitionKey != null)
 				{
 					var partitionKeyValues = new List<object>();
 
@@ -257,7 +271,11 @@ namespace dii.storage
 				var compressedBytes = Convert.FromBase64String(compressedString);
 				var compressedObj = MessagePackSerializer.Deserialize(CompressedEntityType, compressedBytes);
 
-				if (PartitionKey != null)
+                if (HierarchicalPartitionKeyProperties != null && HierarchicalPartitionKeyProperties.Count > 0)
+                {
+					// These are real properties so do nothing
+                }
+                else if (PartitionKey != null)
 				{
 					// Reverse engineer parition key string.
 					var partitionKey = ((string)PartitionKey.GetValue(packedObject)).Split(new string[] { PartitionKeySeparator }, StringSplitOptions.None);
