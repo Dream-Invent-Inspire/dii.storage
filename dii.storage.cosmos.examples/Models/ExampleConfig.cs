@@ -6,11 +6,11 @@ namespace dii.storage.cosmos.examples.Models
     {
         public ExampleConfig()
         {
-            Uri = "https://localhost:8081";
-            Key = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
+            //Uri = "https://localhost:8081";
+            //Key = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
 
-            //Uri = "https://cosmos-emporos-low.documents.azure.com:443/";
-            //Key = "brAonLaInaJ8UKOACnidFnckHQv0EvNy42U3812P0tn6mGoOMYO0wSG4zIZsBPUGz32ihJa3kT1VACDbWAAHOw==";
+            Uri = "https://cosmos-emporos-low.documents.azure.com:443/";
+            Key = "brAonLaInaJ8UKOACnidFnckHQv0EvNy42U3812P0tn6mGoOMYO0wSG4zIZsBPUGz32ihJa3kT1VACDbWAAHOw==";
             DatabaseId = $"dii-storage-cosmos-example-local";
             AutoCreate = true;
             MaxRUPerSecond = 4000;

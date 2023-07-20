@@ -129,7 +129,8 @@ namespace dii.storage
 					// just add these to the Concrete types to be handled like any other property
 					foreach (var property in HierarchicalPartitionKeyProperties.Values)
 					{
-						StoredEntityMapping.ConcreteProperties.Add(property.Name, property);
+						if (!StoredEntityMapping.ConcreteProperties.ContainsKey(property.Name))
+                            StoredEntityMapping.ConcreteProperties.Add(property.Name, property);
                     }
                 }
                 else if (PartitionKey != null)
