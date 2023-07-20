@@ -155,6 +155,11 @@ namespace dii.storage
 			return _instance;
 		}
 
+		public void ConfigureTypes(Dictionary<string, List<Type>> types)
+		{
+
+		}
+
 		/// <summary>
 		/// Attempts to register an array of <see cref="Type"/> to the <see cref="Optimizer"/>.
 		/// Any <see cref="Type"/> that is already registered will be ignored.

@@ -24,32 +24,18 @@ namespace dii.storage.cosmos.examples.Adapters
             return base.GetAsync(sessionId, dic, cancellationToken: cancellationToken);
         }
 
-        public async Task<List<PersonSession>> GetManyBySessionIdsAsync(IReadOnlyList<string> personSessionIds)
+        public async Task<List<PersonSession>> GetManyBySessionIdsAsync(IReadOnlyList<Tuple<string, Dictionary<string, string>>> idAndPks)
         {
-            var keysDict = new Dictionary<string, string>();
-
-            for (var i = 0; i < personSessionIds.Count; i++)
-            {
-                keysDict.Add($"@id{i}", personSessionIds[i]);
-            }
-
-            var queryDefinition = new QueryDefinition($"SELECT * FROM person p WHERE p.id IN ({string.Join(", ", keysDict.Keys)})");
-
-            foreach (var id in keysDict)
-            {
-                queryDefinition.WithParameter(id.Key, id.Value);
-            }
-
-            var results = await base.GetPagedAsync(queryDefinition).ConfigureAwait(false);
-
+            var results = await base.GetManyAsync(idAndPks).ConfigureAwait(false);
             return results.ToList();
         }
 
         public Task<PagedList<PersonSession>> GetManyByClientIdAsync(string clientId, string personId)
         {
-            var queryDefinition = new QueryDefinition($"SELECT * FROM person p WHERE p.PK = @clientId");
+            var queryDefinition = new QueryDefinition($"SELECT * FROM c WHERE c.ClientId = @clientId AND c.PersonId = @personId");
 
             queryDefinition.WithParameter("@clientId", clientId);
+            queryDefinition.WithParameter("@personId", personId);
 
             return base.GetPagedAsync(queryDefinition);
         }
@@ -57,9 +43,10 @@ namespace dii.storage.cosmos.examples.Adapters
 
         public Task<PagedList<PersonSession>> SearchByRunDurationAsync(string clientId, string personId, long duration)
         {
-            var queryDefinition = new QueryDefinition($"SELECT * FROM person p WHERE p.ClientId = @clientId AND p.duration = @duration");
+            var queryDefinition = new QueryDefinition($"SELECT * FROM c WHERE c.ClientId = @clientId AND c.PersonId = @personId AND c.Duration = @duration");
 
             queryDefinition.WithParameter("@clientId", clientId);
+            queryDefinition.WithParameter("@personId", personId);
             queryDefinition.WithParameter("@duration", duration);
 
             return base.GetPagedAsync(queryDefinition);
@@ -69,6 +56,10 @@ namespace dii.storage.cosmos.examples.Adapters
 
         public Task<PersonSession> CreateAsync(PersonSession session, CancellationToken cancellationToken = default)
         {
+            if (session.SessionEndDate != null)
+            {
+                session.Duration = (long)(session.SessionEndDate.Value - session.SessionStartDate).TotalMilliseconds;
+            }
             return base.CreateAsync(session, cancellationToken: cancellationToken);
         }
 
