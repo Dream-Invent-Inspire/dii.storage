@@ -24,7 +24,7 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(101)]
         public void Get_Success()
         {
-            _ = Optimizer.Init(typeof(FakeEntity));
+            _ = Optimizer.Init("FakeDb", typeof(FakeEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
 

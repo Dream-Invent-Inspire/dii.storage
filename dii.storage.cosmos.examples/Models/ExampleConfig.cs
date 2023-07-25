@@ -1,9 +1,11 @@
 ﻿using dii.storage.cosmos.Models;
+using System.Collections.Generic;
 
 namespace dii.storage.cosmos.examples.Models
 {
     public class ExampleConfig : CosmosDatabaseConfig
     {
+        public const string DbName = $"dii-storage-cosmos-example-local";
         public ExampleConfig()
         {
             //Uri = "https://localhost:8081";
@@ -11,7 +13,8 @@ namespace dii.storage.cosmos.examples.Models
 
             Uri = "https://cosmos-emporos-low.documents.azure.com:443/";
             Key = "brAonLaInaJ8UKOACnidFnckHQv0EvNy42U3812P0tn6mGoOMYO0wSG4zIZsBPUGz32ihJa3kT1VACDbWAAHOw==";
-            DatabaseId = $"dii-storage-cosmos-example-local";
+
+            DatabaseIds = new List<string>() { DbName };
             AutoCreate = true;
             MaxRUPerSecond = 4000;
 

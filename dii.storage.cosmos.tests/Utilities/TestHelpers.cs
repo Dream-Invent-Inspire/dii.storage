@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Xunit;
+using System.Collections.Generic;
 
 namespace dii.storage.cosmos.tests.Utilities
 {
@@ -19,7 +20,7 @@ namespace dii.storage.cosmos.tests.Utilities
         #region Public Methods
 
         #region Init
-		public static async Task<Optimizer> InitContextAndOptimizerAsync(INoSqlDatabaseConfig noSqlDatabaseConfig, Optimizer optimizer, Type[] types)
+		public static async Task<Optimizer> InitContextAndOptimizerAsync(INoSqlDatabaseConfig noSqlDatabaseConfig, Optimizer optimizer, Dictionary<string, Type[]> types)
         {
 			var context = DiiCosmosContext.Init(noSqlDatabaseConfig);
 
@@ -32,11 +33,17 @@ namespace dii.storage.cosmos.tests.Utilities
 
 			if (optimizer == null)
 			{
-				optimizer = Optimizer.Init(types);
+				foreach (var kvp in types)
+				{
+					optimizer = Optimizer.Init(kvp.Key, kvp.Value.ToArray());
+				}
 			}
 
-			context.InitTablesAsync(optimizer.Tables).Wait();
-
+			foreach (var kvp in types)
+			{
+				var tbls = optimizer.Tables.Where(t => t.DbId == kvp.Key).ToList();
+				context.InitTablesAsync(kvp.Key, tbls).Wait();
+			}
 			return optimizer;
 		}
         #endregion Init
@@ -60,9 +67,12 @@ namespace dii.storage.cosmos.tests.Utilities
 		{
 			var context = DiiCosmosContext.Get();
 
-			if (context.Db != null)
+			if (context.Dbs != null)
 			{
-				_ = await context.Db.DeleteAsync().ConfigureAwait(false);
+				foreach (var db in context.Dbs)
+				{
+					_ = await db.DeleteAsync().ConfigureAwait(false);
+				}
 			}
 		}
 

@@ -74,7 +74,7 @@ namespace dii.storage
 		/// Initializes an instance of <see cref="Optimizer"/>.
 		/// </summary>
 		/// <param name="types">An array of <see cref="Type"/> to register. All types must implement the <see cref="IDiiEntity"/> interface.</param>
-		private Optimizer(params Type[] types)
+		private Optimizer(string dbid, params Type[] types)
 		{
 			Tables = new List<TableMetaData>();
 			TableMappings = new Dictionary<Type, TableMetaData>();
@@ -85,7 +85,7 @@ namespace dii.storage
 
 			_builder = assemblyBuilder.DefineDynamicModule($"{assemblyName}.dll");
 
-			ConfigureTypes(types);
+			ConfigureTypes(dbid, types);
 		}
 		#endregion Constructors
 
@@ -97,9 +97,9 @@ namespace dii.storage
 		/// <returns>
 		/// The instance of <see cref="Optimizer"/>.
 		/// </returns>
-		public static Optimizer Init(params Type[] types)
+		public static Optimizer Init(string dbid, params Type[] types)
 		{
-			return InitializeOptimizer(types);
+			return InitializeOptimizer(dbid, types);
 		}
 
 		/// <summary>
@@ -110,11 +110,11 @@ namespace dii.storage
 		/// <returns>
 		/// The instance of <see cref="Optimizer"/>.
 		/// </returns>
-		public static Optimizer Init(bool ignoreInvalidDiiEntities = false, params Type[] types)
+		public static Optimizer Init(string dbid, bool ignoreInvalidDiiEntities = false, params Type[] types)
 		{
 			_ignoreInvalidDiiEntities = ignoreInvalidDiiEntities;
 
-			return InitializeOptimizer(types);
+			return InitializeOptimizer(dbid, types);
 		}
 
 		/// <summary>
@@ -128,12 +128,12 @@ namespace dii.storage
 		/// <returns>
 		/// The instance of <see cref="Optimizer"/>.
 		/// </returns>
-		public static Optimizer Init(bool autoDetectTypes = false, bool ignoreInvalidDiiEntities = false)
+		public static Optimizer Init(string dbid, bool autoDetectTypes = false, bool ignoreInvalidDiiEntities = false)
 		{
 			_autoDetectTypes = autoDetectTypes;
 			_ignoreInvalidDiiEntities = ignoreInvalidDiiEntities;
 
-			return InitializeOptimizer();
+			return InitializeOptimizer(dbid);
 		}
 
 		/// <summary>
@@ -170,7 +170,7 @@ namespace dii.storage
 		/// the <see cref="Optimizer"/> will search all assemblies for any objects that implement the 
 		/// <see cref="IDiiEntity"/> interface and attempt to register them.
 		/// </remarks>
-		public void ConfigureTypes(params Type[] types)
+		public void ConfigureTypes(string dbid, params Type[] types)
 		{
 			if (_autoDetectTypes)
 			{
@@ -217,6 +217,7 @@ namespace dii.storage
                             {
                                 var tableMetaData = new TableMetaData
                                 {
+									DbId = dbid,
                                     TableName = type.GetCustomAttribute<StorageNameAttribute>()?.Name ?? type.Name,
                                     ClassName = type.Name,
                                     ConcreteType = type,
@@ -550,7 +551,7 @@ namespace dii.storage
 		#endregion Public Methods
 
 		#region Private Methods
-		private static Optimizer InitializeOptimizer(params Type[] types)
+		private static Optimizer InitializeOptimizer(string dbid, params Type[] types)
 		{
 			bool isNew = false;
 
@@ -561,14 +562,14 @@ namespace dii.storage
 					if (_instance == null)
 					{
 						isNew = true;
-						_instance = new Optimizer(types);
+						_instance = new Optimizer(dbid, types);
 					}
 				}
 			}
 
 			if (!isNew)
 			{
-				_instance.ConfigureTypes(types);
+				_instance.ConfigureTypes(dbid, types);
 			}
 
 			return _instance;

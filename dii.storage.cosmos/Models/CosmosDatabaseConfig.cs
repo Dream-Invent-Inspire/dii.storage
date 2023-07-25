@@ -1,7 +1,13 @@
 ﻿using dii.storage.Models.Interfaces;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace dii.storage.cosmos.Models
 {
+    public class CosmosContextConfig : INoSqlContextConfig
+    {
+        List<INoSqlDatabaseConfig> INoSqlContextConfig.Contexts { get; set; }
+    }
     /// <summary>
     /// The configuration necessary to create and connect to a CosmosDB database.
     /// </summary>
@@ -13,11 +19,14 @@ namespace dii.storage.cosmos.Models
 		/// <inheritdoc/>
 		public string Key { get; set; }
 
-		/// <inheritdoc/>
-		public string DatabaseId { get; set; }
+        /// <inheritdoc/>
+        /// <summary>
+        /// The ids of the databases.
+        /// </summary>
+        public List<string> DatabaseIds { get; set; }
 
-		/// <inheritdoc/>
-		public bool AutoCreate { get; set; }
+        /// <inheritdoc/>
+        public bool AutoCreate { get; set; }
 
 		/// <inheritdoc/>
 		public int MaxRUPerSecond { get; set; }

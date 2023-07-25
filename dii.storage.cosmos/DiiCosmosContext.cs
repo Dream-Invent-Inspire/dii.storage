@@ -29,10 +29,11 @@ namespace dii.storage.cosmos
 		#region Public Properties
 
 		/// <inheritdoc cref="Database" />
-		public Database Db { get; private set; }
+		public List<Database> Dbs { get; private set; }
 
 		/// <inheritdoc cref="DatabaseProperties" />
-		public DatabaseProperties DbProperties { get; private set; }
+		public Dictionary<string, DatabaseProperties> DbProperties { get; private set; }
+
 		#endregion Public Properties
 
 		#region Constructors
@@ -107,57 +108,72 @@ namespace dii.storage.cosmos
 							ThroughputProperties.CreateAutoscaleThroughput(Config.MaxRUPerSecond)
 							: ThroughputProperties.CreateManualThroughput(Config.MaxRUPerSecond);
 
-				var response = await Client.CreateDatabaseIfNotExistsAsync(Config.DatabaseId, throughputProperties).ConfigureAwait(false);
-
-				Db = response.Database;
-				DbProperties = response.Resource;
-
-				// Skip throughput check if DB was just created.
-				DatabaseCreatedThisContext = response.StatusCode == HttpStatusCode.Created;
-
-				if (DatabaseCreatedThisContext)
+				foreach (var dbid in Config.DatabaseIds)
 				{
-					DbThroughput = Config.MaxRUPerSecond;
-				}
-				else
-                {
-					if (Config.AutoAdjustMaxRUPerSecond)
-                    {
-						var checkCurrentThroughputProperties = await Db.ReadThroughputAsync().ConfigureAwait(false);
+					var response = await Client.CreateDatabaseIfNotExistsAsync(dbid, throughputProperties).ConfigureAwait(false);
+					if (Dbs == null)
+					{
+                        Dbs = new List<Database>();
+                    }
+					Dbs.Add(response.Database);
+					if (DbProperties == null)
+					{
+						DbProperties = new Dictionary<string, DatabaseProperties>();
+					}
+					DbProperties.Add(dbid, response.Resource);
 
-						if (checkCurrentThroughputProperties.HasValue && checkCurrentThroughputProperties.Value != Config.MaxRUPerSecond)
+					// Skip throughput check if DB was just created.
+					DatabaseCreatedThisContext = response.StatusCode == HttpStatusCode.Created;
+
+					if (DatabaseCreatedThisContext)
+					{
+						DbThroughput = Config.MaxRUPerSecond;
+					}
+					else
+					{
+						if (Config.AutoAdjustMaxRUPerSecond)
 						{
-							// Attempt to modify the Max RU/sec.
-							_ = await Db.ReplaceThroughputAsync(throughputProperties).ConfigureAwait(false);
+							var checkCurrentThroughputProperties = await response.Database.ReadThroughputAsync().ConfigureAwait(false);
 
-							// Future: Potentially allow changing of the AutoScaling configuration.
-							// https://stackoverflow.com/a/63679119
+							if (checkCurrentThroughputProperties.HasValue && checkCurrentThroughputProperties.Value != Config.MaxRUPerSecond)
+							{
+								// Attempt to modify the Max RU/sec.
+								_ = await response.Database.ReplaceThroughputAsync(throughputProperties).ConfigureAwait(false);
+
+								// Future: Potentially allow changing of the AutoScaling configuration.
+								// https://stackoverflow.com/a/63679119
+							}
 						}
 					}
+				}
+			}
+
+			if (Dbs == null)
+			{
+				Dbs = new List<Database>();
+				foreach (var dbid in Config.DatabaseIds)
+				{
+					var db = Client.GetDatabase(dbid);
+					Dbs.Add(db);
+
+					var dbTask = db.ReadAsync();
+					var throughputTask = db.ReadThroughputAsync();
+
+					await Task.WhenAll(dbTask, throughputTask).ConfigureAwait(false);
+
+					var dbResponse = dbTask.Result;
+					DbThroughput = throughputTask.Result ?? -1;
+					DbProperties.Add(dbid, dbResponse.Resource);
+
+					// Database already existed.
+					if (!DatabaseCreatedThisContext && !DbThroughput.HasValue)
+					{
+						DbThroughput = await db.ReadThroughputAsync().ConfigureAwait(false) ?? -1;
+					}
                 }
-			}
+            }
 
-			if (Db == null)
-			{
-				Db = Client.GetDatabase(Config.DatabaseId);
-
-				var dbTask = Db.ReadAsync();
-				var throughputTask = Db.ReadThroughputAsync();
-
-				await Task.WhenAll(dbTask, throughputTask).ConfigureAwait(false);
-
-				var dbResponse = dbTask.Result;
-				DbThroughput = throughputTask.Result ?? -1;
-				DbProperties = dbResponse.Resource;
-			}
-
-			// Database already existed.
-			if (!DatabaseCreatedThisContext && !DbThroughput.HasValue)
-			{
-				DbThroughput = await Db.ReadThroughputAsync().ConfigureAwait(false) ?? -1;
-			}
-
-			return true;
+            return true;
 		}
 
 		/// <summary>
@@ -173,16 +189,16 @@ namespace dii.storage.cosmos
 		/// <exception cref="DiiTableCreationFailedException">
 		/// One or more tables failed to create.
 		/// </exception>
-		public override async Task InitTablesAsync(ICollection<TableMetaData> tableMetaDatas)
+		public override async Task InitTablesAsync(string dbid, ICollection<TableMetaData> tableMetaDatas)
 		{
 			if (tableMetaDatas == null || !tableMetaDatas.Where(x => x != null).Any())
             {
 				throw new ArgumentNullException(nameof(tableMetaDatas));
 			}
 
-			if (Db == null)
+			if (Dbs == null)
 			{
-				throw new DiiNotInitializedException(nameof(Db));
+				throw new DiiNotInitializedException(nameof(Dbs));
 			}
 
 			if (Config.AutoCreate)
@@ -208,8 +224,12 @@ namespace dii.storage.cosmos
                             DefaultTimeToLive = tableMetaData.TimeToLiveInSeconds
                         };					
 					}
-
-					tasks.Add(Db.CreateContainerIfNotExistsAsync(containerProperties));
+					var db = Dbs.FirstOrDefault(x => x.Id == dbid);
+					if (db == null)
+					{
+                        throw new DiiNotInitializedException(nameof(Dbs));
+                    }
+					tasks.Add(db.CreateContainerIfNotExistsAsync(containerProperties));
 				}
 
 				await Task.WhenAll(tasks).ConfigureAwait(false);
@@ -225,8 +245,16 @@ namespace dii.storage.cosmos
 				}
 			}
 
-			TableMappings = tableMetaDatas.ToDictionary(x => x.ConcreteType, x => x);
-		}
+			var curmaps = tableMetaDatas.ToDictionary(x => x.ConcreteType, x => x);
+			if (TableMappings == null)
+			{
+                TableMappings = new Dictionary<Type, TableMetaData>();
+            }
+			foreach(var tbl in curmaps)
+			{
+				TableMappings.Add(tbl.Key, tbl.Value);
+			}
+        }
 		#endregion Public Methods
 	}
 }

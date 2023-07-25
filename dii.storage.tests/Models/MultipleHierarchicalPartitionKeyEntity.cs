@@ -4,13 +4,13 @@ namespace dii.storage.tests.Models
 {
     public class MultipleHierarchicalPartitionKeyEntity : FakeDiiEntity
 	{
-		[HierarchicalPartitionKey(order: 0, separator: '_')]
+		[HierarchicalPartitionKey(order: 0)]
 		public string PK1 { get; set; }
 
-		[HierarchicalPartitionKey(order: 1, separator: '_')]
+		[HierarchicalPartitionKey(order: 1)]
 		public string PK2 { get; set; }
 
-		[HierarchicalPartitionKey(order: 2, separator: '_')]
+		[HierarchicalPartitionKey(order: 2)]
 		public string PK3 { get; set; }
 
 		[Id]

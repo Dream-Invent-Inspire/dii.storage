@@ -24,7 +24,7 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(101)]
         public void Init_Empty()
         {
-            _ = Optimizer.Init();
+            _ = Optimizer.Init("FakeDb");
 
             TestHelpers.AssertOptimizerIsInitialized();
 
@@ -34,7 +34,7 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(102)]
         public void Init_PassedTypes()
         {
-            _ = Optimizer.Init(typeof(FakeEntity));
+            _ = Optimizer.Init("FakeDb", typeof(FakeEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
 
@@ -44,7 +44,7 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(103)]
         public void Init_PassedTypesIgnoreInvalidDiiEntities()
         {
-            _ = Optimizer.Init(true, typeof(InvalidSearchableKeyEntity));
+            _ = Optimizer.Init("FakeDb", true, typeof(InvalidSearchableKeyEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
 
@@ -54,7 +54,7 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(104)]
         public void Init_PassedTypesThrowOnInvalidDiiEntities()
         {
-            var exception = Assert.Throws<DiiReservedSearchableKeyException>(() => { Optimizer.Init(false, typeof(InvalidSearchableKeyEntity)); });
+            var exception = Assert.Throws<DiiReservedSearchableKeyException>(() => { Optimizer.Init("FakeDb", false, typeof(InvalidSearchableKeyEntity)); });
 
             Assert.NotNull(exception);
             Assert.Equal(new DiiReservedSearchableKeyException(Constants.ReservedCompressedKey, nameof(InvalidSearchableKeyEntity.InvalidSearchableKeyStringPValue), nameof(InvalidSearchableKeyEntity)).Message, exception.Message);
@@ -63,7 +63,7 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(105)]
         public void Init_AutoDetectTypesThrowOnInvalidDiiEntities()
         {
-            var exception = Assert.Throws<DiiReservedSearchableKeyException>(() => { Optimizer.Init(true); });
+            var exception = Assert.Throws<DiiReservedSearchableKeyException>(() => { Optimizer.Init("FakeDb", true); });
 
             Assert.NotNull(exception);
             Assert.Equal(new DiiReservedSearchableKeyException(Constants.ReservedCompressedKey, nameof(InvalidSearchableKeyEntity.InvalidSearchableKeyStringPValue), nameof(InvalidSearchableKeyEntity)).Message, exception.Message);
@@ -72,7 +72,7 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(106)]
         public void Init_AutoDetectTypesIgnoreInvalidDiiEntities()
         {
-            _ = Optimizer.Init(true, true);
+            _ = Optimizer.Init("FakeDb", true, true);
 
             TestHelpers.AssertOptimizerIsInitialized();
 
@@ -82,7 +82,7 @@ namespace dii.storage.tests.OptimizerTests
         [Fact, TestPriorityOrder(107)]
         public void Init_InvalidNestingException()
         {
-            var exception = Assert.Throws<DiiInvalidNestingException>(() => { Optimizer.Init(typeof(InvalidSelfReferenceEntity)); });
+            var exception = Assert.Throws<DiiInvalidNestingException>(() => { Optimizer.Init("FakeDb", typeof(InvalidSelfReferenceEntity)); });
 
             Assert.NotNull(exception);
             Assert.Equal(new DiiInvalidNestingException(nameof(InvalidSelfReferenceEntity)).Message, exception.Message);

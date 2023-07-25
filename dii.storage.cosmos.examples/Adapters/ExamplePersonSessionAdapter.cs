@@ -43,7 +43,7 @@ namespace dii.storage.cosmos.examples.Adapters
 
         public Task<PagedList<PersonSession>> SearchByRunDurationAsync(string clientId, string personId, long duration)
         {
-            var queryDefinition = new QueryDefinition($"SELECT * FROM c WHERE c.ClientId = @clientId AND c.PersonId = @personId AND c.Duration = @duration");
+            var queryDefinition = new QueryDefinition($"SELECT * FROM c WHERE c.ClientId = @clientId AND c.PersonId = @personId AND c.duration = @duration");
 
             queryDefinition.WithParameter("@clientId", clientId);
             queryDefinition.WithParameter("@personId", personId);
@@ -51,7 +51,6 @@ namespace dii.storage.cosmos.examples.Adapters
 
             return base.GetPagedAsync(queryDefinition);
         }
-
 
 
         public Task<PersonSession> CreateAsync(PersonSession session, CancellationToken cancellationToken = default)
@@ -63,12 +62,17 @@ namespace dii.storage.cosmos.examples.Adapters
             return base.CreateAsync(session, cancellationToken: cancellationToken);
         }
 
+        public Task<PersonSession> ReplaceAsync(PersonSession session, CancellationToken cancellationToken = default)
+        {
+            return base.ReplaceAsync(session, cancellationToken: cancellationToken);
+        }
+
         public Task<PersonSession> UpsertAsync(PersonSession session, CancellationToken cancellationToken = default)
         {
             return base.UpsertAsync(session, cancellationToken: cancellationToken);
         }
 
-        public async Task AddEndTimeAsync(string personId, string clientId, string sessionId, DateTime ended, CancellationToken cancellationToken = default)
+        public async Task AddEndTimeAsync(string personId, string clientId, string sessionId, DateTime started, DateTime ended, CancellationToken cancellationToken = default)
         {
             var patchItemRequestOptions = new PatchItemRequestOptions
             {
@@ -77,11 +81,17 @@ namespace dii.storage.cosmos.examples.Adapters
 
             var patchOperations = new List<PatchOperation>()
             {
-                //PatchOperation.Increment("/age", 1)
-                PatchOperation.Set("/ended", ended)
+                PatchOperation.Set("/ended", ended),
+                PatchOperation.Set("/duration", (long)(ended - started).TotalMilliseconds)
             };
 
-            _ = await base.PatchAsync(personId, clientId, patchOperations, patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
+            var dic = new Dictionary<string, string>
+            {
+                { "ClientId", clientId },
+                { "PersonId", personId }
+            };
+
+            _ = await base.PatchAsync(sessionId, dic, patchOperations, patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
         }
 
         public Task<bool> DeleteBulkAsync(IReadOnlyList<PersonSession> sessions, CancellationToken cancellationToken = default)

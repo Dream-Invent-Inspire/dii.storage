@@ -36,7 +36,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
             Assert.Equal(fakeCosmosDatabaseConfig.Uri, fetchedContext.Config.Uri);
             Assert.Equal(fakeCosmosDatabaseConfig.Uri, fetchedContext.Client.Endpoint.OriginalString);
             Assert.Equal(fakeCosmosDatabaseConfig.Key, fetchedContext.Config.Key);
-            Assert.Equal(fakeCosmosDatabaseConfig.DatabaseId, fetchedContext.Config.DatabaseId);
+            Assert.Equal(fakeCosmosDatabaseConfig.DatabaseIds, fetchedContext.Config.DatabaseIds);
             Assert.Equal(fakeCosmosDatabaseConfig.AutoCreate, fetchedContext.Config.AutoCreate);
             Assert.Equal(fakeCosmosDatabaseConfig.MaxRUPerSecond, fetchedContext.Config.MaxRUPerSecond);
             Assert.Equal(fakeCosmosDatabaseConfig.AutoAdjustMaxRUPerSecond, fetchedContext.Config.AutoAdjustMaxRUPerSecond);

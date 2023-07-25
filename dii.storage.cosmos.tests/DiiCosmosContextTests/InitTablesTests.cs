@@ -27,7 +27,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
 
             if (context.TableMappings == null)
             {
-                _ = Optimizer.Init(typeof(FakeEntity));
+                _ = Optimizer.Init("FakeDb", typeof(FakeEntity));
 
                 TestHelpers.AssertOptimizerIsInitialized();
             }
@@ -40,7 +40,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
 
             Assert.NotNull(context);
 
-            var exception = await Assert.ThrowsAsync<ArgumentNullException>(() => { return context.InitTablesAsync(tableMetaDatas); }).ConfigureAwait(false);
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(() => { return context.InitTablesAsync(FakeCosmosDatabaseConfig.FakeDBName, tableMetaDatas); }).ConfigureAwait(false);
 
             Assert.NotNull(exception);
             Assert.Equal(new ArgumentNullException("tableMetaDatas").Message, exception.Message);
@@ -57,10 +57,10 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
 
             Assert.NotNull(optimizer);
 
-            var exception = await Assert.ThrowsAsync<DiiNotInitializedException>(() => { return context.InitTablesAsync(optimizer.Tables); }).ConfigureAwait(false);
+            var exception = await Assert.ThrowsAsync<DiiNotInitializedException>(() => { return context.InitTablesAsync(FakeCosmosDatabaseConfig.FakeDBName, optimizer.Tables); }).ConfigureAwait(false);
 
             Assert.NotNull(exception);
-            Assert.Equal(new DiiNotInitializedException("Db").Message, exception.Message);
+            Assert.Equal(new DiiNotInitializedException("Dbs").Message, exception.Message);
         }
 
         [Fact, TestPriorityOrder(102)]
@@ -78,7 +78,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
 
             Assert.NotNull(optimizer);
 
-            await context.InitTablesAsync(optimizer.Tables).ConfigureAwait(false);
+            await context.InitTablesAsync(FakeCosmosDatabaseConfig.FakeDBName, optimizer.Tables).ConfigureAwait(false);
 
             Assert.NotNull(context.TableMappings);
             Assert.Equal(optimizer.TableMappings[typeof(FakeEntity)], context.TableMappings[typeof(FakeEntity)]);

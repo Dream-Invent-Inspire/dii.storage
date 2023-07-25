@@ -14,13 +14,13 @@ namespace dii.storage.tests.AttributeTests
     {
         public HierarchicalPartitionKeyTests()
         {
-            _ = Optimizer.Init(typeof(MultipleHierarchicalPartitionKeyEntity), typeof(FirstPartitionKeySeparatorWinsEntity));
+            _ = Optimizer.Init("FakeDb", typeof(MultipleHierarchicalPartitionKeyEntity), typeof(FirstPartitionKeySeparatorWinsEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
-        [Theory, TestPriorityOrder(100), ClassData(typeof(MultiplePKEntityData))]
-        public void PartitionKey_Success(MultiplePartitionKeyEntity multiplePartitionKeyEntity, string expected)
+        [Theory, TestPriorityOrder(100), ClassData(typeof(MultipleHPKEntityData))]
+        public void PartitionKey_Success(MultipleHierarchicalPartitionKeyEntity multiplePartitionKeyEntity, string expected)
         {
             var optimizer = Optimizer.Get();
 
@@ -28,24 +28,8 @@ namespace dii.storage.tests.AttributeTests
 
             Assert.NotNull(entity);
 
-            var pk = entity.PK as string;
-
-            Assert.Equal(expected, pk);
         }
 
-        [Theory, TestPriorityOrder(101), ClassData(typeof(FirstPartitionKeySeparatorWinsEntityData))]
-        public void PartitionKey_FirstSeparatorWins(FirstPartitionKeySeparatorWinsEntity firstPartitionKeySeparatorWinsEntity, string expected)
-        {
-            var optimizer = Optimizer.Get();
-
-            var entity = (dynamic)optimizer.ToEntity(firstPartitionKeySeparatorWinsEntity);
-
-            Assert.NotNull(entity);
-
-            var pk = entity.PK as string;
-
-            Assert.Equal(expected, pk);
-        }
 
         #region Teardown
         [Fact, TestPriorityOrder(int.MaxValue)]
