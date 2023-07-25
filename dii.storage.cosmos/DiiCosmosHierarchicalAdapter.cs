@@ -18,6 +18,7 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using Azure;
 using System.Collections;
+using System.Security.Principal;
 
 namespace dii.storage.cosmos
 {
@@ -46,7 +47,7 @@ namespace dii.storage.cosmos
             _context = DiiCosmosContext.Get();
             _optimizer = Optimizer.Get();
             _table = _optimizer.TableMappings[typeof(T)];
-            _container = _context.Client.GetContainer(_context.Config.DatabaseId, _table.TableName);
+            _container = _context.Client.GetContainer(_table.DbId, _table.TableName);
         }
         #endregion Constructors
 
@@ -79,10 +80,10 @@ namespace dii.storage.cosmos
             var partitionKey = new PartitionKeyBuilder();
 
             var dic = GetPK(partitionKeys);
-            foreach (var key in dic.Keys)
-            {
-                partitionKeys.Add(key, dic[key]);
-            }
+            
+            if (dic.Count() > 0) partitionKey.Add(dic.ElementAt(0).Value);
+            if (dic.Count() > 1) partitionKey.Add(dic.ElementAt(1).Value);
+            if (dic.Count() > 2) partitionKey.Add(dic.ElementAt(2).Value);
 
             // Perform a point read
             ItemResponse<object> response = await _container.ReadItemAsync<object>(
@@ -382,10 +383,14 @@ namespace dii.storage.cosmos
             }
 
             var packedEntity = _optimizer.ToEntity(diiEntity);
-            var partitionKey = _optimizer.GetPartitionKey(diiEntity);
+
+            // Build the full partition key path
+            var keyBuilder = GetPK(diiEntity);
+
+            //var partitionKey = _optimizer.GetPartitionKey(diiEntity);
             var id = _optimizer.GetId(diiEntity);
 
-            var returnedEntity = await _container.ReplaceItemAsync(packedEntity, id, new PartitionKey(partitionKey), requestOptions, cancellationToken).ConfigureAwait(false);
+            var returnedEntity = await _container.ReplaceItemAsync(packedEntity, id, keyBuilder.Build(), requestOptions, cancellationToken).ConfigureAwait(false);
 
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
 
@@ -428,25 +433,25 @@ namespace dii.storage.cosmos
                 return unpackedEntities;
             }
 
-            var packedEntities = diiEntities.Select(x => new
-            {
-                Id = _optimizer.GetId(x),
-                PartitionKey = _optimizer.GetPartitionKey(x),
-                Entity = _optimizer.ToEntity(x),
-                UnpackedEntity = x
-            });
-
             var concurrentTasks = new List<Task<ItemResponse<object>>>();
             var generateRequestOptions = (requestOptions == null);
 
-            foreach (var packedEntity in packedEntities)
+            foreach (var entity in diiEntities)
             {
-                if (generateRequestOptions && !string.IsNullOrEmpty(packedEntity.UnpackedEntity.DataVersion))
+                var packedEntity = _optimizer.ToEntity(entity);
+
+                // Build the full partition key path
+                var keyBuilder = GetPK(entity);
+
+                //var partitionKey = _optimizer.GetPartitionKey(diiEntity);
+                var id = _optimizer.GetId(entity);
+
+                if (generateRequestOptions && !string.IsNullOrEmpty(entity.DataVersion))
                 {
-                    requestOptions = new ItemRequestOptions { IfMatchEtag = packedEntity.UnpackedEntity.DataVersion };
+                    requestOptions = new ItemRequestOptions { IfMatchEtag = entity.DataVersion };
                 }
 
-                var task = _container.ReplaceItemAsync(packedEntity.Entity, packedEntity.Id, new PartitionKey(packedEntity.PartitionKey), requestOptions, cancellationToken);
+                var task = _container.ReplaceItemAsync(packedEntity, id, keyBuilder.Build(), requestOptions, cancellationToken);
                 concurrentTasks.Add(task);
 
                 if (generateRequestOptions)
@@ -491,9 +496,11 @@ namespace dii.storage.cosmos
             }
 
             var packedEntity = _optimizer.ToEntity(diiEntity);
-            var partitionKey = _optimizer.GetPartitionKey(diiEntity);
 
-            var returnedEntity = await _container.UpsertItemAsync(packedEntity, new PartitionKey(partitionKey), requestOptions, cancellationToken).ConfigureAwait(false);
+            // Build the full partition key path
+            var keyBuilder = GetPK(diiEntity);
+
+            var returnedEntity = await _container.UpsertItemAsync(packedEntity, keyBuilder.Build(), requestOptions, cancellationToken).ConfigureAwait(false);
 
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
 
@@ -529,24 +536,22 @@ namespace dii.storage.cosmos
                 return unpackedEntities;
             }
 
-            var packedEntities = diiEntities.Select(x => new
-            {
-                PartitionKey = _optimizer.GetPartitionKey(x),
-                Entity = _optimizer.ToEntity(x),
-                UnpackedEntity = x
-            });
-
             var concurrentTasks = new List<Task<ItemResponse<object>>>();
             var generateRequestOptions = (requestOptions == null);
 
-            foreach (var packedEntity in packedEntities)
+            foreach (var entity in diiEntities)
             {
-                if (generateRequestOptions && !string.IsNullOrEmpty(packedEntity.UnpackedEntity.DataVersion))
+                if (generateRequestOptions && !string.IsNullOrEmpty(entity.DataVersion))
                 {
-                    requestOptions = new ItemRequestOptions { IfMatchEtag = packedEntity.UnpackedEntity.DataVersion };
+                    requestOptions = new ItemRequestOptions { IfMatchEtag = entity.DataVersion };
                 }
 
-                var task = _container.UpsertItemAsync(packedEntity.Entity, new PartitionKey(packedEntity.PartitionKey), requestOptions, cancellationToken);
+                var packedEntity = _optimizer.ToEntity(entity);
+
+                // Build the full partition key path
+                var keyBuilder = GetPK(entity);
+
+                var task = _container.UpsertItemAsync(packedEntity, keyBuilder.Build(), requestOptions, cancellationToken);
                 concurrentTasks.Add(task);
 
                 if (generateRequestOptions)
@@ -589,9 +594,17 @@ namespace dii.storage.cosmos
         /// as part of the response. User can request no content by setting Microsoft.Azure.Cosmos.ItemRequestOptions.EnableContentResponseOnWrite
         /// flag to false.
         /// </remarks>
-        protected async Task<T> PatchAsync(string id, string partitionKey, IReadOnlyList<PatchOperation> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        protected async Task<T> PatchAsync(string id, Dictionary<string, string> partitionKeys, IReadOnlyList<PatchOperation> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
-            var returnedEntity = await _container.PatchItemAsync<object>(id, new PartitionKey(partitionKey), patchOperations, requestOptions, cancellationToken).ConfigureAwait(false);
+            // Build the full partition key path
+            var partitionKey = new PartitionKeyBuilder();
+
+            var dic = GetPK(partitionKeys);
+            if (dic.Count() > 0) partitionKey.Add(dic.ElementAt(0).Value);
+            if (dic.Count() > 1) partitionKey.Add(dic.ElementAt(1).Value);
+            if (dic.Count() > 2) partitionKey.Add(dic.ElementAt(2).Value);
+
+            var returnedEntity = await _container.PatchItemAsync<object>(id, partitionKey.Build(), patchOperations, requestOptions, cancellationToken).ConfigureAwait(false);
 
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
 
@@ -799,6 +812,40 @@ namespace dii.storage.cosmos
             return ret;
         }
 
+        private PartitionKeyBuilder GetPK(T diiEntity)
+        {
+            var ret = new PartitionKeyBuilder();
+
+            var key1 = (_table.HierarchicalPartitionKeys.ContainsKey(0)) ? this._table.HierarchicalPartitionKeys[0] : null;
+            var key2 = (_table.HierarchicalPartitionKeys.ContainsKey(1)) ? this._table.HierarchicalPartitionKeys[1] : null;
+            var key3 = (_table.HierarchicalPartitionKeys.ContainsKey(2)) ? this._table.HierarchicalPartitionKeys[2] : null;
+
+            if (key1 == null)
+            {
+                throw new Exception("No partition key defined for this table");
+            }
+
+            var curkey = GetPropertyValue(diiEntity, key1);
+            if (curkey == null)
+            {
+                throw new Exception("No valid partition key provided for this query");
+            }
+            ret.Add(curkey.ToString());
+
+            if (key2 != null)
+            {
+                curkey = GetPropertyValue(diiEntity, key2);
+                if (curkey != null) ret.Add(curkey.ToString());
+            }
+
+            if (key3 != null)
+            {
+                curkey = GetPropertyValue(diiEntity, key3);
+                if (curkey != null) ret.Add(curkey.ToString());
+            }
+            return ret;
+        }
+
         public async Task<List<T>> RunConcurrentQueries(List<string> queries)
         {
             List<T> combinedResults = new List<T>();
@@ -838,7 +885,10 @@ namespace dii.storage.cosmos
         }
 
 
-
+        private static object GetPropertyValue(object obj, string propertyName)
+        {
+            return obj.GetType().GetProperty(propertyName)?.GetValue(obj, null);
+        }
     }
 
 }

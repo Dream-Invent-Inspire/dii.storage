@@ -4,6 +4,7 @@ using dii.storage.cosmos.examples.Models.Interfaces;
 using dii.storage.Models.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace dii.storage.cosmos.examples.Fixtures
 {
@@ -34,11 +35,11 @@ namespace dii.storage.cosmos.examples.Fixtures
 
             if (Optimizer == null)
             {
-                Optimizer = Optimizer.Init(typeof(Person), typeof(PersonSession));
+                Optimizer = Optimizer.Init(NoSqlDatabaseConfig.DatabaseIds.First(), typeof(Person), typeof(PersonSession));
                 //Optimizer = Optimizer.Init(typeof(PersonSession));
             }
 
-            context.InitTablesAsync(Optimizer.Tables).Wait();
+            context.InitTablesAsync(ExampleConfig.DbName, Optimizer.Tables).Wait();
 
             if (PersonAdapter == null)
             {

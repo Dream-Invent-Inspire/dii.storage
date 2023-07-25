@@ -69,5 +69,10 @@ namespace dii.storage.Models
 		/// </para>
 		/// </remarks>
         public int? TimeToLiveInSeconds { get; set; }
+
+		/// <summary>
+		/// The database for this table.
+		/// 
+		public string DbId { get; set; }
     }
 }

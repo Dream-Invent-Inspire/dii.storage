@@ -19,8 +19,11 @@ namespace dii.storage.cosmos.examples.Models.Interfaces
 
         Task<PersonSession> CreateAsync(PersonSession person, CancellationToken cancellationToken = default);
 
-        Task<PersonSession> UpsertAsync(PersonSession person, CancellationToken cancellationToken = default);
-        Task AddEndTimeAsync(string personId, string clientId, string sessionId, DateTime ended, CancellationToken cancellationToken = default);
+        Task<PersonSession> ReplaceAsync(PersonSession person, CancellationToken cancellationToken = default);
+
+        Task<PersonSession> UpsertAsync(PersonSession session, CancellationToken cancellationToken = default);
+
+        Task AddEndTimeAsync(string personId, string clientId, string sessionId, DateTime started, DateTime ended, CancellationToken cancellationToken = default);
 
         Task<bool> DeleteBulkAsync(IReadOnlyList<PersonSession> sessions, CancellationToken cancellationToken = default);
 
