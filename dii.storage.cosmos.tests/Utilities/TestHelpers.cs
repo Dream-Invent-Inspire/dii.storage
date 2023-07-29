@@ -20,7 +20,7 @@ namespace dii.storage.cosmos.tests.Utilities
         #region Public Methods
 
         #region Init
-		public static async Task<Optimizer> InitContextAndOptimizerAsync(INoSqlDatabaseConfig noSqlDatabaseConfig, Optimizer optimizer, Dictionary<string, Type[]> types)
+		public static async Task<Optimizer> InitContextAndOptimizerAsync(INoSqlContextConfig noSqlDatabaseConfig, Optimizer optimizer, Dictionary<string, Type[]> types)
         {
 			var context = DiiCosmosContext.Init(noSqlDatabaseConfig);
 
@@ -42,7 +42,7 @@ namespace dii.storage.cosmos.tests.Utilities
 			foreach (var kvp in types)
 			{
 				var tbls = optimizer.Tables.Where(t => t.DbId == kvp.Key).ToList();
-				context.InitTablesAsync(kvp.Key, tbls).Wait();
+				context.InitTablesAsync(kvp.Key, tbls, true).Wait();
 			}
 			return optimizer;
 		}

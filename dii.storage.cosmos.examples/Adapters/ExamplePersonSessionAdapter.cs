@@ -94,6 +94,11 @@ namespace dii.storage.cosmos.examples.Adapters
             _ = await base.PatchAsync(sessionId, dic, patchOperations, patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
         }
 
+        public Task<bool> DeleteEntityAsync(PersonSession session, CancellationToken cancellationToken = default)
+        {
+            return base.DeleteEntityAsync(session, cancellationToken: cancellationToken);
+        }
+
         public Task<bool> DeleteBulkAsync(IReadOnlyList<PersonSession> sessions, CancellationToken cancellationToken = default)
         {
             return base.DeleteEntitiesBulkAsync(sessions, cancellationToken: cancellationToken);

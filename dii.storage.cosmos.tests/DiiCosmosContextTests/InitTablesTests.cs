@@ -7,6 +7,7 @@ using dii.storage.Exceptions;
 using dii.storage.Models;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -19,7 +20,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
     {
         public InitTablesTests()
         {
-            var fakeCosmosDatabaseConfig = new FakeCosmosDatabaseConfig();
+            var fakeCosmosDatabaseConfig = new FakeCosmosContextConfig();
 
             var context = DiiCosmosContext.Init(fakeCosmosDatabaseConfig);
 
@@ -40,7 +41,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
 
             Assert.NotNull(context);
 
-            var exception = await Assert.ThrowsAsync<ArgumentNullException>(() => { return context.InitTablesAsync(FakeCosmosDatabaseConfig.FakeDBName, tableMetaDatas); }).ConfigureAwait(false);
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(() => { return context.InitTablesAsync(FakeCosmosDatabaseConfig.FakeDBName, tableMetaDatas, true); }).ConfigureAwait(false);
 
             Assert.NotNull(exception);
             Assert.Equal(new ArgumentNullException("tableMetaDatas").Message, exception.Message);
@@ -57,7 +58,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
 
             Assert.NotNull(optimizer);
 
-            var exception = await Assert.ThrowsAsync<DiiNotInitializedException>(() => { return context.InitTablesAsync(FakeCosmosDatabaseConfig.FakeDBName, optimizer.Tables); }).ConfigureAwait(false);
+            var exception = await Assert.ThrowsAsync<DiiNotInitializedException>(() => { return context.InitTablesAsync(FakeCosmosDatabaseConfig.FakeDBName, optimizer.Tables, context.Config.CosmosStorageDBs.First().AutoCreate); }).ConfigureAwait(false);
 
             Assert.NotNull(exception);
             Assert.Equal(new DiiNotInitializedException("Dbs").Message, exception.Message);
@@ -78,7 +79,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
 
             Assert.NotNull(optimizer);
 
-            await context.InitTablesAsync(FakeCosmosDatabaseConfig.FakeDBName, optimizer.Tables).ConfigureAwait(false);
+            await context.InitTablesAsync(FakeCosmosDatabaseConfig.FakeDBName, optimizer.Tables, context.Config.CosmosStorageDBs.First().AutoCreate).ConfigureAwait(false);
 
             Assert.NotNull(context.TableMappings);
             Assert.Equal(optimizer.TableMappings[typeof(FakeEntity)], context.TableMappings[typeof(FakeEntity)]);

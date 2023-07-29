@@ -74,5 +74,8 @@ namespace dii.storage.Models
 		/// The database for this table.
 		/// 
 		public string DbId { get; set; }
+
+
+		public bool Initialized { get; set; } = false;
     }
 }

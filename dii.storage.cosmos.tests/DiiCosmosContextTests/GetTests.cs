@@ -4,6 +4,7 @@ using dii.storage.cosmos.tests.Models;
 using dii.storage.cosmos.tests.Orderer;
 using dii.storage.cosmos.tests.Utilities;
 using Xunit;
+using System.Linq;
 
 namespace dii.storage.cosmos.tests.DiiCosmosContextTests
 {
@@ -24,7 +25,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
         [Fact, TestPriorityOrder(101)]
         public void Get_Success()
         {
-            var fakeCosmosDatabaseConfig = new FakeCosmosDatabaseConfig();
+            var fakeCosmosDatabaseConfig = new FakeCosmosContextConfig();
 
             var context = DiiCosmosContext.Init(fakeCosmosDatabaseConfig);
 
@@ -36,11 +37,11 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
             Assert.Equal(fakeCosmosDatabaseConfig.Uri, fetchedContext.Config.Uri);
             Assert.Equal(fakeCosmosDatabaseConfig.Uri, fetchedContext.Client.Endpoint.OriginalString);
             Assert.Equal(fakeCosmosDatabaseConfig.Key, fetchedContext.Config.Key);
-            Assert.Equal(fakeCosmosDatabaseConfig.DatabaseIds, fetchedContext.Config.DatabaseIds);
-            Assert.Equal(fakeCosmosDatabaseConfig.AutoCreate, fetchedContext.Config.AutoCreate);
-            Assert.Equal(fakeCosmosDatabaseConfig.MaxRUPerSecond, fetchedContext.Config.MaxRUPerSecond);
-            Assert.Equal(fakeCosmosDatabaseConfig.AutoAdjustMaxRUPerSecond, fetchedContext.Config.AutoAdjustMaxRUPerSecond);
-            Assert.Equal(fakeCosmosDatabaseConfig.AutoScaling, fetchedContext.Config.AutoScaling);
+            Assert.Equal(fakeCosmosDatabaseConfig.CosmosStorageDBs.First().DatabaseId, fetchedContext.Config.CosmosStorageDBs.First().DatabaseId);
+            Assert.Equal(fakeCosmosDatabaseConfig.CosmosStorageDBs.First().AutoCreate, fetchedContext.Config.CosmosStorageDBs.First().AutoCreate);
+            Assert.Equal(fakeCosmosDatabaseConfig.CosmosStorageDBs.First().MaxRUPerSecond, fetchedContext.Config.CosmosStorageDBs.First().MaxRUPerSecond);
+            Assert.Equal(fakeCosmosDatabaseConfig.CosmosStorageDBs.First().AutoAdjustMaxRUPerSecond, fetchedContext.Config.CosmosStorageDBs.First().AutoAdjustMaxRUPerSecond);
+            Assert.Equal(fakeCosmosDatabaseConfig.CosmosStorageDBs.First().AutoScaling, fetchedContext.Config.CosmosStorageDBs.First().AutoScaling);
         }
 
         #region Teardown
