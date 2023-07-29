@@ -15,9 +15,9 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
     {
         public DoesDatabaseExistTests()
         {
-            var fakeCosmosDatabaseConfig = new FakeCosmosDatabaseConfig();
+            var fakeCosmosContextConfig = new FakeCosmosContextConfig();
 
-            var context = DiiCosmosContext.Init(fakeCosmosDatabaseConfig);
+            var context = DiiCosmosContext.Init(fakeCosmosContextConfig);
 
             Assert.NotNull(context);
         }
@@ -41,10 +41,10 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
             Assert.NotNull(context.Dbs);
             Assert.NotNull(context.DbProperties);
             Assert.NotNull(context.DbThroughput);
-            Assert.Equal(context.Config.MaxRUPerSecond, context.DbThroughput);
+            Assert.Equal(context.Config.CosmosStorageDBs.First().MaxRUPerSecond, context.DbThroughput);
             Assert.Equal(context.Config.Uri, context.Client.Endpoint.OriginalString);
-            Assert.Equal(context.Config.DatabaseIds, context.Dbs.Select(x => x.Id).ToList());
-            Assert.Equal(context.Config.MaxRUPerSecond, context.DbThroughput);
+            Assert.Equal(context.Config.CosmosStorageDBs.Select(x => x.DatabaseId).ToList(), context.Dbs.Select(x => x.Id).ToList());
+            Assert.Equal(context.Config.CosmosStorageDBs.First().MaxRUPerSecond, context.DbThroughput);
         }
 
         #region Teardown

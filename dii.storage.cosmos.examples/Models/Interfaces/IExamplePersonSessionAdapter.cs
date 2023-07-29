@@ -1,4 +1,5 @@
 ﻿using dii.storage.cosmos.Models;
+using Microsoft.Azure.Cosmos;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,6 +25,8 @@ namespace dii.storage.cosmos.examples.Models.Interfaces
         Task<PersonSession> UpsertAsync(PersonSession session, CancellationToken cancellationToken = default);
 
         Task AddEndTimeAsync(string personId, string clientId, string sessionId, DateTime started, DateTime ended, CancellationToken cancellationToken = default);
+
+        Task<bool> DeleteEntityAsync(PersonSession session, CancellationToken cancellationToken = default);
 
         Task<bool> DeleteBulkAsync(IReadOnlyList<PersonSession> sessions, CancellationToken cancellationToken = default);
 

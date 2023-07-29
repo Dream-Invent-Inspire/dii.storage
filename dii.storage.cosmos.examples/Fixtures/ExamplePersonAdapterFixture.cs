@@ -14,7 +14,7 @@ namespace dii.storage.cosmos.examples.Fixtures
     public class ExamplePersonAdapterFixture : IDisposable
     {
         public Optimizer Optimizer;
-        public INoSqlDatabaseConfig NoSqlDatabaseConfig;
+        public INoSqlContextConfig NoSqlDatabaseConfig;
         public IExamplePersonAdapter PersonAdapter;
         public IExamplePersonSessionAdapter PersonSessionAdapter;
         public List<Person> People;
@@ -35,11 +35,11 @@ namespace dii.storage.cosmos.examples.Fixtures
 
             if (Optimizer == null)
             {
-                Optimizer = Optimizer.Init(NoSqlDatabaseConfig.DatabaseIds.First(), typeof(Person), typeof(PersonSession));
+                Optimizer = Optimizer.Init(NoSqlDatabaseConfig.CosmosStorageDBs.First().DatabaseId, typeof(Person), typeof(PersonSession));
                 //Optimizer = Optimizer.Init(typeof(PersonSession));
             }
 
-            context.InitTablesAsync(ExampleConfig.DbName, Optimizer.Tables).Wait();
+            context.InitTablesAsync(ExampleConfig.DbName, Optimizer.Tables, true).Wait();
 
             if (PersonAdapter == null)
             {

@@ -42,7 +42,7 @@ namespace dii.storage.cosmos
 		/// </summary>
 		/// <param name="config">The <see cref="INoSqlDatabaseConfig"/> to be used when this context is initialized.</param>
 		/// <param name="cosmosClientOptions">Optional settings to be used when this context is initialized.</param>
-		private DiiCosmosContext(INoSqlDatabaseConfig config, CosmosClientOptions cosmosClientOptions = null)
+		private DiiCosmosContext(INoSqlContextConfig config, CosmosClientOptions cosmosClientOptions = null)
 		{
 			Config = config;
 			Client = new CosmosClient(Config.Uri, Config.Key, cosmosClientOptions);
@@ -58,7 +58,7 @@ namespace dii.storage.cosmos
 		/// <returns>
 		/// The instance of the <see cref="DiiCosmosContext"/>.
 		/// </returns>
-		public static DiiCosmosContext Init(INoSqlDatabaseConfig config, CosmosClientOptions cosmosClientOptions = null)
+		public static DiiCosmosContext Init(INoSqlContextConfig config, CosmosClientOptions cosmosClientOptions = null)
 		{
 			if (_instance == null)
 			{
@@ -102,77 +102,76 @@ namespace dii.storage.cosmos
 		/// </returns>
 		public override async Task<bool> DoesDatabaseExistAsync()
 		{
-			if (Config.AutoCreate)
+			if (Config != null)
 			{
-				var throughputProperties = Config.AutoScaling ?
-							ThroughputProperties.CreateAutoscaleThroughput(Config.MaxRUPerSecond)
-							: ThroughputProperties.CreateManualThroughput(Config.MaxRUPerSecond);
-
-				foreach (var dbid in Config.DatabaseIds)
+				foreach (var dbcfg in Config.CosmosStorageDBs)
 				{
-					var response = await Client.CreateDatabaseIfNotExistsAsync(dbid, throughputProperties).ConfigureAwait(false);
+					if (dbcfg.AutoCreate)
+					{
+						var throughputProperties = dbcfg.AutoScaling ?
+									ThroughputProperties.CreateAutoscaleThroughput(dbcfg.MaxRUPerSecond)
+									: ThroughputProperties.CreateManualThroughput(dbcfg.MaxRUPerSecond);
+
+						var response = await Client.CreateDatabaseIfNotExistsAsync(dbcfg.DatabaseId, throughputProperties).ConfigureAwait(false);
+						if (Dbs == null)
+						{
+							Dbs = new List<Database>();
+						}
+						Dbs.Add(response.Database);
+						if (DbProperties == null)
+						{
+							DbProperties = new Dictionary<string, DatabaseProperties>();
+						}
+						DbProperties.Add(dbcfg.DatabaseId, response.Resource);
+
+						// Skip throughput check if DB was just created.
+						DatabaseCreatedThisContext = response.StatusCode == HttpStatusCode.Created;
+
+						if (DatabaseCreatedThisContext)
+						{
+							DbThroughput = dbcfg.MaxRUPerSecond;
+						}
+						else
+						{
+							if (dbcfg.AutoAdjustMaxRUPerSecond)
+							{
+								var checkCurrentThroughputProperties = await response.Database.ReadThroughputAsync().ConfigureAwait(false);
+
+								if (checkCurrentThroughputProperties.HasValue && checkCurrentThroughputProperties.Value != dbcfg.MaxRUPerSecond)
+								{
+									// Attempt to modify the Max RU/sec.
+									_ = await response.Database.ReplaceThroughputAsync(throughputProperties).ConfigureAwait(false);
+
+									// Future: Potentially allow changing of the AutoScaling configuration.
+									// https://stackoverflow.com/a/63679119
+								}
+							}
+						}
+					}
+
 					if (Dbs == null)
 					{
-                        Dbs = new List<Database>();
-                    }
-					Dbs.Add(response.Database);
-					if (DbProperties == null)
-					{
-						DbProperties = new Dictionary<string, DatabaseProperties>();
-					}
-					DbProperties.Add(dbid, response.Resource);
+						Dbs = new List<Database>();
+						var db = Client.GetDatabase(dbcfg.DatabaseId);
+						Dbs.Add(db);
 
-					// Skip throughput check if DB was just created.
-					DatabaseCreatedThisContext = response.StatusCode == HttpStatusCode.Created;
+						var dbTask = db.ReadAsync();
+						var throughputTask = db.ReadThroughputAsync();
 
-					if (DatabaseCreatedThisContext)
-					{
-						DbThroughput = Config.MaxRUPerSecond;
-					}
-					else
-					{
-						if (Config.AutoAdjustMaxRUPerSecond)
+						await Task.WhenAll(dbTask, throughputTask).ConfigureAwait(false);
+
+						var dbResponse = dbTask.Result;
+						DbThroughput = throughputTask.Result ?? -1;
+						DbProperties.Add(dbcfg.DatabaseId, dbResponse.Resource);
+
+						// Database already existed.
+						if (!DatabaseCreatedThisContext && !DbThroughput.HasValue)
 						{
-							var checkCurrentThroughputProperties = await response.Database.ReadThroughputAsync().ConfigureAwait(false);
-
-							if (checkCurrentThroughputProperties.HasValue && checkCurrentThroughputProperties.Value != Config.MaxRUPerSecond)
-							{
-								// Attempt to modify the Max RU/sec.
-								_ = await response.Database.ReplaceThroughputAsync(throughputProperties).ConfigureAwait(false);
-
-								// Future: Potentially allow changing of the AutoScaling configuration.
-								// https://stackoverflow.com/a/63679119
-							}
+							DbThroughput = await db.ReadThroughputAsync().ConfigureAwait(false) ?? -1;
 						}
 					}
 				}
 			}
-
-			if (Dbs == null)
-			{
-				Dbs = new List<Database>();
-				foreach (var dbid in Config.DatabaseIds)
-				{
-					var db = Client.GetDatabase(dbid);
-					Dbs.Add(db);
-
-					var dbTask = db.ReadAsync();
-					var throughputTask = db.ReadThroughputAsync();
-
-					await Task.WhenAll(dbTask, throughputTask).ConfigureAwait(false);
-
-					var dbResponse = dbTask.Result;
-					DbThroughput = throughputTask.Result ?? -1;
-					DbProperties.Add(dbid, dbResponse.Resource);
-
-					// Database already existed.
-					if (!DatabaseCreatedThisContext && !DbThroughput.HasValue)
-					{
-						DbThroughput = await db.ReadThroughputAsync().ConfigureAwait(false) ?? -1;
-					}
-                }
-            }
-
             return true;
 		}
 
@@ -189,7 +188,7 @@ namespace dii.storage.cosmos
 		/// <exception cref="DiiTableCreationFailedException">
 		/// One or more tables failed to create.
 		/// </exception>
-		public override async Task InitTablesAsync(string dbid, ICollection<TableMetaData> tableMetaDatas)
+		public override async Task InitTablesAsync(string dbid, ICollection<TableMetaData> tableMetaDatas, bool autoCreate)
 		{
 			if (tableMetaDatas == null || !tableMetaDatas.Where(x => x != null).Any())
             {
@@ -201,12 +200,13 @@ namespace dii.storage.cosmos
 				throw new DiiNotInitializedException(nameof(Dbs));
 			}
 
-			if (Config.AutoCreate)
+			if (autoCreate)
 			{
 				var tasks = new List<Task<ContainerResponse>>();
 
 				foreach (var tableMetaData in tableMetaDatas)
 				{
+					if (tableMetaData.Initialized) continue;
                     var containerProperties = new ContainerProperties(tableMetaData.TableName, tableMetaData.PartitionKeyPath)
                     {
                         DefaultTimeToLive = tableMetaData.TimeToLiveInSeconds
@@ -238,10 +238,12 @@ namespace dii.storage.cosmos
 
 				foreach (var tableMetaData in tableMetaDatas)
 				{
-					if (!containers.ContainsKey(tableMetaData.TableName))
+                    if (tableMetaData.Initialized) continue;
+                    if (!containers.ContainsKey(tableMetaData.TableName))
 					{
 						throw new DiiTableCreationFailedException(tableMetaData.TableName);
 					}
+					tableMetaData.Initialized = true;
 				}
 			}
 
@@ -252,8 +254,11 @@ namespace dii.storage.cosmos
             }
 			foreach(var tbl in curmaps)
 			{
-				TableMappings.Add(tbl.Key, tbl.Value);
-			}
+                if (!TableMappings.ContainsKey(tbl.Key))
+                {
+                    TableMappings.Add(tbl.Key, tbl.Value);
+                }
+            }
         }
 		#endregion Public Methods
 	}

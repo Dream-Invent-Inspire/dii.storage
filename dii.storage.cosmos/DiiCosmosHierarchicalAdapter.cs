@@ -331,7 +331,7 @@ namespace dii.storage.cosmos
 
             var packedEntities = diiEntities.Select(x => new
             {
-                PartitionKey = _optimizer.GetPartitionKey(x),
+                //PartitionKey = _optimizer.GetPartitionKey(x),
                 Entity = _optimizer.ToEntity(x)
             });
 
@@ -339,7 +339,7 @@ namespace dii.storage.cosmos
 
             foreach (var packedEntity in packedEntities)
             {
-                var task = _container.CreateItemAsync(packedEntity.Entity, new PartitionKey(packedEntity.PartitionKey), requestOptions, cancellationToken);
+                var task = _container.CreateItemAsync(packedEntity.Entity, null, requestOptions, cancellationToken);
                 concurrentTasks.Add(task);
             }
 
@@ -638,7 +638,7 @@ namespace dii.storage.cosmos
         /// flag to false.
         /// </para>
         /// </remarks>
-        protected async Task<List<T>> PatchBulkAsync(IReadOnlyList<(string id, string partitionKey, IReadOnlyList<PatchOperation> listOfPatchOperations)> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        protected async Task<List<T>> PatchBulkAsync(IReadOnlyList<(string id, Dictionary<string, string> partitionKeys, IReadOnlyList<PatchOperation> listOfPatchOperations)> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             var unpackedEntities = default(List<T>);
 
@@ -649,9 +649,17 @@ namespace dii.storage.cosmos
 
             var concurrentTasks = new List<Task<ItemResponse<object>>>();
 
-            foreach (var (id, partitionKey, listOfPatchOperations) in patchOperations)
+            foreach (var (id, partitionKeys, listOfPatchOperations) in patchOperations)
             {
-                var task = _container.PatchItemAsync<object>(id, new PartitionKey(partitionKey), listOfPatchOperations, requestOptions, cancellationToken);
+                // Build the full partition key path
+                var partitionKey = new PartitionKeyBuilder();
+
+                var dic = GetPK(partitionKeys);
+                if (dic.Count() > 0) partitionKey.Add(dic.ElementAt(0).Value);
+                if (dic.Count() > 1) partitionKey.Add(dic.ElementAt(1).Value);
+                if (dic.Count() > 2) partitionKey.Add(dic.ElementAt(2).Value);
+
+                var task = _container.PatchItemAsync<object>(id, partitionKey.Build(), listOfPatchOperations, requestOptions, cancellationToken);
                 concurrentTasks.Add(task);
             }
 
@@ -685,10 +693,10 @@ namespace dii.storage.cosmos
         /// </remarks>
         protected Task<bool> DeleteEntityAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
-            var partitionKey = _optimizer.GetPartitionKey(diiEntity);
+            var partitionKey = GetPK(diiEntity);
             var id = _optimizer.GetId(diiEntity);
 
-            return DeleteAsync(id, partitionKey.ToString(), requestOptions, cancellationToken);
+            return DeleteAsync(id, partitionKey, requestOptions, cancellationToken);
         }
 
         /// <summary>
@@ -704,9 +712,9 @@ namespace dii.storage.cosmos
         /// <remarks>
         /// <see cref="ItemRequestOptions.EnableContentResponseOnWrite"/> is ignored.
         /// </remarks>
-        protected async Task<bool> DeleteAsync(string id, string partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        protected async Task<bool> DeleteAsync(string id, PartitionKeyBuilder partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
-            var response = await _container.DeleteItemStreamAsync(id, new PartitionKey(partitionKey), requestOptions, cancellationToken).ConfigureAwait(false);
+            var response = await _container.DeleteItemStreamAsync(id, partitionKey.Build(), requestOptions, cancellationToken).ConfigureAwait(false);
 
             return response.IsSuccessStatusCode;
         }
@@ -727,10 +735,10 @@ namespace dii.storage.cosmos
         /// </remarks>
         protected Task<bool> DeleteEntitiesBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
-            var idAndPks = diiEntities.Select<T, (string, string)>(x => new
+            var idAndPks = diiEntities.Select<T, (string, PartitionKeyBuilder)>(x => new
             (
                 _optimizer.GetId(x),
-                _optimizer.GetPartitionKey(x)
+                GetPK(x)
             )).ToList();
 
             return DeleteBulkAsync(idAndPks, requestOptions, cancellationToken);
@@ -750,7 +758,7 @@ namespace dii.storage.cosmos
         /// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
         /// <see cref="ItemRequestOptions.EnableContentResponseOnWrite"/> is ignored.
         /// </remarks>
-        protected async Task<bool> DeleteBulkAsync(IReadOnlyList<(string id, string partitionKey)> idAndPks, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        protected async Task<bool> DeleteBulkAsync(IReadOnlyList<(string id, PartitionKeyBuilder partitionKey)> idAndPks, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             var response = false;
 
@@ -763,7 +771,7 @@ namespace dii.storage.cosmos
 
             foreach (var (id, partitionKey) in idAndPks)
             {
-                var task = _container.DeleteItemStreamAsync(id, new PartitionKey(partitionKey), requestOptions, cancellationToken);
+                var task = _container.DeleteItemStreamAsync(id, partitionKey.Build(), requestOptions, cancellationToken);
                 concurrentTasks.Add(task);
             }
 
