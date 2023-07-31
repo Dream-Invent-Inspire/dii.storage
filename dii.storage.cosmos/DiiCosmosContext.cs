@@ -247,13 +247,13 @@ namespace dii.storage.cosmos
 				}
 			}
 
-			var curmaps = tableMetaDatas.ToDictionary(x => x.ConcreteType, x => x);
-			if (TableMappings == null)
-			{
+            var curmaps = tableMetaDatas.ToDictionary(x => x.ConcreteType, x => x);
+            if (TableMappings == null)
+            {
                 TableMappings = new Dictionary<Type, TableMetaData>();
             }
-			foreach(var tbl in curmaps)
-			{
+            foreach (var tbl in curmaps)
+            {
                 if (!TableMappings.ContainsKey(tbl.Key))
                 {
                     TableMappings.Add(tbl.Key, tbl.Value);
