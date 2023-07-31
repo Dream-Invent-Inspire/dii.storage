@@ -14,7 +14,7 @@ namespace dii.storage.tests.OptimizerTests
     {
         public GetPartitionKeyTests()
         {
-            _ = Optimizer.Init("FakeDb", typeof(FakeEntity), typeof(InvalidSearchableKeyEntity));
+            _ = Optimizer.Init("FakeDb", typeof(FakeEntity)); //, typeof(InvalidSearchableKeyEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
