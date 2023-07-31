@@ -785,7 +785,6 @@ namespace dii.storage.cosmos
 
         #endregion Public Methods
 
-
         private Dictionary<string, string> GetPK(Dictionary<string, string> partitionKeys)
         {
             var ret = new Dictionary<string, string>();

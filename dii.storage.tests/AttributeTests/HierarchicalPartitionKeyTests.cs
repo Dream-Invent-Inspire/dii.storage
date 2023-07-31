@@ -28,8 +28,24 @@ namespace dii.storage.tests.AttributeTests
 
             Assert.NotNull(entity);
 
+            var pk = entity.PK as string;
+
+            Assert.Equal(expected, pk);
         }
 
+        [Theory, TestPriorityOrder(101), ClassData(typeof(FirstPartitionKeySeparatorWinsEntityData))]
+        public void PartitionKey_FirstSeparatorWins(FirstPartitionKeySeparatorWinsEntity firstPartitionKeySeparatorWinsEntity, string expected)
+        {
+            var optimizer = Optimizer.Get();
+
+            var entity = (dynamic)optimizer.ToEntity(firstPartitionKeySeparatorWinsEntity);
+
+            Assert.NotNull(entity);
+
+            var pk = entity.PK as string;
+
+            Assert.Equal(expected, pk);
+        }
 
         #region Teardown
         [Fact, TestPriorityOrder(int.MaxValue)]
