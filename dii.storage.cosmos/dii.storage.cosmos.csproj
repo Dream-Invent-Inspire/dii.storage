@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Company>Dream Invent Inspire, Inc</Company>
+    <Description>A CosmosDB extension for dii.storage.</Description>
+    <PackageLicenseFile>COPYING.LESSER.txt</PackageLicenseFile>
+    <RepositoryUrl>https://github.com/Dream-Invent-Inspire/dii.storage</RepositoryUrl>
+    <PackageTags>DiiStorage;Cosmos;CosmosDB;MessagePack;Storage;Compression</PackageTags>
+    <Authors>Andrew Beers &amp; Pat MacMannis</Authors>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageId>dii.storage.cosmos</PackageId>
+    <Version>1.2.5-rc1</Version>
+    <AssemblyName>dii.storage.cosmos</AssemblyName>
+    <RootNamespace>dii.storage.cosmos</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.35.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\dii.storage\dii.storage.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\COPYING.LESSER.txt">
+      <Pack>true</Pack>
+      <PackagePath></PackagePath>
+    </None>
+    <None Update="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>
