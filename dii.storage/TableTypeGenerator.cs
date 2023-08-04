@@ -15,6 +15,8 @@ namespace dii.storage
         { }
 
         protected Dictionary<int, PropertyInfo> partitionFields { get; set; } = new Dictionary<int, PropertyInfo>();
+        protected Dictionary<int, PropertyInfo> hierarchicalPartitionFields { get; set; } = new Dictionary<int, PropertyInfo>();
+
         protected Dictionary<int, PropertyInfo> idFields { get; set; } = new Dictionary<int, PropertyInfo>();
 
         /// <summary>
@@ -49,7 +51,32 @@ namespace dii.storage
         {
             base.ProcessExtended(p);
             ProcessPartitionKey(p);
+            ProcessHierarchicalPartitionKey(p);
             ProcessIdField(p);
+        }
+
+        /// <summary>
+        /// Processes any Hierarchical PartitionKey mappings and configuration
+        /// for the source property.
+        /// </summary>
+        /// <param name="p">The <see cref="PropertyInfo"/> of the source property.</param>
+        /// <returns>True if the property was a PartitionKey, false otherwise.</returns>
+        protected bool ProcessHierarchicalPartitionKey(PropertyInfo p)
+        {
+            var hierarchicalPartitionKey = p.GetCustomAttribute<HierarchicalPartitionKeyAttribute>();
+            if (hierarchicalPartitionKey != null)
+            {
+                //Two fields cannot occupy the same position in the partition key.
+                if (hierarchicalPartitionFields.ContainsKey(hierarchicalPartitionKey.Order))
+                {
+                    throw new DiiPartitionKeyDuplicateOrderException(hierarchicalPartitionFields[hierarchicalPartitionKey.Order].Name, p.Name, hierarchicalPartitionKey.Order);
+                }
+
+                hierarchicalPartitionFields.Add(hierarchicalPartitionKey.Order, p);
+
+                return true;
+            }
+            return false;
         }
 
         /// <summary>
@@ -127,19 +154,23 @@ namespace dii.storage
             base.AppendExtendedFields();
 
             //Append the necessary table fields for the PK and the ID
-            _ = AddProperty(typeBuilder, Constants.ReservedPartitionKeyKey, typeof(string));
+            if (this.hierarchicalPartitionFields?.Any() ?? false)
+            {
+                foreach(var field in hierarchicalPartitionFields.OrderBy(x => x.Key))
+                {
+                    _ = AddProperty(typeBuilder, field.Value.Name, field.Value.PropertyType);
+                };
+            }
+            else
+            {
+                _ = AddProperty(typeBuilder, Constants.ReservedPartitionKeyKey, typeof(string));
+            }
             _ = AddProperty(typeBuilder, Constants.ReservedIdKey, typeof(string));
         }
 
         protected override Serializer CustomizeSearchableSerializer(Dictionary<string, PropertyInfo> properties, Serializer serializer)
         {
             serializer = base.CustomizeSearchableSerializer(properties, serializer);
-
-            //Handle PK mapping for the stored type.
-            var partitionKeyInfo = properties[Constants.ReservedPartitionKeyKey];
-            serializer.PartitionKey = partitionKeyInfo;
-            properties.Remove(Constants.ReservedPartitionKeyKey);
-
 
             var idInfo = properties[Constants.ReservedIdKey];
             properties.Remove(Constants.ReservedIdKey);
@@ -154,8 +185,19 @@ namespace dii.storage
                 serializer.IdSeparator = idSeparator.ToString();
             }
 
+            if (hierarchicalPartitionFields?.Any() ?? false)
+            {
+                serializer.HierarchicalPartitionKeyProperties = hierarchicalPartitionFields;
+                serializer.PartitionKeyType = partitionKeyType;
+            }
+
             if (partitionFields != null && partitionFields.Any())
             {
+                //Handle PK mapping for the stored type.
+                var partitionKeyInfo = properties[Constants.ReservedPartitionKeyKey];
+                serializer.PartitionKey = partitionKeyInfo;
+                properties.Remove(Constants.ReservedPartitionKeyKey);
+
                 serializer.PartitionKeyProperties = partitionFields
                         .OrderBy(x => x.Key)
                         .Select(x => x.Value)

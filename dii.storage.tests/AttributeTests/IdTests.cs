@@ -14,7 +14,7 @@ namespace dii.storage.tests.AttributeTests
     {
         public IdTests()
         {
-            _ = Optimizer.Init(typeof(MultipleIdEntity), typeof(FirstIdSeparatorWinsEntity));
+            _ = Optimizer.Init("Db1", typeof(MultipleIdEntity), typeof(FirstIdSeparatorWinsEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }

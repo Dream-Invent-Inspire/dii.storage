@@ -16,9 +16,35 @@ namespace dii.storage.tests.OptimizerTests
     {
         public ConfigureTypesTests()
         {
-            _ = Optimizer.Init(typeof(FakeEntity));
+            _ = Optimizer.Init("FakeDb", typeof(FakeEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
+        }
+
+        [Theory, TestPriorityOrder(92), ClassData(typeof(ConfigureTypesInvalidPartitionKeyOrderExceptionData))]
+        public void ConfigureTypes_AddTypeWithInvalidHierarchicalPartitionKeyOrder(string dbid, Type type, string propertyName, string duplicatePropertyName, int order)
+        {
+            var optimizer = Optimizer.Get();
+
+            Assert.Single(optimizer.Tables);
+
+            var tablesInitialized = optimizer.Tables;
+            var tableMappingsInitialized = optimizer.TableMappings;
+
+            var exception = Assert.Throws<DiiPartitionKeyDuplicateOrderException>(() => { optimizer.ConfigureTypes("FakeDb", type); });
+
+            Assert.NotNull(exception);
+            Assert.Equal(new DiiPartitionKeyDuplicateOrderException(propertyName, duplicatePropertyName, order).Message, exception.Message);
+
+            Assert.Single(optimizer.Tables);
+            Assert.Equal(tablesInitialized.Count, optimizer.Tables.Count);
+            Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
+            Assert.Equal(tablesInitialized[0].ClassName, optimizer.Tables[0].ClassName);
+
+            Assert.Single(optimizer.TableMappings);
+            Assert.Equal(tableMappingsInitialized.Count, optimizer.TableMappings.Count);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].TableName, optimizer.TableMappings[typeof(FakeEntity)].TableName);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
         }
 
         [Theory, TestPriorityOrder(100), ClassData(typeof(ConfigureTypesNoOpData))]
@@ -31,7 +57,7 @@ namespace dii.storage.tests.OptimizerTests
             var tablesInitialized = optimizer.Tables;
             var tableMappingsInitialized = optimizer.TableMappings;
 
-            optimizer.ConfigureTypes(type);
+            optimizer.ConfigureTypes("FakeDb", type);
 
             Assert.Single(optimizer.Tables);
             Assert.Equal(tablesInitialized.Count, optimizer.Tables.Count);
@@ -54,7 +80,7 @@ namespace dii.storage.tests.OptimizerTests
             var tablesInitialized = optimizer.Tables;
             var tableMappingsInitialized = optimizer.TableMappings;
 
-            var exception = Assert.Throws<DiiReservedSearchableKeyException>(() => { optimizer.ConfigureTypes(type); });
+            var exception = Assert.Throws<DiiReservedSearchableKeyException>(() => { optimizer.ConfigureTypes("FakeDb", type); });
 
             Assert.NotNull(exception);
             Assert.Equal(new DiiReservedSearchableKeyException(key, propertyName, typeName).Message, exception.Message);
@@ -80,7 +106,7 @@ namespace dii.storage.tests.OptimizerTests
             var tablesInitialized = optimizer.Tables;
             var tableMappingsInitialized = optimizer.TableMappings;
 
-            var exception = Assert.Throws<DiiPartitionKeyDuplicateOrderException>(() => { optimizer.ConfigureTypes(type); });
+            var exception = Assert.Throws<DiiPartitionKeyDuplicateOrderException>(() => { optimizer.ConfigureTypes("FakeDb", type); });
 
             Assert.NotNull(exception);
             Assert.Equal(new DiiPartitionKeyDuplicateOrderException(propertyName, duplicatePropertyName, order).Message, exception.Message);
@@ -106,7 +132,7 @@ namespace dii.storage.tests.OptimizerTests
             var tablesInitialized = optimizer.Tables;
             var tableMappingsInitialized = optimizer.TableMappings;
 
-            var exception = Assert.Throws<DiiIdDuplicateOrderException>(() => { optimizer.ConfigureTypes(type); });
+            var exception = Assert.Throws<DiiIdDuplicateOrderException>(() => { optimizer.ConfigureTypes("FakeDb", type); });
 
             Assert.NotNull(exception);
             Assert.Equal(new DiiIdDuplicateOrderException(propertyName, duplicatePropertyName, order).Message, exception.Message);
@@ -132,7 +158,7 @@ namespace dii.storage.tests.OptimizerTests
             var tablesInitialized = optimizer.Tables;
             var tableMappingsInitialized = optimizer.TableMappings;
 
-            optimizer.ConfigureTypes(typeof(FakeEntityTwo));
+            optimizer.ConfigureTypes("FakeDb", typeof(FakeEntityTwo));
 
             Assert.Equal(2, optimizer.Tables.Count);
             Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
@@ -158,7 +184,7 @@ namespace dii.storage.tests.OptimizerTests
             var tablesInitialized = optimizer.Tables;
             var tableMappingsInitialized = optimizer.TableMappings;
 
-            optimizer.ConfigureTypes(typeof(FakeEntityFive));
+            optimizer.ConfigureTypes("FakeDb", typeof(FakeEntityFive));
 
             Assert.Equal(3, optimizer.Tables.Count);
             Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);

@@ -15,7 +15,7 @@ namespace dii.storage.tests.OptimizerTests
     {
         public UnpackageFromJsonTests()
         {
-            _ = Optimizer.Init(typeof(FakeEntityTwo));
+            _ = Optimizer.Init("FakeDb", typeof(FakeEntityTwo));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }

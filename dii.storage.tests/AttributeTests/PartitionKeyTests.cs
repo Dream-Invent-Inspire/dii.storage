@@ -14,7 +14,7 @@ namespace dii.storage.tests.AttributeTests
     {
         public PartitionKeyTests()
         {
-            _ = Optimizer.Init(typeof(MultiplePartitionKeyEntity), typeof(FirstPartitionKeySeparatorWinsEntity));
+            _ = Optimizer.Init("FakeDb", typeof(MultiplePartitionKeyEntity), typeof(FirstPartitionKeySeparatorWinsEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }

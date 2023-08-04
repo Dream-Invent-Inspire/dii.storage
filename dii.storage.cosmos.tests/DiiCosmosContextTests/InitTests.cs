@@ -24,7 +24,7 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
         [Fact, TestPriorityOrder(101)]
         public void Init_Success()
         {
-            var fakeCosmosDatabaseConfig = new FakeCosmosDatabaseConfig();
+            var fakeCosmosDatabaseConfig = new FakeCosmosContextConfig();
 
             var context = DiiCosmosContext.Init(fakeCosmosDatabaseConfig);
 

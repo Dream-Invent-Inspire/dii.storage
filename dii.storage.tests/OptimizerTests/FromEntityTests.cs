@@ -16,7 +16,7 @@ namespace dii.storage.tests.OptimizerTests
     {
         public FromEntityTests()
         {
-            _ = Optimizer.Init(typeof(FakeEntityTwo), typeof(FakeEntityFive));
+            _ = Optimizer.Init("FakeDb", typeof(FakeEntityTwo), typeof(FakeEntityFive));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }

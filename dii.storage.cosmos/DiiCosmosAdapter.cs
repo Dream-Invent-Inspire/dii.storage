@@ -37,7 +37,7 @@ namespace dii.storage.cosmos
 			_context = DiiCosmosContext.Get();
 			_optimizer = Optimizer.Get();
 			_table = _optimizer.TableMappings[typeof(T)];
-			_container = _context.Client.GetContainer(_context.Config.DatabaseId, _table.TableName);
+			_container = _context.Client.GetContainer(_table.DbId, _table.TableName);
 		}
 		#endregion Constructors
 
