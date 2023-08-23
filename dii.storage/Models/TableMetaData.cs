@@ -1,6 +1,8 @@
 ﻿using dii.storage.Attributes;
+using Microsoft.Azure.Cosmos;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace dii.storage.Models
 {
@@ -43,9 +45,40 @@ namespace dii.storage.Models
         /// The searchable path of the partition key.
         /// </summary>
         /// <remarks>
-        /// Currently hardcoded as /PK.
         /// </remarks>
-        public Dictionary<int, string> HierarchicalPartitionKeys { get; set; } = new Dictionary<int, string>();
+        public Dictionary<int, PropertyInfo> HierarchicalPartitionKeys { get; set; } = new Dictionary<int, PropertyInfo>();
+
+        /// <summary>
+		/// Properties composing the CosmosDB Id
+		/// </summary>
+		public Dictionary<int, PropertyInfo> IdProperties { get; set; } = new Dictionary<int, PropertyInfo>();
+
+        /// <summary>
+		/// Separator used when multiple Id properties
+		/// </summary>
+		public string IdSeparator { get; set; }
+
+        /// <summary>
+        /// The searchable path of the Lookup container partition key.
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        public Dictionary<int, PropertyInfo> LookupHpks { get; set; } = new Dictionary<int, PropertyInfo>();
+
+        /// <summary>
+        /// The searchable path of the Lookup container id key.
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        public Dictionary<int, PropertyInfo> LookupIds { get; set; } = new Dictionary<int, PropertyInfo>();
+
+        /// <summary>
+        /// The searchable path of the search fields.
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        public List<PropertyInfo> SearchableFields { get; set; } = new List<PropertyInfo>();
+
 
         /// <summary>
         /// The dynamically created type created by the <see cref="Optimizer"/>.
@@ -77,5 +110,11 @@ namespace dii.storage.Models
 
 
 		public bool Initialized { get; set; } = false;
+        public bool IsLookupTable { get; internal set; }
+		public string SourceTableNameForLookup { get; internal set; }
+        public Type SourceTableTypeForLookup { get; internal set; }
+
+		public Container LookupContainer { get; set; } 
+		public Type LookupType { get; set;}
     }
 }

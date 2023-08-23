@@ -23,7 +23,7 @@ namespace dii.storage.Models.Interfaces
 		/// <remarks>
 		/// This is a placeholder for a future feature.
 		/// </remarks>
-		Version SchemaVersion { get; }
+		Version SchemaVersion { get; set; }
 
 		/// <summary>
 		/// The computed version of the stored object. Necessary for optimistic concurrency.

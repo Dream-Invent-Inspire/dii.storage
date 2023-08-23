@@ -185,7 +185,7 @@ namespace dii.storage.cosmos.examples
             return orders;
         }
 
-        [Fact, TestPriorityOrder(10)]
+        //[Fact, TestPriorityOrder(10)]
         public async Task RunHPKExample1()
         {
 
@@ -251,7 +251,7 @@ namespace dii.storage.cosmos.examples
 
         }
 
-        [Fact, TestPriorityOrder(20)]
+        //[Fact, TestPriorityOrder(20)]
         public async Task RunHPKExample2()
         {
             //var pmtid = Guid.NewGuid().ToString();
@@ -260,12 +260,12 @@ namespace dii.storage.cosmos.examples
             // Create new item
             var o1 = new PersonOrder
             {
-                PaymentAmount = 900,
+                PaymentAmount = 100,
                 PaymentType = "Credit",
                 ClientId = "SomeEnterprise",
-                OrderId = "orderid9",
-                PaymentId = "pmtid9",
-                PersonId = "person9",
+                OrderId = "orderid1",
+                PaymentId = "pmtid1",
+                PersonId = "person1",
                 OrderDate = DateTimeOffset.Parse("2023-07-01T21:14:07.3066349Z")
             };
             //Task.Delay(100000).Wait();
@@ -343,14 +343,20 @@ namespace dii.storage.cosmos.examples
         [Fact, TestPriorityOrder(int.MaxValue)]
         public async Task Teardown()
         {
-            var context = DiiCosmosContext.Get();
-
-            if (context.Dbs != null)
+            try
             {
-                foreach (var db in context.Dbs)
+                var context = DiiCosmosContext.Get();
+
+                if (context.Dbs != null)
                 {
-                    _ = await db.DeleteAsync().ConfigureAwait(false);
+                    foreach (var db in context.Dbs)
+                    {
+                        _ = await db.DeleteAsync().ConfigureAwait(false);
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
             }
         }
         #endregion

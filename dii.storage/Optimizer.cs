@@ -2,6 +2,7 @@
 using dii.storage.Exceptions;
 using dii.storage.Models;
 using dii.storage.Models.Interfaces;
+using dii.storage.Utilities;
 using MessagePack;
 using Newtonsoft.Json.Linq;
 using System;
@@ -12,6 +13,9 @@ using System.Reflection.Emit;
 using System.Security.AccessControl;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Channels;
+using System.Threading;
+using System.Reflection.PortableExecutable;
 
 namespace dii.storage
 {
@@ -58,23 +62,25 @@ namespace dii.storage
 		/// </summary>
 		public readonly Dictionary<Type, TableMetaData> TableMappings;
 
-		/// <summary>
-		/// A <see cref="Dictionary{TKey, TValue}"/> of concrete <see cref="Type"/> mapped to their <see cref="TableMetaData"/>
-		/// record initialized with this instance of the <see cref="Optimizer"/>.
-		/// <para>
-		/// All types within this collection do not implement the <see cref="IDiiEntity"/> interface. They are
-		/// user-defined objects that are typically found as properties within the objects found in <see cref="Tables"/>.
-		/// </para>
-		/// </summary>
+        /// <summary>
+        /// A <see cref="Dictionary{TKey, TValue}"/> of concrete <see cref="Type"/> mapped to their <see cref="TableMetaData"/>
+        /// record initialized with this instance of the <see cref="Optimizer"/>.
+        /// <para>
+        /// All types within this collection do not implement the <see cref="IDiiEntity"/> interface. They are
+        /// user-defined objects that are typically found as properties within the objects found in <see cref="Tables"/>.
+        /// </para>
+        /// </summary>
 		public readonly Dictionary<Type, Type> SubPropertyMapping;
-		#endregion Public Fields
+        
+		private readonly string LookupTableSuffix = "Lookup";
+        #endregion Public Fields
 
-		#region Constructors
-		/// <summary>
-		/// Initializes an instance of <see cref="Optimizer"/>.
-		/// </summary>
-		/// <param name="types">An array of <see cref="Type"/> to register. All types must implement the <see cref="IDiiEntity"/> interface.</param>
-		private Optimizer(string dbid, params Type[] types)
+        #region Constructors
+        /// <summary>
+        /// Initializes an instance of <see cref="Optimizer"/>.
+        /// </summary>
+        /// <param name="types">An array of <see cref="Type"/> to register. All types must implement the <see cref="IDiiEntity"/> interface.</param>
+        private Optimizer(string dbid, params Type[] types)
 		{
 			Tables = new List<TableMetaData>();
 			TableMappings = new Dictionary<Type, TableMetaData>();
@@ -191,50 +197,216 @@ namespace dii.storage
 				{
 					if (!IsKnownConcreteType(type))
 					{
-						Serializer storageTypeSerializer;
-						try
-						{
-							//Wiring to the new typeGenerator structure from 05/08/2023
-							var typeGenerator = new TableTypeGenerator(type, _builder, SubPropertyMapping, _ignoreInvalidDiiEntities);
-							storageTypeSerializer = typeGenerator.Generate();
-						}
-						catch
-						{
-							//Duplicate type initialization will yield this exception.
-							//This trapping is preventing Init(typeof(SameType), typeof(SameType))
-							if (_ignoreInvalidDiiEntities)
-								continue;
-							else
-								throw;
-						}
-
+						Serializer storageTypeSerializer = RegisterType(type);
 						if (storageTypeSerializer != null && storageTypeSerializer.StoredEntityType != null)
 						{
-                            OptimizedTypeRegistrar.Register(type, storageTypeSerializer);
+							var tableMetaData = new TableMetaData
+							{
+								DbId = dbid,
+								TableName = type.GetCustomAttribute<StorageNameAttribute>()?.Name ?? type.Name,
+								ClassName = type.Name,
+								ConcreteType = type,
+								StorageType = storageTypeSerializer.StoredEntityType,
+								TimeToLiveInSeconds = type.GetCustomAttribute<EnableTimeToLiveAttribute>()?.TimeToLiveInSeconds,
+							};
+							if (storageTypeSerializer.HierarchicalPartitionKeyProperties != null && storageTypeSerializer.HierarchicalPartitionKeyProperties.Any())
+							{
+								tableMetaData.HierarchicalPartitionKeys = storageTypeSerializer.HierarchicalPartitionKeyProperties.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
+							}
 
-                            var storageType = storageTypeSerializer.StoredEntityType;
-                            if (storageType != null)
+							//Handles Lookup containers
+							if (storageTypeSerializer.LookupHpkProperties != null && storageTypeSerializer.LookupHpkProperties.Any())
+							{
+								tableMetaData.LookupHpks = storageTypeSerializer.LookupHpkProperties.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
+							}
+							if (storageTypeSerializer.LookupIdProperties != null && storageTypeSerializer.LookupIdProperties.Any())
+							{
+								tableMetaData.LookupIds = storageTypeSerializer.LookupIdProperties.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
+							}
+							if (storageTypeSerializer.SearchableProperties != null && storageTypeSerializer.SearchableProperties.Any())
+							{
+								tableMetaData.SearchableFields = storageTypeSerializer.SearchableProperties;
+							}
+                            if (storageTypeSerializer.IdProperties != null && storageTypeSerializer.IdProperties.Any())
                             {
-                                var tableMetaData = new TableMetaData
-                                {
-									DbId = dbid,
-                                    TableName = type.GetCustomAttribute<StorageNameAttribute>()?.Name ?? type.Name,
-                                    ClassName = type.Name,
-                                    ConcreteType = type,
-                                    StorageType = storageType,
-                                    TimeToLiveInSeconds = type.GetCustomAttribute<EnableTimeToLiveAttribute>()?.TimeToLiveInSeconds,
-                                };
-								if (storageTypeSerializer.HierarchicalPartitionKeyProperties != null && storageTypeSerializer.HierarchicalPartitionKeyProperties.Any())
-								{
-									tableMetaData.HierarchicalPartitionKeys = storageTypeSerializer.HierarchicalPartitionKeyProperties.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value.Name);
-								}
-
-                                Tables.Add(tableMetaData);
-                                TableMappings.Add(type, tableMetaData);
+                                tableMetaData.IdProperties = storageTypeSerializer.IdProperties
+									.Select((property, index) => new { Index = index, Property = property })
+									.ToDictionary(item => item.Index, item => item.Property);
+								tableMetaData.IdSeparator = storageTypeSerializer.IdSeparator;
                             }
-                        }
+
+                            Tables.Add(tableMetaData);
+							TableMappings.Add(type, tableMetaData);
+
+							if (tableMetaData.LookupIds?.Any() ?? false) //Note: We really only care if there are Lookup Ids, odds are in those cases there should also be HPKs
+							{
+								//Create the dynamic Lookup table and register it
+								string tblName = type.GetCustomAttribute<StorageNameAttribute>()?.Name ?? type.Name;
+								var lookupType = RegisterLookupType(
+                                    tableMetaData.LookupHpks,
+									//tableMetaData.LookupIds?.Select(x => x.Value).ToList(),
+									tableMetaData.LookupIds,
+									tableMetaData.SearchableFields?.ToList(),
+									lookupTableMetaData: new TableMetaData
+									{
+										DbId = dbid,
+										TimeToLiveInSeconds = type.GetCustomAttribute<EnableTimeToLiveAttribute>()?.TimeToLiveInSeconds,
+										TableName = $"{tblName}{LookupTableSuffix}",
+										ClassName = $"{tableMetaData.ClassName}{LookupTableSuffix}",
+                                        //this is used for the change feed wire up
+                                        SourceTableNameForLookup = tableMetaData.TableName, //this is THIS entity's table name (not the lookup table)
+										SourceTableTypeForLookup = type, //this is THIS entity's type (not the lookup type)
+										IsLookupTable = true
+									});
+
+								tableMetaData.LookupType = lookupType; //this is for the lookup object unpacking
+							}
+						}
 					}
 				}
+			}
+		}
+
+		public object HydrateEntityByType(Type type, string json)
+		{
+            if (type == null)
+			{
+                throw new ArgumentNullException(nameof(type));
+            }
+
+            if (!IsKnownConcreteType(type))
+			{
+                throw new Exception($"The type {type.FullName} is not registered with the Optimizer. Please register the type before attempting to construct an instance.");
+            }
+
+            var method = this.GetType().GetMethod("UnpackageFromJson").MakeGenericMethod(type);
+            var sourceObj = method.Invoke(this, new object[] { json });
+			return sourceObj;
+        }
+
+		private Serializer RegisterType(Type type)
+		{
+			Serializer storageTypeSerializer = null;
+            try
+            {
+                //Wiring to the new typeGenerator structure from 05/08/2023
+                var typeGenerator = new TableTypeGenerator(type, _builder, SubPropertyMapping, _ignoreInvalidDiiEntities);
+                storageTypeSerializer = typeGenerator.Generate();
+            }
+            catch
+            {
+                //Duplicate type initialization will yield this exception.
+                //This trapping is preventing Init(typeof(SameType), typeof(SameType))
+                if (_ignoreInvalidDiiEntities)
+                    return null;
+                else
+                    throw;
+            }
+
+			if (storageTypeSerializer != null && storageTypeSerializer.StoredEntityType != null)
+			{
+				OptimizedTypeRegistrar.Register(type, storageTypeSerializer);
+			}
+            return storageTypeSerializer;
+        }
+
+		private Type RegisterLookupType(Dictionary<int,PropertyInfo> lookupHpks, Dictionary<int, PropertyInfo> lookupIds, List<PropertyInfo> searchableFields, TableMetaData lookupTableMetaData)
+        {
+            Type dynamicType = DynamicTypeCreator.CreateLookupType(lookupHpks, lookupIds, searchableFields, lookupTableMetaData);
+			var lookupTypeSerializer = RegisterType(dynamicType);
+
+			//Add to the lookup table
+			lookupTableMetaData.ConcreteType = dynamicType;
+			lookupTableMetaData.StorageType = lookupTypeSerializer.StoredEntityType;
+			lookupTableMetaData.HierarchicalPartitionKeys = lookupHpks.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
+			lookupTableMetaData.LookupIds = lookupIds;
+            
+            Tables.Add(lookupTableMetaData);
+            TableMappings.Add(dynamicType, lookupTableMetaData);
+			return dynamicType;
+        }
+
+		//private void SetAttributedProperty(TypeBuilder typeBuilder, PropertyInfo property, params Type[] attributeTypes)
+		//{
+		//	foreach (var attrType in attributeTypes)
+		//	{
+		//		Attribute attribute = property.GetCustomAttribute(attrType);
+		//		if (attribute != null)
+		//		{
+		//			var propertyName = property.Name;
+		//			var propertyType = property.PropertyType;
+		//			var fieldBuilder = typeBuilder.DefineField($"_{propertyName}", propertyType, FieldAttributes.Private);
+		//			var propertyBuilder = typeBuilder.DefineProperty(propertyName, PropertyAttributes.HasDefault, propertyType, null);
+
+		//			// Getting the right constructor
+		//			var ctor = attrType.GetConstructor(new[] { typeof(Type), typeof(int) });
+
+		//			// Creating the CustomAttributeBuilder with extracted values
+		//			var attributeBuilder = new CustomAttributeBuilder(
+		//				ctor,
+		//				new object[] { attribute.PartitionKeyType, attribute.Order }
+		//			);
+
+		//			propertyBuilder.SetCustomAttribute(attributeBuilder);
+
+		//			// Create get and set methods for the property and associate them with the property
+		//			var getMethodBuilder = typeBuilder.DefineMethod($"get_{propertyName}", MethodAttributes.Public, propertyType, Type.EmptyTypes);
+		//			var getIL = getMethodBuilder.GetILGenerator();
+		//			getIL.Emit(OpCodes.Ldarg_0);
+		//			getIL.Emit(OpCodes.Ldfld, fieldBuilder);
+		//			getIL.Emit(OpCodes.Ret);
+
+		//			var setMethodBuilder = typeBuilder.DefineMethod($"set_{propertyName}", MethodAttributes.Public, null, new Type[] { propertyType });
+		//			var setIL = setMethodBuilder.GetILGenerator();
+		//			setIL.Emit(OpCodes.Ldarg_0);
+		//			setIL.Emit(OpCodes.Ldarg_1);
+		//			setIL.Emit(OpCodes.Stfld, fieldBuilder);
+		//			setIL.Emit(OpCodes.Ret);
+
+		//			propertyBuilder.SetGetMethod(getMethodBuilder);
+		//			propertyBuilder.SetSetMethod(setMethodBuilder);
+		//		}
+		//	}
+		//}
+
+		private void SetAttributedProperty(TypeBuilder typeBuilder, PropertyInfo property, DiiBaseAttribute attribute, Type attributeType)
+		{
+			//var att = property.GetCustomAttribute<SearchableAttribute>();
+			if (attribute != null)
+			{
+				// Define a single property "Name" of type string
+				var propertyName = property.Name;
+				var fieldBuilder = typeBuilder.DefineField($"_{propertyName}", property.PropertyType, FieldAttributes.Private);
+				var propertyBuilder = typeBuilder.DefineProperty(propertyName, PropertyAttributes.HasDefault, property.PropertyType, null);
+
+				// Getting the right constructor
+				//var ctor = attributeType.GetConstructor(new[] { typeof(Type), typeof(int) });
+
+				// Creating the CustomAttributeBuilder with extracted values
+				var attributeBuilder = attribute.GetConstructorBuilder();
+                //	new CustomAttributeBuilder(
+                //	ctor,
+                //	new object[] { attribute.IdKeyType, attribute.Order }
+                //);
+
+                propertyBuilder.SetCustomAttribute(attributeBuilder);
+
+				// Create get and set methods for the property and associate them with the property
+				var getMethodBuilder = typeBuilder.DefineMethod($"get_{propertyName}", MethodAttributes.Public, property.PropertyType, Type.EmptyTypes);
+				var getIL = getMethodBuilder.GetILGenerator();
+				getIL.Emit(OpCodes.Ldarg_0);
+				getIL.Emit(OpCodes.Ldfld, fieldBuilder);
+				getIL.Emit(OpCodes.Ret);
+
+				var setMethodBuilder = typeBuilder.DefineMethod($"set_{propertyName}", MethodAttributes.Public, null, new Type[] { property.PropertyType });
+				var setIL = setMethodBuilder.GetILGenerator();
+				setIL.Emit(OpCodes.Ldarg_0);
+				setIL.Emit(OpCodes.Ldarg_1);
+				setIL.Emit(OpCodes.Stfld, fieldBuilder);
+				setIL.Emit(OpCodes.Ret);
+
+				propertyBuilder.SetGetMethod(getMethodBuilder);
+				propertyBuilder.SetSetMethod(setMethodBuilder);
 			}
 		}
 
@@ -548,6 +720,17 @@ namespace dii.storage
 
 			return default(Type);
 		}
+
+		/// <summary>
+		/// Return corresponding Lookup Table
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <returns></returns>
+		public TableMetaData GetLookupTableMetaData<T>(string group = null)
+		{
+			return Tables.Where(x => x.IsLookupTable && x.SourceTableTypeForLookup == typeof(T)).FirstOrDefault();
+		}
+
 		#endregion Public Methods
 
 		#region Private Methods
@@ -614,6 +797,6 @@ namespace dii.storage
 
 			return prop;
 		}
-#endregion Private Methods
+		#endregion Private Methods
 	}
 }

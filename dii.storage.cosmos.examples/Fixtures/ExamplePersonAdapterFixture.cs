@@ -39,7 +39,7 @@ namespace dii.storage.cosmos.examples.Fixtures
                 //Optimizer = Optimizer.Init(typeof(PersonSession));
             }
 
-            context.InitTablesAsync(ExampleConfig.DbName, Optimizer.Tables, true).Wait();
+            context.InitTablesAsync(ExampleConfig.DbName, Optimizer.Tables, true, Optimizer).Wait();
 
             if (PersonAdapter == null)
             {
@@ -53,6 +53,25 @@ namespace dii.storage.cosmos.examples.Fixtures
             if (People == null)
             {
                 People = new List<Person>();
+                //{
+                //    new Person
+                //    {
+                //        Address = new Address
+                //        {
+                //            PhoneNumber = new PhoneNumber
+                //            {
+                //                FullPhoneNumber = "412-555-2340"
+                //            },
+                //            ZipCode = "90210"
+                //        },
+                //        Age = 37,
+                //        PersonId = "4337f053-854f-407d-8540-078258879b34",
+                //        ClientId = "f52e95e2-ea7c-456d-9400-d211ff57e152",
+                //        OtherData = "Some other data",
+                //        DataVersion = "1",
+                //        Name = "Jimbo"
+                //    }
+                //};
             }
         }
 

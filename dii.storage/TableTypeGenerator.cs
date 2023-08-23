@@ -14,10 +14,20 @@ namespace dii.storage
         public TableTypeGenerator(Type source, ModuleBuilder builder, Dictionary<Type,Type> subPropertyMapping, bool suppressConfigurationErrors = false) : base(source, builder, subPropertyMapping, suppressConfigurationErrors)
         { }
 
+        //public TableTypeGenerator(TypeBuilder typeBuilder, Dictionary<Type, Type> subPropertyMapping, bool suppressConfigurationErrors = false) : base(typeBuilder, subPropertyMapping, suppressConfigurationErrors)
+        //{
+            
+        //}
         protected Dictionary<int, PropertyInfo> partitionFields { get; set; } = new Dictionary<int, PropertyInfo>();
         protected Dictionary<int, PropertyInfo> hierarchicalPartitionFields { get; set; } = new Dictionary<int, PropertyInfo>();
 
+        protected Dictionary<int, PropertyInfo> LookupHpkFields { get; set; } = new Dictionary<int, PropertyInfo>();
+
         protected Dictionary<int, PropertyInfo> idFields { get; set; } = new Dictionary<int, PropertyInfo>();
+
+        protected Dictionary<int, PropertyInfo> LookupIdFields { get; set; } = new Dictionary<int, PropertyInfo>();
+
+        protected List<PropertyInfo> SearchableFields { get; set; } = new List<PropertyInfo>();
 
         /// <summary>
         /// The delimiter to separate aggregate partiton keys.
@@ -53,6 +63,11 @@ namespace dii.storage
             ProcessPartitionKey(p);
             ProcessHierarchicalPartitionKey(p);
             ProcessIdField(p);
+            ProcessSearchableField(p);
+
+            //Lookup
+            ProcessLookupHpk(p);
+            ProcessLookupIdField(p);
         }
 
         /// <summary>
@@ -149,6 +164,55 @@ namespace dii.storage
             return false;
         }
 
+        protected bool ProcessLookupHpk(PropertyInfo p)
+        {
+            var LookupHpk = p.GetCustomAttribute<LookupHpkAttribute>();
+            if (LookupHpk != null)
+            {
+                //Two fields cannot occupy the same position in the partition key.
+                if (LookupHpkFields.ContainsKey(LookupHpk.Order))
+                {
+                    throw new DiiPartitionKeyDuplicateOrderException(LookupHpkFields[LookupHpk.Order].Name, p.Name, LookupHpk.Order);
+                }
+
+                LookupHpkFields.Add(LookupHpk.Order, p);
+
+                return true;
+            }
+            return false;
+        }
+
+        protected bool ProcessLookupIdField(PropertyInfo p)
+        {
+            var id = p.GetCustomAttribute<LookupIdAttribute>();
+            if (id != null)
+            {
+                if (LookupIdFields.ContainsKey(id.Order))
+                {
+                    // Throw an exception when an invalid type is attempted.
+                    throw new DiiIdDuplicateOrderException(LookupIdFields[id.Order].Name, p.Name, id.Order);
+                }
+
+                LookupIdFields.Add(id.Order, p);
+
+                return true;
+            }
+            return false;
+        }
+
+        protected void ProcessSearchableField(PropertyInfo p)
+        {
+            var id = p.GetCustomAttribute<SearchableAttribute>();
+            if (id != null)
+            {
+                if (SearchableFields == null)
+                {
+                    SearchableFields = new List<PropertyInfo>();
+                }
+                SearchableFields.Add(p);
+            }
+        }
+
         protected override void AppendExtendedFields()
         {
             base.AppendExtendedFields();
@@ -167,6 +231,16 @@ namespace dii.storage
             }
             _ = AddProperty(typeBuilder, Constants.ReservedIdKey, typeof(string));
         }
+
+        //public Serializer GenerateLookup(Dictionary<int, PropertyInfo> hierarchicalPartitionFields, Dictionary<int, PropertyInfo> idFields)
+        //{
+        //    this.hierarchicalPartitionFields = hierarchicalPartitionFields;
+        //    this.idFields = idFields;
+
+        //    var serializer = AppendStandardFields();
+        //    MapTypes(serializer);
+        //    return serializer;
+        //}
 
         protected override Serializer CustomizeSearchableSerializer(Dictionary<string, PropertyInfo> properties, Serializer serializer)
         {
@@ -189,6 +263,20 @@ namespace dii.storage
             {
                 serializer.HierarchicalPartitionKeyProperties = hierarchicalPartitionFields;
                 serializer.PartitionKeyType = partitionKeyType;
+            }
+
+            //This handles Lookup container configuration
+            if (LookupHpkFields?.Any() ?? false)
+            {
+                serializer.LookupHpkProperties = LookupHpkFields;
+            }
+            if (LookupIdFields?.Any() ?? false)
+            {
+                serializer.LookupIdProperties = LookupIdFields;
+            }
+            if (SearchableFields?.Any() ?? false)
+            {
+                serializer.SearchableProperties = SearchableFields;
             }
 
             if (partitionFields != null && partitionFields.Any())

@@ -1,4 +1,5 @@
 ﻿using dii.storage.Attributes;
+using dii.storage.cosmos.Models;
 using dii.storage.Models.Interfaces;
 using MessagePack;
 using Microsoft.Azure.Cosmos;
@@ -11,7 +12,7 @@ using System.Threading.Tasks;
 namespace dii.storage.cosmos.examples.Models
 {
     [StorageName("Example-PersonSession")]
-    public class PersonSession : IDiiEntity
+    public class PersonSession : DiiCosmosEntity
     {
         /// <summary>
         /// The Client Id that the <see cref="Person"/> record belongs to.
@@ -61,12 +62,23 @@ namespace dii.storage.cosmos.examples.Models
         [Compress(0)]
         public string SessionData { get; set; }
 
-        /// <inheritdoc/>
-        [Searchable("_etag")]
-        public string DataVersion { get; set; }
+        ///// <inheritdoc/>
+        //[Searchable("_etag")]
+        //public string DataVersion { get; set; }
+
+
+        //private Version _schemaVersion = new Version(1, 0);
+
+        //[IgnoreMember]
+        //public Version SchemaVersion
+        //{
+        //    get { return _schemaVersion; }
+        //    set { _schemaVersion = value; }
+        //}
+
 
         /// <inheritdoc/>
-        [IgnoreMember]
-        public Version SchemaVersion => new(1, 0);
+        //[IgnoreMember]
+        //public Version SchemaVersion => new(1, 0);
     }
 }
