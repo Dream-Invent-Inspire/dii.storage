@@ -100,7 +100,6 @@ namespace dii.storage
             {
                 throw new DiiDuplicateTypeInitializedException(source);
             }
-
             suppressConfigErrors = suppressConfigurationErrors;
             SubPropertyMapping = subPropertyMappings;
 
@@ -111,40 +110,64 @@ namespace dii.storage
             sourceProperties = source.GetProperties();
             typeBuilder = moduleBuilder.DefineType(source.Name, TypeAttributes.Public);
             var typeConst = typeBuilder.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
-
+            
             compressBuilder = moduleBuilder.DefineType($"{source.Name}Compressed", TypeAttributes.Public);
             compressConst = compressBuilder.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
             compressBuilder.SetCustomAttribute(new CustomAttributeBuilder(msgPkAttrConst, new object[] { false }));
+
         }
+
+        //public TypeGenerator(TypeBuilder typeBuilder, Dictionary<Type, Type> subPropertyMappings, bool suppressConfigurationErrors = false)
+        //{
+        //    suppressConfigErrors = suppressConfigurationErrors;
+        //    SubPropertyMapping = subPropertyMappings;
+
+        //    jsonMap = new PackingMapper();
+        //    compressMap = new PackingMapper();
+
+        //    moduleBuilder = (ModuleBuilder)typeBuilder.Module;
+        //    this.typeBuilder = typeBuilder;
+        //    var typeConst = typeBuilder.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
+
+        //    var sourceType = (Type)typeBuilder;
+        //    sourceProperties = sourceType.GetProperties();
+        //    compressBuilder = moduleBuilder.DefineType($"{sourceType.Name}Compressed", TypeAttributes.Public);
+        //    compressConst = compressBuilder.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
+        //    compressBuilder.SetCustomAttribute(new CustomAttributeBuilder(msgPkAttrConst, new object[] { false }));
+        //}
 
         public Serializer Generate()
         {
-            foreach (var p in sourceProperties)
+            if (this.typeBuilder != null)
             {
-                try
+                foreach (var p in sourceProperties)
                 {
-                    ProcessProperty(p);
-                }
-                catch (Exception ex)
-                {
-                    if(
-                        suppressConfigErrors && 
-                        (
-                            ex is DiiPartitionKeyDuplicateOrderException 
-                            || ex is DiiIdDuplicateOrderException
-                            || ex is DiiReservedSearchableKeyException
-                        )
-                    ) {
-                        //If a handled configuration exception is thrown and suppressConfigErrors
-                        //is configured, do not create or map the type and halt processing.
-                        //Useful for debugging multiple new types with advanced configuration
-                        return null;
+                    try
+                    {
+                        ProcessProperty(p);
                     }
-                    throw;
+                    catch (Exception ex)
+                    {
+                        if (
+                            suppressConfigErrors &&
+                            (
+                                ex is DiiPartitionKeyDuplicateOrderException
+                                || ex is DiiIdDuplicateOrderException
+                                || ex is DiiReservedSearchableKeyException
+                            )
+                        )
+                        {
+                            //If a handled configuration exception is thrown and suppressConfigErrors
+                            //is configured, do not create or map the type and halt processing.
+                            //Useful for debugging multiple new types with advanced configuration
+                            return null;
+                        }
+                        throw;
+                    }
                 }
-            }
 
-            AppendExtendedFields();
+                AppendExtendedFields();
+            }
             var serializer = AppendStandardFields();
             MapTypes( serializer );
             return serializer;
@@ -152,6 +175,10 @@ namespace dii.storage
 
         protected virtual void MapTypes(Serializer serializer)
         {
+            if (sourceType == null)
+            {
+                return;
+            }
             if (!SubPropertyMapping.ContainsKey(sourceType))
             {
                 SubPropertyMapping.Add(sourceType, serializer.StoredEntityType);

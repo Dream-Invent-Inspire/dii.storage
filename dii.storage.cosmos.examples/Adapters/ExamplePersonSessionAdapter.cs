@@ -14,14 +14,14 @@ namespace dii.storage.cosmos.examples.Adapters
 {
     public class ExamplePersonSessionAdapter : DiiCosmosHierarchicalAdapter<PersonSession>, IExamplePersonSessionAdapter
     {
-        public Task<PersonSession> FetchAsync(string personId, string clientId, string sessionId, CancellationToken cancellationToken = default)
+        public async Task<PersonSession> FetchAsync(string personId, string clientId, string sessionId, CancellationToken cancellationToken = default)
         {
             var dic = new Dictionary<string, string>
             {
                 { "ClientId", clientId },
                 { "PersonId", personId }
             };
-            return base.GetAsync(sessionId, dic, cancellationToken: cancellationToken);
+            return await base.GetAsync(sessionId, dic, cancellationToken: cancellationToken);
         }
 
         public async Task<List<PersonSession>> GetManyBySessionIdsAsync(IReadOnlyList<Tuple<string, Dictionary<string, string>>> idAndPks)
@@ -30,18 +30,18 @@ namespace dii.storage.cosmos.examples.Adapters
             return results.ToList();
         }
 
-        public Task<PagedList<PersonSession>> GetManyByClientIdAsync(string clientId, string personId)
+        public async Task<PagedList<PersonSession>> GetManyByClientIdAsync(string clientId, string personId)
         {
             var queryDefinition = new QueryDefinition($"SELECT * FROM c WHERE c.ClientId = @clientId AND c.PersonId = @personId");
 
             queryDefinition.WithParameter("@clientId", clientId);
             queryDefinition.WithParameter("@personId", personId);
 
-            return base.GetPagedAsync(queryDefinition);
+            return await base.GetPagedAsync(queryDefinition);
         }
 
 
-        public Task<PagedList<PersonSession>> SearchByRunDurationAsync(string clientId, string personId, long duration)
+        public async Task<PagedList<PersonSession>> SearchByRunDurationAsync(string clientId, string personId, long duration)
         {
             var queryDefinition = new QueryDefinition($"SELECT * FROM c WHERE c.ClientId = @clientId AND c.PersonId = @personId AND c.duration = @duration");
 
@@ -49,40 +49,56 @@ namespace dii.storage.cosmos.examples.Adapters
             queryDefinition.WithParameter("@personId", personId);
             queryDefinition.WithParameter("@duration", duration);
 
-            return base.GetPagedAsync(queryDefinition);
+            return await base.GetPagedAsync(queryDefinition);
         }
 
 
-        public Task<PersonSession> CreateAsync(PersonSession session, CancellationToken cancellationToken = default)
+        public async Task<PersonSession> CreateAsync(PersonSession session, CancellationToken cancellationToken = default)
         {
             if (session.SessionEndDate != null)
             {
                 session.Duration = (long)(session.SessionEndDate.Value - session.SessionStartDate).TotalMilliseconds;
             }
-            return base.CreateAsync(session, cancellationToken: cancellationToken);
+            return await base.CreateAsync(session, cancellationToken: cancellationToken);
         }
 
-        public Task<PersonSession> ReplaceAsync(PersonSession session, CancellationToken cancellationToken = default)
+        public async Task<PersonSession> ReplaceAsync(PersonSession session, CancellationToken cancellationToken = default)
         {
-            return base.ReplaceAsync(session, cancellationToken: cancellationToken);
+            return await base.ReplaceAsync(session, cancellationToken: cancellationToken);
         }
 
-        public Task<PersonSession> UpsertAsync(PersonSession session, CancellationToken cancellationToken = default)
+        public async Task<PersonSession> ChangePersonIdAsync(PersonSession diiOldEntity, string newPersonId, CancellationToken cancellationToken = default)
         {
-            return base.UpsertAsync(session, cancellationToken: cancellationToken);
+            var dic = new Dictionary<string, string>
+            {
+                { "ClientId", diiOldEntity.ClientId },
+                { "PersonId", newPersonId }
+            };
+            return await base.ModifyHierarchicalPartitionKeyValueReplaceAsync(diiOldEntity, dic, cancellationToken: cancellationToken);
         }
 
-        public async Task AddEndTimeAsync(string personId, string clientId, string sessionId, DateTime started, DateTime ended, CancellationToken cancellationToken = default)
+        public async Task<PersonSession> UpsertAsync(PersonSession session, CancellationToken cancellationToken = default)
+        {
+            return await base.UpsertAsync(session, cancellationToken: cancellationToken);
+        }
+
+        public async Task<PersonSession> AddEndTimeAsync(string personId, string clientId, string sessionId, DateTime started, DateTime ended, CancellationToken cancellationToken = default)
         {
             var patchItemRequestOptions = new PatchItemRequestOptions
             {
-                EnableContentResponseOnWrite = false
+                EnableContentResponseOnWrite = true
             };
 
-            var patchOperations = new List<PatchOperation>()
+            //var patchOperations = new List<PatchOperation>()
+            //{
+            //    PatchOperation.Set("/ended", ended),
+            //    PatchOperation.Set("/duration", (long)(ended - started).TotalMilliseconds)
+            //};
+
+            var patchOperations = new Dictionary<string, object>()
             {
-                PatchOperation.Set("/ended", ended),
-                PatchOperation.Set("/duration", (long)(ended - started).TotalMilliseconds)
+                { "/ended", ended },
+                { "/duration", (long)(ended - started).TotalMilliseconds }
             };
 
             var dic = new Dictionary<string, string>
@@ -91,17 +107,29 @@ namespace dii.storage.cosmos.examples.Adapters
                 { "PersonId", personId }
             };
 
-            _ = await base.PatchAsync(sessionId, dic, patchOperations, patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
+            var session = await base.PatchAsync(sessionId, dic, patchOperations, patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
+            return session;
         }
 
-        public Task<bool> DeleteEntityAsync(PersonSession session, CancellationToken cancellationToken = default)
+        public async Task<bool> DeleteEntityAsync(PersonSession session, CancellationToken cancellationToken = default)
         {
-            return base.DeleteEntityAsync(session, cancellationToken: cancellationToken);
+            return await base.DeleteEntityAsync(session, cancellationToken: cancellationToken);
         }
 
-        public Task<bool> DeleteBulkAsync(IReadOnlyList<PersonSession> sessions, CancellationToken cancellationToken = default)
+        public async Task<bool> DeleteEntityByIdAsync(string personId, string clientId, string sessionId, CancellationToken cancellationToken = default)
         {
-            return base.DeleteEntitiesBulkAsync(sessions, cancellationToken: cancellationToken);
+            var dic = new Dictionary<string, string>
+            {
+                { "ClientId", clientId },
+                { "PersonId", personId }
+            };
+
+            return await base.DeleteEntityByIdAsync(sessionId, dic, cancellationToken: cancellationToken);
+        }
+        
+        public async Task<bool> DeleteBulkAsync(IReadOnlyList<PersonSession> sessions, CancellationToken cancellationToken = default)
+        {
+            return await base.DeleteEntitiesBulkAsync(sessions, cancellationToken: cancellationToken);
         }
 
     }

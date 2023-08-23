@@ -1,6 +1,7 @@
 ﻿using dii.storage.Attributes;
 using dii.storage.Models;
 using MessagePack;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -36,10 +37,25 @@ namespace dii.storage
 			public List<PropertyInfo> PartitionKeyProperties { get; set; }
 
             /// <summary>
-            /// The <see cref="PropertyInfo"/> for all properties designated by the <see cref="PartitionKeyAttribute"/>.
+            /// The <see cref="PropertyInfo"/> for all properties designated by the <see cref="HierarchicalPartitionKeyAttribute"/>.
             /// </summary>
             public Dictionary<int, PropertyInfo> HierarchicalPartitionKeyProperties { get; set; }
 
+
+            /// <summary>
+            /// The <see cref="PropertyInfo"/> for all properties designated by the <see cref="LookupHpkAttribute"/>.
+            /// </summary>
+            public Dictionary<int, PropertyInfo> LookupHpkProperties { get; set; }
+
+            /// <summary>
+            /// The <see cref="PropertyInfo"/> for all properties designated by the <see cref="LookupIdAttribute"/>.
+            /// </summary>
+            public Dictionary<int, PropertyInfo> LookupIdProperties { get; set; }
+
+            /// <summary>
+            /// The <see cref="PropertyInfo"/> for all properties designated by the <see cref="SearchableAttribute"/>.
+            /// </summary>
+            public List<PropertyInfo> SearchableProperties { get; set; }
 
             /// <summary>
             /// The character used to delimiter multiple partition key values as set in the <see cref="PartitionKeyAttribute.Separator"/>.
@@ -172,8 +188,9 @@ namespace dii.storage
 						{
 							if (!string.IsNullOrWhiteSpace(idValue as string))
 							{
-								idValues.Add(idValue);
-							}
+                                //idValues.Add(((string)idValue).ToLower()); //remove case sensitivity
+                                idValues.Add(idValue);
+                            }
 						}
 						else
 						{
@@ -221,8 +238,13 @@ namespace dii.storage
 					}
 					else if(StoredEntityMapping.EmitProperties.ContainsKey(property.Key))
 					{
-						StoredEntityMapping.EmitProperties[property.Key].SetValue(packedObject, val);
-					}
+						//string value = null;
+      //                  if (property.Value.PropertyType == typeof(string) && HierarchicalPartitionKeyProperties?.Values?.ToList().FirstOrDefault(x => x.Name == property.Key) != null)
+						//{
+						//	value = val.ToString().ToLower(); //remove case sensitivity
+						//}
+                        StoredEntityMapping.EmitProperties[property.Key].SetValue(packedObject, val);
+                    }
 				}
 
 				foreach (var property in CompressedEntityMapping.ConcreteProperties)
@@ -274,7 +296,16 @@ namespace dii.storage
 
                 if (HierarchicalPartitionKeyProperties != null && HierarchicalPartitionKeyProperties.Count > 0)
                 {
-					// These are real properties so do nothing
+                    // These are real properties so make sure they're there
+                    for (var i = 0; i < HierarchicalPartitionKeyProperties.Count; i++)
+                    {
+						var hpk = packedObject.GetType().GetProperty(HierarchicalPartitionKeyProperties[i].Name);
+                        if (hpk != null)
+                        {
+                            var hpkVal = hpk.GetValue(packedObject);
+                            HierarchicalPartitionKeyProperties[i].SetValue(unpackedObject, hpkVal);
+                        }
+                    }
                 }
                 else if (PartitionKey != null)
 				{
@@ -293,8 +324,9 @@ namespace dii.storage
 					var id = ((string)Id.GetValue(packedObject)).Split(new string[] { IdSeparator }, StringSplitOptions.None);
 
 					for (var i = 0; i < IdProperties.Count; i++)
-					{
-						IdProperties[i].SetValue(unpackedObject, id[i]);
+                    {
+						object o = Convert.ChangeType(id[i], IdProperties[i].PropertyType);
+                        IdProperties[i].SetValue(unpackedObject, o);
 					}
 				}
 
@@ -325,7 +357,7 @@ namespace dii.storage
 
                         StoredEntityMapping.ConcreteProperties[property.Key].SetValue(unpackedObject, collection);
                     }
-                    else if (Get().SubPropertyMapping.ContainsKey(StoredEntityMapping.ConcreteProperties[property.Key].PropertyType))
+                    else if (StoredEntityMapping.ConcreteProperties.ContainsKey(property.Key) && Get().SubPropertyMapping.ContainsKey(StoredEntityMapping.ConcreteProperties[property.Key].PropertyType))
 					{
 						try
 						{
@@ -340,7 +372,8 @@ namespace dii.storage
 					}
 					else
 					{
-						StoredEntityMapping.ConcreteProperties[property.Key].SetValue(unpackedObject, val);
+						if (StoredEntityMapping.ConcreteProperties.ContainsKey(property.Key))
+							StoredEntityMapping.ConcreteProperties[property.Key].SetValue(unpackedObject, val);
 					}
 				}
 
