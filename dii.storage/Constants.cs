@@ -61,6 +61,24 @@ namespace dii.storage
         public const string ReservedSchemaVersionKey = "_sv";
 
         /// <summary>
+        /// A reserved searchable key. Cannot be used as the <see cref="SearchableAttribute.Abbreviation"/>.
+        /// </summary>
+        /// <value>
+        /// id
+        /// </value>
+        public const string ReservedTimestampKey = "_ts";
+
+        /// <summary>
+        /// A reserved searchable key. Cannot be used as the <see cref="SearchableAttribute.Abbreviation"/>.
+        /// </summary>
+        /// <value>
+        /// _sv
+        /// </value>
+        public const string ReservedDataVersionKey = "_etag";
+
+        public const string ReservedChangeTrackerKey = "DiiChangeTrackerString";
+
+        /// <summary>
         /// The default delimiter used as the <see cref="PartitionKeyAttribute.Separator"/>.
         /// </summary>
         /// <value>

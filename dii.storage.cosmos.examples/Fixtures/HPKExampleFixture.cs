@@ -1,24 +1,22 @@
 ﻿using dii.storage.cosmos.examples.Adapters;
-using dii.storage.cosmos.examples.Models;
 using dii.storage.cosmos.examples.Models.Interfaces;
+using dii.storage.cosmos.examples.Models;
 using dii.storage.Models.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace dii.storage.cosmos.examples.Fixtures
 {
-    /// <summary>
-    /// A class to allow multiple tests within this test class to share a mock database context.
-    /// </summary>
-    public class ExamplePersonAdapterFixture : IDisposable
+    public class HPKExampleFixture : IDisposable
     {
         public Optimizer Optimizer;
         public INoSqlContextConfig NoSqlDatabaseConfig;
-        public IExamplePersonAdapter PersonAdapter;
-        public List<Person> People;
+        public ExamplePersonSessionAdapter PersonSessionAdapter;
 
-        public ExamplePersonAdapterFixture()
+        public HPKExampleFixture()
         {
             NoSqlDatabaseConfig = new ExampleConfig();
 
@@ -34,19 +32,14 @@ namespace dii.storage.cosmos.examples.Fixtures
 
             if (Optimizer == null)
             {
-                Optimizer = Optimizer.Init(NoSqlDatabaseConfig.CosmosStorageDBs.First().DatabaseId, typeof(Person), typeof(PersonSession));
+                Optimizer = Optimizer.Init(NoSqlDatabaseConfig.CosmosStorageDBs.First().DatabaseId, typeof(PersonSession));
             }
 
             context.InitTablesAsync(ExampleConfig.DbName, Optimizer.Tables, true, Optimizer).Wait();
 
-            if (PersonAdapter == null)
+            if (PersonSessionAdapter == null)
             {
-                PersonAdapter = new ExamplePersonAdapter();
-            }
-
-            if (People == null)
-            {
-                People = new List<Person>();
+                PersonSessionAdapter = new ExamplePersonSessionAdapter();
             }
         }
 
@@ -62,4 +55,5 @@ namespace dii.storage.cosmos.examples.Fixtures
             GC.SuppressFinalize(this);
         }
     }
+
 }

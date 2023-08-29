@@ -17,8 +17,6 @@ namespace dii.storage.cosmos.examples.Fixtures
     {
         public Optimizer Optimizer;
         public INoSqlContextConfig NoSqlDatabaseConfig;
-        public IExamplePersonAdapter PersonAdapter;
-        public IExamplePersonSessionAdapter PersonSessionAdapter;
         public ExamplePersonOrderAdapter PersonOrderAdapter;
         public List<PersonOrder> Orders;
         public DiiCosmosLookupAdapter OrderLookupAdapter;
@@ -39,16 +37,12 @@ namespace dii.storage.cosmos.examples.Fixtures
 
             if (Optimizer == null)
             {
-                Optimizer = Optimizer.Init(NoSqlDatabaseConfig.CosmosStorageDBs.First().DatabaseId, typeof(Person), typeof(PersonSession), typeof(PersonOrder));
-                //Optimizer = Optimizer.Init(NoSqlDatabaseConfig.CosmosStorageDBs.First().DatabaseId, typeof(PersonOrder));
+                //Optimizer = Optimizer.Init(NoSqlDatabaseConfig.CosmosStorageDBs.First().DatabaseId, typeof(Person), typeof(PersonSession), typeof(PersonOrder));
+                Optimizer = Optimizer.Init(NoSqlDatabaseConfig.CosmosStorageDBs.First().DatabaseId, typeof(PersonOrder));
             }
 
             context.InitTablesAsync(ExampleConfig.DbName, Optimizer.Tables, true, Optimizer).Wait();
 
-            if (PersonAdapter == null)
-            {
-                PersonAdapter = new ExamplePersonAdapter();
-            }
             if (PersonOrderAdapter == null)
             {
                 PersonOrderAdapter = new ExamplePersonOrderAdapter();

@@ -89,12 +89,6 @@ namespace dii.storage.cosmos.examples.Adapters
                 EnableContentResponseOnWrite = true
             };
 
-            //var patchOperations = new List<PatchOperation>()
-            //{
-            //    PatchOperation.Set("/ended", ended),
-            //    PatchOperation.Set("/duration", (long)(ended - started).TotalMilliseconds)
-            //};
-
             var patchOperations = new Dictionary<string, object>()
             {
                 { "/ended", ended },

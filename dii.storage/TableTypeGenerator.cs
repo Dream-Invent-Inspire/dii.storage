@@ -1,5 +1,6 @@
 ﻿using dii.storage.Attributes;
 using dii.storage.Exceptions;
+using dii.storage.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,10 +15,6 @@ namespace dii.storage
         public TableTypeGenerator(Type source, ModuleBuilder builder, Dictionary<Type,Type> subPropertyMapping, bool suppressConfigurationErrors = false) : base(source, builder, subPropertyMapping, suppressConfigurationErrors)
         { }
 
-        //public TableTypeGenerator(TypeBuilder typeBuilder, Dictionary<Type, Type> subPropertyMapping, bool suppressConfigurationErrors = false) : base(typeBuilder, subPropertyMapping, suppressConfigurationErrors)
-        //{
-            
-        //}
         protected Dictionary<int, PropertyInfo> partitionFields { get; set; } = new Dictionary<int, PropertyInfo>();
         protected Dictionary<int, PropertyInfo> hierarchicalPartitionFields { get; set; } = new Dictionary<int, PropertyInfo>();
 
@@ -28,6 +25,8 @@ namespace dii.storage
         protected Dictionary<int, PropertyInfo> LookupIdFields { get; set; } = new Dictionary<int, PropertyInfo>();
 
         protected List<PropertyInfo> SearchableFields { get; set; } = new List<PropertyInfo>();
+
+        protected PropertyInfo ChangeTrackerField { get; set; }
 
         /// <summary>
         /// The delimiter to separate aggregate partiton keys.
@@ -213,6 +212,17 @@ namespace dii.storage
             }
         }
 
+        protected bool ProcessChangeTrackerField(PropertyInfo p)
+        {
+            if (p.Name.Equals(Constants.ReservedChangeTrackerKey, StringComparison.InvariantCultureIgnoreCase))
+            {
+                ChangeTrackerField = p;
+
+                return true;
+            }
+            return false;
+        }
+
         protected override void AppendExtendedFields()
         {
             base.AppendExtendedFields();
@@ -220,27 +230,25 @@ namespace dii.storage
             //Append the necessary table fields for the PK and the ID
             if (this.hierarchicalPartitionFields?.Any() ?? false)
             {
-                foreach(var field in hierarchicalPartitionFields.OrderBy(x => x.Key))
+                foreach (var field in hierarchicalPartitionFields.OrderBy(x => x.Key))
                 {
                     _ = AddProperty(typeBuilder, field.Value.Name, field.Value.PropertyType);
-                };
+                }
             }
             else
             {
                 _ = AddProperty(typeBuilder, Constants.ReservedPartitionKeyKey, typeof(string));
             }
+
+            if (this.idFields?.Any() ?? false)
+            {
+                foreach (var field in idFields.Values.Where(x => !this.workingPropertySet.ContainsKey(x.Name)).ToList())
+                {
+                    _ = AddProperty(typeBuilder, field.Name, field.PropertyType);
+                };
+            }
             _ = AddProperty(typeBuilder, Constants.ReservedIdKey, typeof(string));
         }
-
-        //public Serializer GenerateLookup(Dictionary<int, PropertyInfo> hierarchicalPartitionFields, Dictionary<int, PropertyInfo> idFields)
-        //{
-        //    this.hierarchicalPartitionFields = hierarchicalPartitionFields;
-        //    this.idFields = idFields;
-
-        //    var serializer = AppendStandardFields();
-        //    MapTypes(serializer);
-        //    return serializer;
-        //}
 
         protected override Serializer CustomizeSearchableSerializer(Dictionary<string, PropertyInfo> properties, Serializer serializer)
         {
@@ -273,6 +281,7 @@ namespace dii.storage
             if (LookupIdFields?.Any() ?? false)
             {
                 serializer.LookupIdProperties = LookupIdFields;
+                serializer.diiChangeTrackerProperty = ChangeTrackerField;
             }
             if (SearchableFields?.Any() ?? false)
             {
@@ -296,5 +305,6 @@ namespace dii.storage
 
             return serializer;
         }
+
     }
 }

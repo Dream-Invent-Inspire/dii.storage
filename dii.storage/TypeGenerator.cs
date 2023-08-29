@@ -82,6 +82,9 @@ namespace dii.storage
         protected PackingMapper jsonMap { get; private set; }
         protected PackingMapper compressMap { get; private set; }
 
+        protected Dictionary<string, PropertyInfo> workingPropertySet { get; set; } = new Dictionary<string, PropertyInfo>();
+
+
         private readonly string[] _reservedSearchableKeys = new string[3]
         {
             Constants.ReservedPartitionKeyKey,
@@ -116,25 +119,6 @@ namespace dii.storage
             compressBuilder.SetCustomAttribute(new CustomAttributeBuilder(msgPkAttrConst, new object[] { false }));
 
         }
-
-        //public TypeGenerator(TypeBuilder typeBuilder, Dictionary<Type, Type> subPropertyMappings, bool suppressConfigurationErrors = false)
-        //{
-        //    suppressConfigErrors = suppressConfigurationErrors;
-        //    SubPropertyMapping = subPropertyMappings;
-
-        //    jsonMap = new PackingMapper();
-        //    compressMap = new PackingMapper();
-
-        //    moduleBuilder = (ModuleBuilder)typeBuilder.Module;
-        //    this.typeBuilder = typeBuilder;
-        //    var typeConst = typeBuilder.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
-
-        //    var sourceType = (Type)typeBuilder;
-        //    sourceProperties = sourceType.GetProperties();
-        //    compressBuilder = moduleBuilder.DefineType($"{sourceType.Name}Compressed", TypeAttributes.Public);
-        //    compressConst = compressBuilder.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
-        //    compressBuilder.SetCustomAttribute(new CustomAttributeBuilder(msgPkAttrConst, new object[] { false }));
-        //}
 
         public Serializer Generate()
         {
@@ -197,6 +181,12 @@ namespace dii.storage
             var jsonAttachmentAttr = new CustomAttributeBuilder(jsonAttrConstructor, new object[] { Constants.ReservedCompressedKey });
             _ = AddProperty(typeBuilder, Constants.ReservedCompressedKey, typeof(string), jsonAttachmentAttr);
 
+            //Add the timestamp and version fields
+            _ = AddProperty(typeBuilder, Constants.ReservedTimestampKey, typeof(long));
+            _ = AddProperty(typeBuilder, Constants.ReservedDataVersionKey, typeof(string));
+            _ = AddProperty(typeBuilder, Constants.ReservedChangeTrackerKey, typeof(string));
+            //This is the last opportunity to add properties to the type.
+
             Type storageEntityType = typeBuilder.CreateTypeInfo();
             Type compressedEntityType = compressBuilder.CreateTypeInfo();
             PropertyInfo attachments;
@@ -232,7 +222,12 @@ namespace dii.storage
             serializer.CompressedEntityMapping = compressMap;
             serializer.StoredEntityType = storageEntityType;
             serializer.CompressedEntityType = compressedEntityType;
-
+            
+            PropertyInfo trackerPropertyInfo = storageEntityType.GetProperty(Constants.ReservedChangeTrackerKey);
+            if (trackerPropertyInfo != null)
+            {
+                serializer.diiChangeTrackerProperty = trackerPropertyInfo;
+            }
             return serializer;
         }
 
@@ -354,7 +349,10 @@ namespace dii.storage
                 _ = AddProperty(typeBuilder, search.Abbreviation, p.PropertyType, jsonAttr);
             }
 
-            jsonMap.ConcreteProperties.Add(search.Abbreviation, p);
+            if (!jsonMap.ConcreteProperties.ContainsKey(search.Abbreviation))
+            {
+                jsonMap.ConcreteProperties.Add(search.Abbreviation, p);
+            }
         }
 
         protected void ProcessCompressed(PropertyInfo p)
@@ -371,6 +369,8 @@ namespace dii.storage
 
         protected PropertyBuilder AddProperty(TypeBuilder typeBuilder, string name, Type propertyType, params CustomAttributeBuilder[] customAttributeBuilders)
         {
+            if (this.workingPropertySet.ContainsKey(name)) return null;
+
             var field = typeBuilder.DefineField($"_{name}", propertyType, FieldAttributes.Private);
             var prop = typeBuilder.DefineProperty(name, PropertyAttributes.None, propertyType, null);
 
@@ -405,6 +405,7 @@ namespace dii.storage
             {
                 prop.SetCustomAttribute(customAttributeBuilder);
             }
+            this.workingPropertySet.Add(name, prop);
 
             return prop;
         }

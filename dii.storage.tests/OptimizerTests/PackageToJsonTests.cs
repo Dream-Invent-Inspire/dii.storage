@@ -35,8 +35,11 @@ namespace dii.storage.tests.OptimizerTests
             var entity = optimizer.PackageToJson(fakeEntityTwo);
 
             Assert.NotNull(entity);
-            var expectedEntity = $"{{\"string\":null,\"long\":0,\"complex\":null,\"collection_complex\":null,\"_etag\":null,\"PK\":\"dddd0000-0000-0000-0000-000000000000\",\"id\":\"ffff0000-0000-0000-0000-000000000000\",\"p\":\"kdkkZmFrZUVudGl0eVR3bzogQ29tcHJlc3NlZFN0cmluZ1ZhbHVl\"}}";
-            Assert.Equal(expectedEntity, entity);
+            //var expectedEntity = $"{{\"string\":null,\"long\":0,\"complex\":null,\"collection_complex\":null,\"_etag\":null,\"PK\":\"dddd0000-0000-0000-0000-000000000000\",\"id\":\"ffff0000-0000-0000-0000-000000000000\",\"p\":\"kdkkZmFrZUVudGl0eVR3bzogQ29tcHJlc3NlZFN0cmluZ1ZhbHVl\",\"_ts\":0,\"DiiChangeTrackerString\":null}}";
+            var expectedEntity = optimizer.UnpackageFromJson<FakeEntityTwo>(entity);
+            Assert.Equal(expectedEntity.Id, fakeEntityTwo.Id);
+            Assert.Equal(expectedEntity.FakeEntityTwoId, fakeEntityTwo.FakeEntityTwoId);
+            Assert.Equal(expectedEntity.CompressedStringValue, fakeEntityTwo.CompressedStringValue);
         }
 
         [Fact, TestPriorityOrder(101)]

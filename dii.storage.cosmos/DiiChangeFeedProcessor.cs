@@ -38,7 +38,7 @@ namespace dii.storage.cosmos
                 try
                 {
                     //Process the job
-                    if (!await ProcessJob(job))
+                    if (!await ProcessJobAsync(job))
                     {
                         //retry
                         retries.Add(job);
@@ -67,7 +67,7 @@ namespace dii.storage.cosmos
                 try
                 {
                     //TODO: add exponential retry here
-                    await ProcessJob(retry);
+                    await ProcessJobAsync(retry);
                 }
                 catch (Exception ex)
                 { 
@@ -77,19 +77,17 @@ namespace dii.storage.cosmos
             return;
         }
 
-        protected async Task<bool> ProcessJob(JObject job)
+        protected async Task<bool> ProcessJobAsync(JObject job)
         {
-            //Hydrate the lookup object
-            //Executed command: var lookupObj = _optimizer.UnpackageFromJson<T>(job.ToString());
-
+            //Hydrate the source and lookup objects
             var method = _optimizer.GetType().GetMethod("UnpackageFromJson").MakeGenericMethod(_concreteType); //This passed in concrete type is for the source table
             var sourceObj = method.Invoke(_optimizer, new object[] { job.ToString() });
             var dynamicObject = Activator.CreateInstance(_tableMetaData.ConcreteType); //this is the Lookup table type...the dynamically created (from the source) type
 
+            //Transfer data from source object to the target Dynamic object
             var sourceProperties = sourceObj.GetType().GetProperties().ToDictionary(p => p.Name, p => p);
             foreach (var targetProp in dynamicObject.GetType().GetProperties())
             {
-                //Transfer data from source object to the target Dynamic object
                 if (sourceProperties.ContainsKey(targetProp.Name))
                 {
                     var sourceProp = sourceProperties[targetProp.Name];
@@ -101,17 +99,14 @@ namespace dii.storage.cosmos
                 }
             }
 
-            //upsert the sync'd object
-            //NOTE: We don't need or want the entity back from the upsert...so don't unpack it.
-            //Use EnableContentResponseOnWrite=false and cast result to bool....hack..?
-
-            //First, set the Lookup Container on the (source) MetaTableData object
-            //_tableMetaData.LookupContainer = _optimizer.TableMappings.ContainsKey(_tableMetaData.LookupType) ? _optimizer.TableMappings[_tableMetaData.LookupType]. : null;
-            _tableMetaData.LookupContainer = _context.Client.GetContainer(_tableMetaData.DbId, _tableMetaData.SourceTableNameForLookup);
+            //Set the Lookup Container on the (source) MetaTableData object
+            _tableMetaData.LookupContainer = _tableMetaData.LookupContainer ?? _context.Client.GetContainer(_tableMetaData.DbId, _tableMetaData.SourceTableNameForLookup);
             if (_tableMetaData.LookupContainer == null)
             {
                 throw new Exception($"Unable to find Lookup Container for {_tableMetaData.SourceTableNameForLookup}");
             }
+
+            //Upsert the Lookup object
             var adapter = new DiiCosmosLookupAdapter(_sourceTblMetaData); //This is the source table TableMetaData
             var result = await adapter.UpsertIfMoreRecentAsync(
                 dynamicObject, 
