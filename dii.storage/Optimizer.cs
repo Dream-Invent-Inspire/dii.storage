@@ -161,6 +161,12 @@ namespace dii.storage
 			return _instance;
 		}
 
+        public static void Clear()
+        {
+            _instance = null;
+        }
+
+        
 		public void ConfigureTypes(Dictionary<string, List<Type>> types)
 		{
 
@@ -243,11 +249,11 @@ namespace dii.storage
 								//Create the dynamic Lookup table and register it
 								string tblName = type.GetCustomAttribute<StorageNameAttribute>()?.Name ?? type.Name;
 								var lookupType = RegisterLookupType(
-                                    tableMetaData.LookupHpks,
-									//tableMetaData.LookupIds?.Select(x => x.Value).ToList(),
-									tableMetaData.LookupIds,
-									tableMetaData.SearchableFields?.ToList(),
-									lookupTableMetaData: new TableMetaData
+                                    //                           tableMetaData.LookupHpks,
+                                    //tableMetaData.LookupIds,
+                                    //tableMetaData.SearchableFields?.ToList(),
+                                    sourceTableMetaData: tableMetaData, // Source table metadata
+                                    lookupTableMetaData: new TableMetaData
 									{
 										DbId = dbid,
 										TimeToLiveInSeconds = type.GetCustomAttribute<EnableTimeToLiveAttribute>()?.TimeToLiveInSeconds,
@@ -255,7 +261,7 @@ namespace dii.storage
 										ClassName = $"{tableMetaData.ClassName}{LookupTableSuffix}",
                                         //this is used for the change feed wire up
                                         SourceTableNameForLookup = tableMetaData.TableName, //this is THIS entity's table name (not the lookup table)
-										SourceTableTypeForLookup = type, //this is THIS entity's type (not the lookup type)
+										SourceTableTypeForLookup = type, //this is THIS entity's type (not the lookup type) for the Lookup object to cross reference
 										IsLookupTable = true
 									});
 
@@ -310,105 +316,69 @@ namespace dii.storage
             return storageTypeSerializer;
         }
 
-		private Type RegisterLookupType(Dictionary<int,PropertyInfo> lookupHpks, Dictionary<int, PropertyInfo> lookupIds, List<PropertyInfo> searchableFields, TableMetaData lookupTableMetaData)
+        private Type RegisterLookupType(TableMetaData sourceTableMetaData, TableMetaData lookupTableMetaData)
         {
-            Type dynamicType = DynamicTypeCreator.CreateLookupType(lookupHpks, lookupIds, searchableFields, lookupTableMetaData);
-			var lookupTypeSerializer = RegisterType(dynamicType);
+			var otherFields = new List<PropertyInfo>();
+			otherFields.AddRange(sourceTableMetaData.HierarchicalPartitionKeys.Values);
+			otherFields.AddRange(sourceTableMetaData.IdProperties.Values);
+
+			//Generate the dynamic type for the Lookup entity
+            Type dynamicType = DynamicTypeCreator.CreateLookupType(sourceTableMetaData.LookupHpks, sourceTableMetaData.LookupIds, otherFields, lookupTableMetaData);
+            var lookupTypeSerializer = RegisterType(dynamicType);
 
 			//Add to the lookup table
 			lookupTableMetaData.ConcreteType = dynamicType;
 			lookupTableMetaData.StorageType = lookupTypeSerializer.StoredEntityType;
-			lookupTableMetaData.HierarchicalPartitionKeys = lookupHpks.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
-			lookupTableMetaData.LookupIds = lookupIds;
-            
+			lookupTableMetaData.HierarchicalPartitionKeys = sourceTableMetaData.LookupHpks.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
+			
+			//ToDo: not sure about this...does this need to be set on the lookup table?
+			lookupTableMetaData.LookupIds = sourceTableMetaData.LookupIds.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
+
             Tables.Add(lookupTableMetaData);
             TableMappings.Add(dynamicType, lookupTableMetaData);
 			return dynamicType;
         }
 
-		//private void SetAttributedProperty(TypeBuilder typeBuilder, PropertyInfo property, params Type[] attributeTypes)
+		//private void SetAttributedProperty(TypeBuilder typeBuilder, PropertyInfo property, DiiBaseAttribute attribute, Type attributeType)
 		//{
-		//	foreach (var attrType in attributeTypes)
+		//	//var att = property.GetCustomAttribute<SearchableAttribute>();
+		//	if (attribute != null)
 		//	{
-		//		Attribute attribute = property.GetCustomAttribute(attrType);
-		//		if (attribute != null)
-		//		{
-		//			var propertyName = property.Name;
-		//			var propertyType = property.PropertyType;
-		//			var fieldBuilder = typeBuilder.DefineField($"_{propertyName}", propertyType, FieldAttributes.Private);
-		//			var propertyBuilder = typeBuilder.DefineProperty(propertyName, PropertyAttributes.HasDefault, propertyType, null);
+		//		// Define a single property "Name" of type string
+		//		var propertyName = property.Name;
+		//		var fieldBuilder = typeBuilder.DefineField($"_{propertyName}", property.PropertyType, FieldAttributes.Private);
+		//		var propertyBuilder = typeBuilder.DefineProperty(propertyName, PropertyAttributes.HasDefault, property.PropertyType, null);
 
-		//			// Getting the right constructor
-		//			var ctor = attrType.GetConstructor(new[] { typeof(Type), typeof(int) });
+		//		// Getting the right constructor
+		//		//var ctor = attributeType.GetConstructor(new[] { typeof(Type), typeof(int) });
 
-		//			// Creating the CustomAttributeBuilder with extracted values
-		//			var attributeBuilder = new CustomAttributeBuilder(
-		//				ctor,
-		//				new object[] { attribute.PartitionKeyType, attribute.Order }
-		//			);
+		//		// Creating the CustomAttributeBuilder with extracted values
+		//		var attributeBuilder = attribute.GetConstructorBuilder();
+  //              //	new CustomAttributeBuilder(
+  //              //	ctor,
+  //              //	new object[] { attribute.IdKeyType, attribute.Order }
+  //              //);
 
-		//			propertyBuilder.SetCustomAttribute(attributeBuilder);
+  //              propertyBuilder.SetCustomAttribute(attributeBuilder);
 
-		//			// Create get and set methods for the property and associate them with the property
-		//			var getMethodBuilder = typeBuilder.DefineMethod($"get_{propertyName}", MethodAttributes.Public, propertyType, Type.EmptyTypes);
-		//			var getIL = getMethodBuilder.GetILGenerator();
-		//			getIL.Emit(OpCodes.Ldarg_0);
-		//			getIL.Emit(OpCodes.Ldfld, fieldBuilder);
-		//			getIL.Emit(OpCodes.Ret);
+		//		// Create get and set methods for the property and associate them with the property
+		//		var getMethodBuilder = typeBuilder.DefineMethod($"get_{propertyName}", MethodAttributes.Public, property.PropertyType, Type.EmptyTypes);
+		//		var getIL = getMethodBuilder.GetILGenerator();
+		//		getIL.Emit(OpCodes.Ldarg_0);
+		//		getIL.Emit(OpCodes.Ldfld, fieldBuilder);
+		//		getIL.Emit(OpCodes.Ret);
 
-		//			var setMethodBuilder = typeBuilder.DefineMethod($"set_{propertyName}", MethodAttributes.Public, null, new Type[] { propertyType });
-		//			var setIL = setMethodBuilder.GetILGenerator();
-		//			setIL.Emit(OpCodes.Ldarg_0);
-		//			setIL.Emit(OpCodes.Ldarg_1);
-		//			setIL.Emit(OpCodes.Stfld, fieldBuilder);
-		//			setIL.Emit(OpCodes.Ret);
+		//		var setMethodBuilder = typeBuilder.DefineMethod($"set_{propertyName}", MethodAttributes.Public, null, new Type[] { property.PropertyType });
+		//		var setIL = setMethodBuilder.GetILGenerator();
+		//		setIL.Emit(OpCodes.Ldarg_0);
+		//		setIL.Emit(OpCodes.Ldarg_1);
+		//		setIL.Emit(OpCodes.Stfld, fieldBuilder);
+		//		setIL.Emit(OpCodes.Ret);
 
-		//			propertyBuilder.SetGetMethod(getMethodBuilder);
-		//			propertyBuilder.SetSetMethod(setMethodBuilder);
-		//		}
+		//		propertyBuilder.SetGetMethod(getMethodBuilder);
+		//		propertyBuilder.SetSetMethod(setMethodBuilder);
 		//	}
 		//}
-
-		private void SetAttributedProperty(TypeBuilder typeBuilder, PropertyInfo property, DiiBaseAttribute attribute, Type attributeType)
-		{
-			//var att = property.GetCustomAttribute<SearchableAttribute>();
-			if (attribute != null)
-			{
-				// Define a single property "Name" of type string
-				var propertyName = property.Name;
-				var fieldBuilder = typeBuilder.DefineField($"_{propertyName}", property.PropertyType, FieldAttributes.Private);
-				var propertyBuilder = typeBuilder.DefineProperty(propertyName, PropertyAttributes.HasDefault, property.PropertyType, null);
-
-				// Getting the right constructor
-				//var ctor = attributeType.GetConstructor(new[] { typeof(Type), typeof(int) });
-
-				// Creating the CustomAttributeBuilder with extracted values
-				var attributeBuilder = attribute.GetConstructorBuilder();
-                //	new CustomAttributeBuilder(
-                //	ctor,
-                //	new object[] { attribute.IdKeyType, attribute.Order }
-                //);
-
-                propertyBuilder.SetCustomAttribute(attributeBuilder);
-
-				// Create get and set methods for the property and associate them with the property
-				var getMethodBuilder = typeBuilder.DefineMethod($"get_{propertyName}", MethodAttributes.Public, property.PropertyType, Type.EmptyTypes);
-				var getIL = getMethodBuilder.GetILGenerator();
-				getIL.Emit(OpCodes.Ldarg_0);
-				getIL.Emit(OpCodes.Ldfld, fieldBuilder);
-				getIL.Emit(OpCodes.Ret);
-
-				var setMethodBuilder = typeBuilder.DefineMethod($"set_{propertyName}", MethodAttributes.Public, null, new Type[] { property.PropertyType });
-				var setIL = setMethodBuilder.GetILGenerator();
-				setIL.Emit(OpCodes.Ldarg_0);
-				setIL.Emit(OpCodes.Ldarg_1);
-				setIL.Emit(OpCodes.Stfld, fieldBuilder);
-				setIL.Emit(OpCodes.Ret);
-
-				propertyBuilder.SetGetMethod(getMethodBuilder);
-				propertyBuilder.SetSetMethod(setMethodBuilder);
-			}
-		}
 
 		/// <summary>
 		/// Identified whether a <see cref="Type"/> is already registered with the <see cref="Optimizer"/>
@@ -649,7 +619,7 @@ namespace dii.storage
 			}
 
 			var type = typeof(T);
-			var props = OptimizedTypeRegistrar.GetPackageMapping(type).PartitionKeyProperties;
+			var props = OptimizedTypeRegistrar.GetPackageMapping(type)?.PartitionKeyProperties;
 
             if (OptimizedTypeRegistrar.IsMapped(type) && props != null && props.Any())
 			{
@@ -758,7 +728,7 @@ namespace dii.storage
 			return _instance;
 		}
 
-		private static PropertyBuilder AddProperty(TypeBuilder typeBuilder, string name, Type propertyType, params CustomAttributeBuilder[] customAttributeBuilders)
+		private static PropertyBuilder AddPropertyX(TypeBuilder typeBuilder, string name, Type propertyType, params CustomAttributeBuilder[] customAttributeBuilders)
 		{
 			var field = typeBuilder.DefineField($"_{name}", propertyType, FieldAttributes.Private);
 			var prop = typeBuilder.DefineProperty(name, PropertyAttributes.None, propertyType, null);

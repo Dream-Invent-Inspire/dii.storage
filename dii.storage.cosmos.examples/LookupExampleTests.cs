@@ -22,8 +22,6 @@ namespace dii.storage.cosmos.examples
 
         public LookupExampleTests(LookupExampleFixture fixture)
         {
-            //quicktest();
-
             _fixture = fixture ?? throw new ArgumentNullException(nameof(fixture));
 
             if (_fixture.Orders == null)
@@ -32,40 +30,6 @@ namespace dii.storage.cosmos.examples
             }
         }
 
-
-        private void quicktest()
-        {
-            var typeName = "PersonOrderLookup";
-
-            var assemblyName = new AssemblyName("DynamicAssembly");
-            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
-            var moduleBuilder = assemblyBuilder.DefineDynamicModule("DynamicModule");
-
-            var typeBuilder = moduleBuilder.DefineType(typeName, TypeAttributes.Public, typeof(object), new[] { typeof(IDoh) });
-
-            // Define a default constructor (a constructor that takes no parameters)
-            var constructorBuilder = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, Type.EmptyTypes);
-
-            // Get the ILGenerator for the constructor
-            var ilGenerator = constructorBuilder.GetILGenerator();
-
-            // Load 'this' onto the evaluation stack
-            ilGenerator.Emit(OpCodes.Ldarg_0);
-
-            // Load the address of the base (System.Object) constructor
-            var objectConstructor = typeof(object).GetConstructor(new Type[0]);
-            ilGenerator.Emit(OpCodes.Call, objectConstructor);
-
-            // Return from the constructor method
-            ilGenerator.Emit(OpCodes.Ret);
-
-            //These are for the interface implementations...handle separately
-            DefineProperty(typeBuilder, "SchemaVersion", typeof(Version));
-
-            var ttt = typeBuilder.CreateTypeInfo().AsType();
-
-
-        }
         private List<PersonOrder> FillOrders()
         {
             var orders = new List<PersonOrder>();
@@ -213,24 +177,24 @@ namespace dii.storage.cosmos.examples
             };
 
             try
-            { 
+            {
                 var result1 = await _fixture.PersonOrderAdapter.CreateAsync(o1).ConfigureAwait(false);
-                Task.Delay(10000).Wait();
+                Task.Delay(100).Wait();
                 var result2 = await _fixture.PersonOrderAdapter.CreateAsync(o2).ConfigureAwait(false);
-                Task.Delay(10000).Wait();
+                Task.Delay(100).Wait();
 
 
                 o1.Catalog = "Catalog1";
                 var result3 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
-                Task.Delay(10000).Wait();
+                Task.Delay(100).Wait();
 
                 o1.PaymentType = "Cash";
                 var result4 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
-                Task.Delay(10000).Wait();
+                Task.Delay(100).Wait();
 
 
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
             }
 
@@ -244,74 +208,83 @@ namespace dii.storage.cosmos.examples
             //Assert.Equal(storedsession.Catalog, createdPersonSession.Catalog);
             //Assert.Equal(storedsession.SessionEndDate, createdPersonSession.SessionEndDate);
             int x = 100;
-            while(--x >= 0)
+            while (--x >= 0)
             {
                 Task.Delay(1000).Wait();
             }
 
         }
 
-        //[Fact, TestPriorityOrder(20)]
+        [Fact, TestPriorityOrder(20)]
         public async Task RunHPKExample2()
         {
-            //var pmtid = Guid.NewGuid().ToString();
-            //var pid = Guid.NewGuid().ToString();
-
             // Create new item
             var o1 = new PersonOrder
             {
-                PaymentAmount = 100,
+                PaymentAmount = 2220,
                 PaymentType = "Credit",
                 ClientId = "SomeEnterprise",
-                OrderId = "orderid1",
-                PaymentId = "pmtid1",
-                PersonId = "person1",
-                OrderDate = DateTimeOffset.Parse("2023-07-01T21:14:07.3066349Z")
+                OrderId = "orderid222",
+                PaymentId = "pmtid222",
+                PersonId = "person222",
+                OrderDate = DateTimeOffset.Parse("2023-08-22T21:14:07.3066349Z")
             };
-            //Task.Delay(100000).Wait();
+
             try
             {
                 //Create/update
-                PersonOrder result1 =await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
-                Task.Delay(10000).Wait();
+                PersonOrder result1 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
 
                 //Fetch
                 var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
-                int go = 100;
-                while(getres1 == null && --go > 0)
+                int go = 50;
+                while (getres1 == null && --go > 0)
                 {
-                    Task.Delay(10000).Wait();
+                    Task.Delay(100).Wait();
                     getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
                 }
+                Assert.NotNull(getres1);
 
                 //Update a "normal" field
                 getres1.Catalog = "Catalog2";
                 var result2 = await _fixture.PersonOrderAdapter.UpsertAsync(getres1 ?? o1).ConfigureAwait(false);
-                Task.Delay(20000).Wait();
 
                 //Fetch again
                 var getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result2.PaymentType, result2.PaymentAmount.ToString(), result2.ClientId, result2.PersonId, result2.OrderDate).ConfigureAwait(false);
+                go = 50;
+                while (getres2 == null && --go > 0)
+                {
+                    Task.Delay(100).Wait();
+                    getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result2.PaymentType, result2.PaymentAmount.ToString(), result2.ClientId, result2.PersonId, result2.OrderDate).ConfigureAwait(false);
+                }
+                if (go > 0) Task.Delay(1000).Wait();
+                Assert.NotNull(getres2);
 
-                //Update a "hpk" field
+                //Update a "id" field
                 getres2.PaymentType = "Cash";
                 var result3 = await _fixture.PersonOrderAdapter.UpsertAsync(getres2).ConfigureAwait(false);
-                Task.Delay(20000).Wait();
 
                 //Last fetch...will the "new" record be there? ...and the old record deleted?
                 var result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
+                go = 50;
+                while (result4 == null && --go > 0)
+                {
+                    Task.Delay(100).Wait();
+                    result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
+                }
+                if (go > 0) Task.Delay(1000).Wait();
+                Assert.NotNull(result4);
 
             }
             catch (Exception ex)
             {
             }
 
-            //var storedsession = await _fixture.OrderLookupAdapter.LookupAsync(o1);
-
-            int x = 100;
-            while (--x >= 0)
-            {
-                Task.Delay(1000).Wait();
-            }
+            //int x = 100;
+            //while (--x >= 0)
+            //{
+            //    Task.Delay(1000).Wait();
+            //}
 
         }
 
@@ -324,10 +297,10 @@ namespace dii.storage.cosmos.examples
                 PaymentAmount = 300,
                 PaymentType = "Credit",
                 ClientId = "SomeEnterprise",
-                OrderId = "3",
-                PaymentId = "abc",
-                PersonId = "3",
-                OrderDate = DateTime.Parse("2023-07-02T21:14:37.3066349Z")
+                OrderId = "orderid3",
+                PaymentId = "pmtid3",
+                PersonId = "person3",
+                OrderDate = DateTimeOffset.Parse("2023-08-03T21:14:07.3066349Z")
             };
 
             try
@@ -339,21 +312,116 @@ namespace dii.storage.cosmos.examples
             }
         }
 
+        [Fact, TestPriorityOrder(40)]
+        public async Task RunHPKExample4()
+        {
+            // Create new item
+            var o1 = new PersonOrder
+            {
+                PaymentAmount = 400,
+                PaymentType = "Credit",
+                ClientId = "SomeEnterprise",
+                OrderId = "orderid4",
+                PaymentId = "pmtid4",
+                PersonId = "person4",
+                OrderDate = DateTimeOffset.Parse("2023-08-04T21:14:07.3066349Z")
+            };
+
+            try
+            {
+                //Create/update
+                PersonOrder result1 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
+
+                //Fetch
+                var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+                int go = 20;
+                while (getres1 == null && --go > 0)
+                {
+                    Task.Delay(100).Wait();
+                    getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+                }
+                Assert.NotNull(getres1);
+
+                //Update a "normal" field
+                getres1.Catalog = "Catalog2";
+                var result2 = await _fixture.PersonOrderAdapter.UpsertAsync(getres1 ?? o1).ConfigureAwait(false);
+
+                //Fetch again
+                var getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result2.PaymentType, result2.PaymentAmount.ToString(), result2.ClientId, result2.PersonId, result2.OrderDate).ConfigureAwait(false);
+                go = 10;
+                while (getres2 == null && --go > 0)
+                {
+                    Task.Delay(100).Wait();
+                    getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result2.PaymentType, result2.PaymentAmount.ToString(), result2.ClientId, result2.PersonId, result2.OrderDate).ConfigureAwait(false);
+                }
+                Assert.NotNull(getres2);
+
+                //Update a "hpk" field
+                getres2.OrderId = "orderidX";
+                var result3 = await _fixture.PersonOrderAdapter.UpsertAsync(getres2).ConfigureAwait(false);
+
+                //Last fetch...will the "new" record be there? ...and the old record deleted?
+                var result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
+                go = 10;
+                while (result4 == null && --go > 0)
+                {
+                    Task.Delay(100).Wait();
+                    result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
+                }
+                Assert.NotNull(result4);
+
+            }
+            catch (Exception ex)
+            {
+            }
+
+            //int x = 100;
+            //while (--x >= 0)
+            //{
+            //    Task.Delay(1000).Wait();
+            //}
+
+        }
+
+        [Fact, TestPriorityOrder(50)]
+        public async Task Test_ts()
+        {
+            DateTime dateTime = new DateTime(2023, 8, 24, 12, 01, 01);
+            long unixEpoch = ConvertDateTimeToUnix(dateTime);
+
+            long newEpoch = 1693064914; // Example Unix epoch timestamp
+            dateTime = ConvertUnixToDateTime(newEpoch);
+        }
+
+        public static DateTime ConvertUnixToDateTime(long unixEpoch)
+        {
+            DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            return epoch.AddSeconds(unixEpoch);
+        }
+        public static long ConvertDateTimeToUnix(DateTime dateTime)
+        {
+            DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            TimeSpan timeSpan = dateTime.ToUniversalTime() - epoch;
+            return (long)timeSpan.TotalSeconds;
+        }
+
+
         #region Teardown
         [Fact, TestPriorityOrder(int.MaxValue)]
         public async Task Teardown()
         {
             try
             {
-                var context = DiiCosmosContext.Get();
+                Optimizer.Clear();
+                //var context = DiiCosmosContext.Get();
 
-                if (context.Dbs != null)
-                {
-                    foreach (var db in context.Dbs)
-                    {
-                        _ = await db.DeleteAsync().ConfigureAwait(false);
-                    }
-                }
+                //if (context.Dbs != null)
+                //{
+                //    foreach (var db in context.Dbs)
+                //    {
+                //        _ = await db.DeleteAsync().ConfigureAwait(false);
+                //    }
+                //}
             }
             catch (Exception ex)
             {
@@ -361,36 +429,31 @@ namespace dii.storage.cosmos.examples
         }
         #endregion
 
-        private static void DefineProperty(TypeBuilder typeBuilder, string propertyName, Type propertyType, bool getterOnly = false)
-        {
-            var fieldBuilder = typeBuilder.DefineField($"_{propertyName}", propertyType, FieldAttributes.Private);
-            var propertyBuilder = typeBuilder.DefineProperty(propertyName, PropertyAttributes.HasDefault, propertyType, null);
+        //    private static void DefineProperty(TypeBuilder typeBuilder, string propertyName, Type propertyType, bool getterOnly = false)
+        //    {
+        //        var fieldBuilder = typeBuilder.DefineField($"_{propertyName}", propertyType, FieldAttributes.Private);
+        //        var propertyBuilder = typeBuilder.DefineProperty(propertyName, PropertyAttributes.HasDefault, propertyType, null);
 
-            var getMethodBuilder = typeBuilder.DefineMethod($"get_{propertyName}", MethodAttributes.Public, propertyType, Type.EmptyTypes);
-            var getIL = getMethodBuilder.GetILGenerator();
-            getIL.Emit(OpCodes.Ldarg_0);
-            getIL.Emit(OpCodes.Ldfld, fieldBuilder);
-            getIL.Emit(OpCodes.Ret);
+        //        var getMethodBuilder = typeBuilder.DefineMethod($"get_{propertyName}", MethodAttributes.Public, propertyType, Type.EmptyTypes);
+        //        var getIL = getMethodBuilder.GetILGenerator();
+        //        getIL.Emit(OpCodes.Ldarg_0);
+        //        getIL.Emit(OpCodes.Ldfld, fieldBuilder);
+        //        getIL.Emit(OpCodes.Ret);
 
-            propertyBuilder.SetGetMethod(getMethodBuilder);
+        //        propertyBuilder.SetGetMethod(getMethodBuilder);
 
-            if (!getterOnly)
-            {
-                var setMethodBuilder = typeBuilder.DefineMethod($"set_{propertyName}", MethodAttributes.Public, null, new Type[] { propertyType });
-                var setIL = setMethodBuilder.GetILGenerator();
-                setIL.Emit(OpCodes.Ldarg_0);
-                setIL.Emit(OpCodes.Ldarg_1);
-                setIL.Emit(OpCodes.Stfld, fieldBuilder);
-                setIL.Emit(OpCodes.Ret);
+        //        if (!getterOnly)
+        //        {
+        //            var setMethodBuilder = typeBuilder.DefineMethod($"set_{propertyName}", MethodAttributes.Public, null, new Type[] { propertyType });
+        //            var setIL = setMethodBuilder.GetILGenerator();
+        //            setIL.Emit(OpCodes.Ldarg_0);
+        //            setIL.Emit(OpCodes.Ldarg_1);
+        //            setIL.Emit(OpCodes.Stfld, fieldBuilder);
+        //            setIL.Emit(OpCodes.Ret);
 
-                propertyBuilder.SetSetMethod(setMethodBuilder);
-            }
-        }
+        //            propertyBuilder.SetSetMethod(setMethodBuilder);
+        //        }
+        //    }
 
-    }
-
-    public interface IDoh
-    {
-        Version SchemaVersion { get; set; }
     }
 }

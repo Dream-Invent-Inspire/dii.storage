@@ -58,7 +58,7 @@ namespace dii.storage.cosmos
 
         #region Fetch APIs
 
-        protected virtual async Task<bool> ItemExists(string id, Dictionary<string, string> partitionKeys, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        protected virtual async Task<bool> ItemExistsAsync(string id, Dictionary<string, string> partitionKeys, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(id) || partitionKeys == default(Dictionary<string, string>))
             {
@@ -75,7 +75,7 @@ namespace dii.storage.cosmos
             if (dic.Count() > 2) partitionKey.Add(dic.ElementAt(2).Value);
 
             //Note: we just care if the entity is present so avoid deserializing the entity
-            var strEntity = await ReadStreamToString(id, partitionKey, requestOptions, cancellationToken);
+            var strEntity = await ReadStreamToStringAsync(id, partitionKey, requestOptions, cancellationToken);
             return !string.IsNullOrWhiteSpace(strEntity);
         }
 
@@ -110,14 +110,14 @@ namespace dii.storage.cosmos
             if (dic.Count() > 1) partitionKey.Add(dic.ElementAt(1).Value);
             if (dic.Count() > 2) partitionKey.Add(dic.ElementAt(2).Value);
 
-            diiEntity = await ReadStream(id, partitionKey, requestOptions, cancellationToken);
+            diiEntity = await ReadStreamAsync(id, partitionKey, requestOptions, cancellationToken);
             return diiEntity;
         }
 
-        protected async Task<T> ReadStream(string id, PartitionKeyBuilder pkBuilder, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        protected async Task<T> ReadStreamAsync(string id, PartitionKeyBuilder pkBuilder, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             // Read the same item but as a stream.
-            var strEntity = await ReadStreamToString(id, pkBuilder, requestOptions, cancellationToken);
+            var strEntity = await ReadStreamToStringAsync(id, pkBuilder, requestOptions, cancellationToken);
             if (!string.IsNullOrWhiteSpace(strEntity))
             {
                 T returnObj = _optimizer.UnpackageFromJson<T>(strEntity);
@@ -126,7 +126,7 @@ namespace dii.storage.cosmos
             }
             return null;
         }
-        protected async Task<string> ReadStreamToString(string id, PartitionKeyBuilder pkBuilder, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        protected async Task<string> ReadStreamToStringAsync(string id, PartitionKeyBuilder pkBuilder, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             //Remove case sensitivity
             //var ids = id.Split($"{Constants.DefaultIdDelimitor}");
@@ -562,7 +562,7 @@ namespace dii.storage.cosmos
             var oldId = _optimizer.GetId(diiEntity); //needed for initial verification
 
             //first verify that the new partition key(s) are valid...as in, there does not exist a record with the (new) partition key(s)
-            bool itemAlreadyExists = await ItemExists(oldId, newPartitionKeys, requestOptions, cancellationToken);
+            bool itemAlreadyExists = await ItemExistsAsync(oldId, newPartitionKeys, requestOptions, cancellationToken);
             if (itemAlreadyExists)
             {
                 throw new Exception("The new partition key(s) already exist in the database.");
@@ -1068,7 +1068,7 @@ namespace dii.storage.cosmos
         }
 
 
-        public async Task<List<T>> RunConcurrentQueries(List<string> queries)
+        public async Task<List<T>> RunConcurrentQueriesAsync(List<string> queries)
         {
             List<T> combinedResults = new List<T>();
             Queue<string> queriesQueue = new Queue<string>(queries);
@@ -1079,7 +1079,7 @@ namespace dii.storage.cosmos
                 while (tasks.Count < 5 && queriesQueue.Any())
                 {
                     string query = queriesQueue.Dequeue();
-                    tasks.Add(RunQuery(query));
+                    tasks.Add(RunQueryAsync(query));
                 }
 
                 Task<List<T>> completedTask = await Task.WhenAny(tasks);
@@ -1090,7 +1090,7 @@ namespace dii.storage.cosmos
             return combinedResults;
         }
 
-        private async Task<List<T>> RunQuery(string query)
+        private async Task<List<T>> RunQueryAsync(string query)
         {
             QueryDefinition queryDefinition = new QueryDefinition(query);
             FeedIterator<string> queryResultSetIterator = _container.GetItemQueryIterator<string>(queryDefinition);

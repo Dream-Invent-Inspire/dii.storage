@@ -5,6 +5,8 @@ using dii.storage.Models.Interfaces;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Serialization.HybridRow.Schemas;
 using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
@@ -49,7 +51,7 @@ namespace dii.storage.cosmos
             // Build the full partition key path
             var partitionKey = GetPK(_tableMetaData.LookupHpks, partitionKeys);
 
-            var lookupResponse = await ReadStream(this._lookupContainer, _tableMetaData.LookupType, id, partitionKey, requestOptions, cancellationToken);
+            var lookupResponse = await ReadStreamAsync(this._lookupContainer, _tableMetaData.LookupType, id, partitionKey, requestOptions, cancellationToken);
             if (lookupResponse != null)
             {
                 //pull the values from the lookup response to read the source
@@ -88,13 +90,141 @@ namespace dii.storage.cosmos
                 {
                     throw new Exception("No source Id was found in the lookup response.");
                 }
-                var sourceObject = await ReadStream(this._sourceContainer, _tableMetaData.ConcreteType, sourceId, partitionKey, requestOptions, cancellationToken);
+                var sourceObject = await ReadStreamAsync(this._sourceContainer, _tableMetaData.ConcreteType, sourceId, partitionKey, requestOptions, cancellationToken);
                 ((DiiCosmosEntity)sourceObject).SetInitialState(_tableMetaData);
                 return sourceObject;
             }
             return null;
         }
-        protected async Task<object> ReadStream(Container container, Type returnType, string id, PartitionKeyBuilder pkBuilder, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+
+        public async Task<List<object>> LookupByQueryAsync(QueryDefinition queryDefinition, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        {
+            if (_tableMetaData.LookupType == null)
+            {
+                throw new Exception("No Lookup dynamic type has been associated with the provided TableMetaData configuration.");
+            }
+
+            //For the source object lookup
+            List<object> ids = new List<object>();
+            List<object> key1 = new List<object>();
+            List<object> key2 = new List<object>();
+            List<object> key3 = new List<object>();
+            string keycol1 = string.Empty, keycol2 = string.Empty, keycol3 = string.Empty;
+
+            // Retrieve an iterator for the result set
+            List<object> objs = new List<object>();
+            using FeedIterator<object> results = this._lookupContainer.GetItemQueryIterator<object>(queryDefinition);
+            while (results.HasMoreResults)
+            {
+                //List<Tuple<string, Dictionary<string, string>>> idAndPks = new List<Tuple<string, Dictionary<string, string>>>();
+                FeedResponse<object> resultsPage = await results.ReadNextAsync();
+
+                foreach (var result in resultsPage)
+                {
+                    var lookupObj = this._optimizer.HydrateEntityByType(this._tableMetaData.LookupType, result.ToString());
+
+                    //pull the values from the lookup response to read the source
+                    var lookupProperties = lookupObj.GetType().GetProperties().ToDictionary(p => p.Name, p => p);
+
+                    var innerdic = _tableMetaData.HierarchicalPartitionKeys;
+                    if (innerdic.Count() > 0 && lookupProperties.ContainsKey(innerdic.ElementAt(0).Value.Name))
+                    {
+                        var res = lookupProperties[innerdic.ElementAt(0).Value.Name].GetValue(lookupObj);
+                        if (res != null)
+                        {
+                            key1.Add(res.ToString());
+                            if (string.IsNullOrEmpty(keycol1)) keycol1 = innerdic.ElementAt(0).Value.Name;
+                        }
+                        else
+                        {
+                            //wtf.... this key property value is null in the dynamic lookup object
+                        }
+                    }
+                    if (innerdic.Count() > 1 && lookupProperties.ContainsKey(innerdic.ElementAt(1).Value.Name))
+                    {
+                        var res = lookupProperties[innerdic.ElementAt(1).Value.Name].GetValue(lookupObj);
+                        if (res != null)
+                        {
+                            key2.Add(res.ToString());
+                            if (string.IsNullOrEmpty(keycol2)) keycol2 = innerdic.ElementAt(1).Value.Name;
+                        }
+                        else
+                        {
+                            //wtf.... this key property value is null in the dynamic lookup object
+                        }
+                    }
+                    if (innerdic.Count() > 2 && lookupProperties.ContainsKey(innerdic.ElementAt(2).Value.Name))
+                    {
+                        var res = lookupProperties[innerdic.ElementAt(2).Value.Name].GetValue(lookupObj);
+                        if (res != null)
+                        {
+                            key3.Add(res.ToString());
+                            if (string.IsNullOrEmpty(keycol3)) keycol3 = innerdic.ElementAt(2).Value.Name;
+                        }
+                        else
+                        {
+                            //wtf.... this key property value is null in the dynamic lookup object
+                        }
+                    }
+
+                    string sourceId = string.Empty;
+                    foreach (var idProp in _tableMetaData.IdProperties)
+                    {
+                        if (!string.IsNullOrWhiteSpace(sourceId)) sourceId += $"{_tableMetaData.IdSeparator}";
+                        if (lookupProperties.ContainsKey(idProp.Value.Name))
+                        {
+                            var res = lookupProperties[idProp.Value.Name].GetValue(lookupObj);
+                            if (res != null)
+                                sourceId += lookupProperties[idProp.Value.Name].GetValue(lookupObj).ToString();
+                            else
+                            {
+                                //wtf....this id property value is null in the dynamic lookup object
+                            }
+                        }
+                    }
+                    ids.Add(sourceId);
+                }
+            }
+            if (ids.Count() == 0)
+            {
+                return objs;
+            }
+
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.Append("SELECT * FROM c WHERE ");
+
+            if (!string.IsNullOrEmpty(keycol1))
+            {
+                stringBuilder.Append($"c.{keycol1} IN ({string.Join(",", key1.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
+            }
+            if (!string.IsNullOrEmpty(keycol2))
+            {
+                stringBuilder.Append($"c.{keycol2} IN ({string.Join(",", key2.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
+            }
+            if (!string.IsNullOrEmpty(keycol3))
+            {
+                stringBuilder.Append($"c.{keycol3} IN ({string.Join(",", key3.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
+            }
+
+            stringBuilder.Append($"c.id IN ({string.Join(",", ids.Distinct().Select(x => $"\"{x}\"").ToList())})");
+
+            //run query
+            using FeedIterator<object> sourceResults = this._sourceContainer.GetItemQueryIterator<object>(stringBuilder.ToString());
+            while (sourceResults.HasMoreResults)
+            {
+                FeedResponse<object> sourceResultsPage = await sourceResults.ReadNextAsync();
+                foreach (object srcRes in sourceResultsPage)
+                {
+                    // Process result
+                    var returnSrcObj = this._optimizer.HydrateEntityByType(this._tableMetaData.ConcreteType, srcRes.ToString());
+                    ((DiiCosmosEntity)returnSrcObj).SetInitialState(this._tableMetaData);
+                    objs.Add(returnSrcObj);
+                }
+            }
+            return objs;
+        }
+
+        protected async Task<object> ReadStreamAsync(Container container, Type returnType, string id, PartitionKeyBuilder pkBuilder, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             // Read the same item but as a stream.
             using (ResponseMessage responseMessage = await container.ReadItemStreamAsync(
@@ -127,18 +257,21 @@ namespace dii.storage.cosmos
             var sourceProperties = lookupType.GetType().GetProperties().ToDictionary(p => p.Name, p => p);
 
             //Verify the idempotant key
-            if (!sourceProperties.ContainsKey("LastUpdated") ||
-                !DateTime.TryParse((sourceProperties["LastUpdated"].GetValue(lookupType)?.ToString() ?? string.Empty), out DateTime sourceIdemDate))
+            var _ts = ((sourceProperties.ContainsKey(Constants.ReservedTimestampKey)) ? sourceProperties[Constants.ReservedTimestampKey] : null);
+            if (_ts == null)
             {
-                throw new InvalidOperationException("The source object must contain the idempotant key: 'LastUpdated'");
+                throw new InvalidOperationException("The source object must contain the idempotant key: 'DiiTimestampUTC' (_ts)");
             }
+            var sourceTs = (long)_ts.GetValue(lookupType);
 
             //Verify the optimisitc concurrency key
-            if (!sourceProperties.ContainsKey("DataVersion"))
+            var etag = (sourceProperties.ContainsKey("DataVersion")) ? sourceProperties["DataVersion"] : null;
+            etag = etag ?? ((sourceProperties.ContainsKey(Constants.ReservedDataVersionKey)) ? sourceProperties[Constants.ReservedDataVersionKey] : null);
+            if (etag == null)
             {
-                throw new InvalidOperationException("The source object must contain the optimistic concurrency key: 'DataVersion'");
+                throw new InvalidOperationException("The source object must contain the optimistic concurrency key: 'DataVersion' (_etag)");
             }
-            var sourceVersion = sourceProperties["DataVersion"].GetValue(lookupType)?.ToString() ?? null;
+            var sourceVersion = etag.GetValue(lookupType)?.ToString() ?? null;
 
             // At this point we know the (dynamic) lookupType object has the required properties
             // Now we have to Get the actual CosmosDB enity (if it exists)
@@ -175,7 +308,7 @@ namespace dii.storage.cosmos
                                         (sourceProperties.ContainsKey(id.Value.Name) ? sourceProperties[id.Value.Name].GetValue(lookupType).ToString() : null); //otherwise, grab the current value
                         if (!string.IsNullOrEmpty(val))
                         {
-                            if (oldStrId != null) oldStrId += $"|";
+                            if (oldStrId != null) oldStrId += $"{Constants.DefaultIdDelimitor}";
 
                             oldStrId += $"{val}";
                         }
@@ -267,7 +400,7 @@ namespace dii.storage.cosmos
                 try
                 {
                     // Perform a point read
-                    lookupResponse = await ReadStream(this._lookupContainer, _tableMetaData.LookupType, strId, partitionKey, requestOptions, cancellationToken);
+                    lookupResponse = await ReadStreamAsync(this._lookupContainer, _tableMetaData.LookupType, strId, partitionKey, requestOptions, cancellationToken);
                 }
                 catch (CosmosException ex)
                 {
@@ -278,25 +411,19 @@ namespace dii.storage.cosmos
 
             if (lookupResponse != null) // && lookupResponse.Resource != null)
             {
-                //Hydrate and verify idempotency
-                //var unpackMethod = _optimizer.GetType().GetMethod("UnpackageFromJson").MakeGenericMethod(_tableMetaData.ConcreteType);
-                //var fetchedObj = unpackMethod.Invoke(_optimizer, new object[] { lookupResponse.Resource.ToString() });
-
                 var fetchedObjProperties = lookupResponse.GetType().GetProperties().ToDictionary(p => p.Name, p => p);
                 if (sourceProperties?.Any() ?? false)
                 {
-                    if (fetchedObjProperties.ContainsKey("LastUpdated"))
+                    var ts = ((sourceProperties.ContainsKey(Constants.ReservedTimestampKey)) ? sourceProperties[Constants.ReservedTimestampKey] : null);
+                    if (ts != null)
                     {
-                        //compare fetched lastupdated to provided lastupdated
+                        //compare fetched timestamp to provided timestamp
                         //Upsert if provided is more recent
-                        var dtVal = fetchedObjProperties["LastUpdated"].GetValue(lookupResponse);
-                        if (DateTime.TryParse((dtVal?.ToString() ?? string.Empty), out DateTime dt))
+                        var curts = (long)ts.GetValue(lookupResponse);
+                        if (curts > 0 && sourceTs > curts)
                         {
-                            if (sourceIdemDate > dt)
-                            {
-                                //Nothing to do, the provided object's LastUpdated is older than currently stored value
-                                return lookupResponse;
-                            }
+                            //Nothing to do, the provided object's timestamp is older than currently stored value
+                            return lookupResponse;
                         }
                     }
                 }

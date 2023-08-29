@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 
@@ -106,6 +107,8 @@ namespace dii.storage
 			/// The dynamically created <see cref="Type"/> to represent the compressed object.
 			/// </summary>
 			public Type CompressedEntityType { get; set; }
+
+			public PropertyInfo diiChangeTrackerProperty { get; set; }
 			#endregion Public Properties
 
 			#region Constructors
@@ -188,7 +191,6 @@ namespace dii.storage
 						{
 							if (!string.IsNullOrWhiteSpace(idValue as string))
 							{
-                                //idValues.Add(((string)idValue).ToLower()); //remove case sensitivity
                                 idValues.Add(idValue);
                             }
 						}
@@ -199,12 +201,15 @@ namespace dii.storage
 								idValues.Add(idValue);
 							}
 						}
-					}
+                        if (!StoredEntityMapping.ConcreteProperties.ContainsKey(property.Name))
+                            StoredEntityMapping.ConcreteProperties.Add(property.Name, property);
+                    }
 
 					Id.SetValue(packedObject, string.Join(IdSeparator, idValues));
+
 				}
 
-				foreach (var property in StoredEntityMapping.ConcreteProperties)
+                foreach (var property in StoredEntityMapping.ConcreteProperties)
 				{
 					var val = property.Value.GetValue(unpackedObject);
 					if(val == null) { continue; }
@@ -238,16 +243,22 @@ namespace dii.storage
 					}
 					else if(StoredEntityMapping.EmitProperties.ContainsKey(property.Key))
 					{
-						//string value = null;
-      //                  if (property.Value.PropertyType == typeof(string) && HierarchicalPartitionKeyProperties?.Values?.ToList().FirstOrDefault(x => x.Name == property.Key) != null)
-						//{
-						//	value = val.ToString().ToLower(); //remove case sensitivity
-						//}
                         StoredEntityMapping.EmitProperties[property.Key].SetValue(packedObject, val);
                     }
 				}
 
-				foreach (var property in CompressedEntityMapping.ConcreteProperties)
+                var sourceProperties = unpackedObject.GetType().GetProperties().ToDictionary(p => p.Name, p => p);
+                if (diiChangeTrackerProperty != null && sourceProperties.ContainsKey(Constants.ReservedChangeTrackerKey))
+                {
+                    var sourceProp = sourceProperties[Constants.ReservedChangeTrackerKey];
+                    if (sourceProp.PropertyType == diiChangeTrackerProperty.PropertyType) // Ensure the property types match
+                    {
+                        var valueToSet = sourceProp.GetValue(unpackedObject);
+                        StoredEntityMapping.EmitProperties[Constants.ReservedChangeTrackerKey].SetValue(packedObject, valueToSet);
+                    }
+				}
+
+                foreach (var property in CompressedEntityMapping.ConcreteProperties)
 				{
 					var val = property.Value.GetValue(unpackedObject);
 					CompressedEntityMapping.EmitProperties[property.Key].SetValue(compressedEntity, val);
@@ -330,7 +341,43 @@ namespace dii.storage
 					}
 				}
 
-				foreach (var property in CompressedEntityMapping.EmitProperties)
+				//Try to unpack the timestamp
+                var timestampPacked = packedObject.GetType().GetProperty(Constants.ReservedTimestampKey);
+                var timestampUnpacked = unpackedObject.GetType().GetProperty(Constants.ReservedTimestampKey);
+                if (timestampPacked != null && timestampUnpacked != null)
+                {
+					try
+					{
+						var ts = (long)timestampPacked.GetValue(packedObject);
+						if (ts != null)
+							timestampUnpacked.SetValue(unpackedObject, ts);
+					}
+					catch(Exception ex)
+					{
+					}
+                }
+				//Try to unpack the data version
+                var versionPacked = packedObject.GetType().GetProperty(Constants.ReservedDataVersionKey);
+                var versionUnpacked = unpackedObject.GetType().GetProperty(Constants.ReservedDataVersionKey);
+                versionUnpacked = versionUnpacked ?? unpackedObject.GetType().GetProperty("DataVersion"); //DiiBasicEntity.DataVersion
+                if (versionPacked != null && versionUnpacked != null)
+                {
+                    string version = versionPacked.GetValue(packedObject)?.ToString();
+					if (!string.IsNullOrEmpty(version))
+						versionUnpacked.SetValue(unpackedObject, version);
+                }
+
+                //Try to unpack the change tracker
+                var trackerPacked = packedObject.GetType().GetProperty(Constants.ReservedChangeTrackerKey);
+                var trackerUnpacked = unpackedObject.GetType().GetProperty(Constants.ReservedChangeTrackerKey);
+                if (trackerPacked != null && trackerUnpacked != null)
+                {
+                    string tracker = trackerPacked.GetValue(packedObject)?.ToString();
+					if (!string.IsNullOrEmpty(tracker))
+						trackerUnpacked.SetValue(unpackedObject, tracker);
+                }
+
+                foreach (var property in CompressedEntityMapping.EmitProperties)
 				{
 					var val = property.Value.GetValue(compressedObj);
 					CompressedEntityMapping.ConcreteProperties[property.Key].SetValue(unpackedObject, val);
@@ -377,7 +424,7 @@ namespace dii.storage
 					}
 				}
 
-				return unpackedObject;
+                return unpackedObject;
 			}
 			#endregion Public Methods
 		}

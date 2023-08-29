@@ -12,7 +12,7 @@ namespace dii.storage.cosmos.examples.Models
 {
     /// <inheritdoc/>
     [StorageName("Example-PersonOrder")]
-    public class PersonOrder : DiiCosmosEntity, IDiiLookupEntity
+    public class PersonOrder : DiiCosmosEntity//, IDiiLookupEntity
     {
         
 
@@ -106,8 +106,8 @@ namespace dii.storage.cosmos.examples.Models
         public string Catalog { get; set; }
 
         /// <inheritdoc/>
-        [Searchable("LastUpdated")]
-        public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
+        //[Searchable("LastUpdated")]
+        //public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
 
     }
 
