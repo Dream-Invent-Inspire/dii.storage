@@ -19,12 +19,11 @@ namespace dii.storage.Utilities
     {
         public static Type CreateLookupType(Dictionary<int, PropertyInfo> lookupHpks, Dictionary<int, PropertyInfo> lookupIds, List<PropertyInfo> otherFields, TableMetaData lookupTableMetaData)
         {
+            //Note this is a different (isolated) type builder than the one in DiiCosmosContext...as it must be, since it builds dynamic objects
             var assemblyName = new AssemblyName("TempDynamicAssembly");
             var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule("TempDynamicModule");
-
             var typeBuilder = moduleBuilder.DefineType(lookupTableMetaData.TableName, TypeAttributes.Public);
-            //var typeConst = typeBuilder.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
 
             var props = lookupIds?.Select(x => x.Value).ToList() ?? new List<PropertyInfo>();
             if (props.Count == 0)
@@ -58,15 +57,8 @@ namespace dii.storage.Utilities
                 {
                     if (!props.Contains(otherFields[i]))
                     {
-                        var searchableAttribute = otherFields[i].GetCustomAttribute<SearchableAttribute>();
-                        if (searchableAttribute != null)
-                        {
-                            AddProperty(typeBuilder, otherFields[i].Name, otherFields[i].PropertyType, searchableAttribute.GetConstructorBuilder());
-                        }
-                        else
-                        {
-                            AddProperty(typeBuilder, otherFields[i].Name, otherFields[i].PropertyType); //no attribute, just set the property
-                        }
+                        var searchableAttribute = otherFields[i].GetCustomAttribute<SearchableAttribute>() ?? new SearchableAttribute(otherFields[i].Name);
+                        AddProperty(typeBuilder, otherFields[i].Name, otherFields[i].PropertyType, searchableAttribute.GetConstructorBuilder());
                         props.Add(otherFields[i]);
                     }
                 }

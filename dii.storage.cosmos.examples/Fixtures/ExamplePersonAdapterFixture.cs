@@ -34,7 +34,8 @@ namespace dii.storage.cosmos.examples.Fixtures
 
             if (Optimizer == null)
             {
-                Optimizer = Optimizer.Init(NoSqlDatabaseConfig.CosmosStorageDBs.First().DatabaseId, typeof(Person), typeof(PersonSession));
+                //Optimizer = Optimizer.Init(NoSqlDatabaseConfig.CosmosStorageDBs.First().DatabaseId, typeof(Person), typeof(PersonSession));
+                Optimizer = Optimizer.Init(NoSqlDatabaseConfig.CosmosStorageDBs.First().DatabaseId, typeof(Person));
             }
 
             context.InitTablesAsync(ExampleConfig.DbName, Optimizer.Tables, true, Optimizer).Wait();
@@ -52,7 +53,8 @@ namespace dii.storage.cosmos.examples.Fixtures
 
         protected virtual void Dispose(bool doNotCleanUpNative)
         {
-
+            Optimizer.Clear();
+            DiiCosmosContext.Reset();
         }
 
         public void Dispose()

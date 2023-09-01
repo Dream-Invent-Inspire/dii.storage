@@ -59,6 +59,21 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
             var type = DynamicTypeCreator.CreateLookupType(lookupHpks, lookupIds, searchableFields, lookupTableMetaData);
             Assert.NotNull(type);
         }
+
+        #region Teardown
+        [Fact, TestPriorityOrder(int.MaxValue)]
+        public async Task Teardown()
+        {
+            try
+            {
+                Optimizer.Clear();
+                DiiCosmosContext.Reset();
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+        #endregion
     }
 
     public class TestEntity

@@ -143,7 +143,7 @@ namespace dii.storage
 				var packedObject = Activator.CreateInstance(StoredEntityType);
 				var compressedEntity = Activator.CreateInstance(CompressedEntityType);
 
-				if (HierarchicalPartitionKeyProperties != null && HierarchicalPartitionKeyProperties.Count > 0)
+				if (HierarchicalPartitionKeyProperties?.Any() ?? false)
 				{
 					// just add these to the Concrete types to be handled like any other property
 					foreach (var property in HierarchicalPartitionKeyProperties.Values)
@@ -305,7 +305,7 @@ namespace dii.storage
 				var compressedBytes = Convert.FromBase64String(compressedString);
 				var compressedObj = MessagePackSerializer.Deserialize(CompressedEntityType, compressedBytes);
 
-                if (HierarchicalPartitionKeyProperties != null && HierarchicalPartitionKeyProperties.Count > 0)
+                if (HierarchicalPartitionKeyProperties?.Any() ?? false)
                 {
                     // These are real properties so make sure they're there
                     for (var i = 0; i < HierarchicalPartitionKeyProperties.Count; i++)
@@ -346,15 +346,9 @@ namespace dii.storage
                 var timestampUnpacked = unpackedObject.GetType().GetProperty(Constants.ReservedTimestampKey);
                 if (timestampPacked != null && timestampUnpacked != null)
                 {
-					try
-					{
-						var ts = (long)timestampPacked.GetValue(packedObject);
-						if (ts != null)
-							timestampUnpacked.SetValue(unpackedObject, ts);
-					}
-					catch(Exception ex)
-					{
-					}
+					var ts = (long?)timestampPacked.GetValue(packedObject);
+					if (ts != null)
+						timestampUnpacked.SetValue(unpackedObject, ts);
                 }
 				//Try to unpack the data version
                 var versionPacked = packedObject.GetType().GetProperty(Constants.ReservedDataVersionKey);

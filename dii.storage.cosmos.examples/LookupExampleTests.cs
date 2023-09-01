@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using System.Threading;
 
 namespace dii.storage.cosmos.examples
 {
@@ -413,47 +414,12 @@ namespace dii.storage.cosmos.examples
             try
             {
                 Optimizer.Clear();
-                //var context = DiiCosmosContext.Get();
-
-                //if (context.Dbs != null)
-                //{
-                //    foreach (var db in context.Dbs)
-                //    {
-                //        _ = await db.DeleteAsync().ConfigureAwait(false);
-                //    }
-                //}
+                DiiCosmosContext.Reset();
             }
             catch (Exception ex)
             {
             }
         }
         #endregion
-
-        //    private static void DefineProperty(TypeBuilder typeBuilder, string propertyName, Type propertyType, bool getterOnly = false)
-        //    {
-        //        var fieldBuilder = typeBuilder.DefineField($"_{propertyName}", propertyType, FieldAttributes.Private);
-        //        var propertyBuilder = typeBuilder.DefineProperty(propertyName, PropertyAttributes.HasDefault, propertyType, null);
-
-        //        var getMethodBuilder = typeBuilder.DefineMethod($"get_{propertyName}", MethodAttributes.Public, propertyType, Type.EmptyTypes);
-        //        var getIL = getMethodBuilder.GetILGenerator();
-        //        getIL.Emit(OpCodes.Ldarg_0);
-        //        getIL.Emit(OpCodes.Ldfld, fieldBuilder);
-        //        getIL.Emit(OpCodes.Ret);
-
-        //        propertyBuilder.SetGetMethod(getMethodBuilder);
-
-        //        if (!getterOnly)
-        //        {
-        //            var setMethodBuilder = typeBuilder.DefineMethod($"set_{propertyName}", MethodAttributes.Public, null, new Type[] { propertyType });
-        //            var setIL = setMethodBuilder.GetILGenerator();
-        //            setIL.Emit(OpCodes.Ldarg_0);
-        //            setIL.Emit(OpCodes.Ldarg_1);
-        //            setIL.Emit(OpCodes.Stfld, fieldBuilder);
-        //            setIL.Emit(OpCodes.Ret);
-
-        //            propertyBuilder.SetSetMethod(setMethodBuilder);
-        //        }
-        //    }
-
     }
 }

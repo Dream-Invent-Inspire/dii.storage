@@ -96,6 +96,11 @@ namespace dii.storage.cosmos
 			return _instance;
 		}
 
+		public static void Reset()
+		{
+            _instance = null;
+        }
+
 		/// <summary>
 		/// Checks if the database exists. When <see cref="INoSqlDatabaseConfig.AutoCreate"/> is <see langword="true"/>,
 		/// creates the database when it does not exist.
@@ -289,7 +294,7 @@ namespace dii.storage.cosmos
 						
 						_changeFeedProcessors.Add(changeFeedProcessor);
                         await changeFeedProcessor.StartAsync();
-                        Task.Delay(1000).Wait(); //give it a second to start
+                        //Task.Delay(1000).Wait(); //give it a second to start
                     }
                     tableMetaData.Initialized = true;
                 }
