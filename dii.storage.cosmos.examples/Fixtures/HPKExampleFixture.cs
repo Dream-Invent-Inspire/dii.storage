@@ -45,7 +45,8 @@ namespace dii.storage.cosmos.examples.Fixtures
 
         protected virtual void Dispose(bool doNotCleanUpNative)
         {
-
+            Optimizer.Clear();
+            DiiCosmosContext.Reset();
         }
 
         public void Dispose()

@@ -34,10 +34,10 @@ namespace dii.storage
 		private static bool _ignoreInvalidDiiEntities;
 
 		private readonly ModuleBuilder _builder;
-		//private readonly Dictionary<Type, Serializer> _packing;
-		//private readonly Dictionary<Type, Serializer> _unpacking;
 
-		private const string _dynamicAssemblyName = "dii.dynamic.storage";
+        private readonly string LookupTableSuffix = "Lookup";
+
+        private const string _dynamicAssemblyName = "dii.dynamic.storage";
 
 		private readonly string[] _reservedSearchableKeys = new string[3]
 		{
@@ -72,7 +72,6 @@ namespace dii.storage
         /// </summary>
 		public readonly Dictionary<Type, Type> SubPropertyMapping;
         
-		private readonly string LookupTableSuffix = "Lookup";
         #endregion Public Fields
 
         #region Constructors
@@ -289,96 +288,6 @@ namespace dii.storage
             var sourceObj = method.Invoke(this, new object[] { json });
 			return sourceObj;
         }
-
-		private Serializer RegisterType(Type type)
-		{
-			Serializer storageTypeSerializer = null;
-            try
-            {
-                //Wiring to the new typeGenerator structure from 05/08/2023
-                var typeGenerator = new TableTypeGenerator(type, _builder, SubPropertyMapping, _ignoreInvalidDiiEntities);
-                storageTypeSerializer = typeGenerator.Generate();
-            }
-            catch
-            {
-                //Duplicate type initialization will yield this exception.
-                //This trapping is preventing Init(typeof(SameType), typeof(SameType))
-                if (_ignoreInvalidDiiEntities)
-                    return null;
-                else
-                    throw;
-            }
-
-			if (storageTypeSerializer != null && storageTypeSerializer.StoredEntityType != null)
-			{
-				OptimizedTypeRegistrar.Register(type, storageTypeSerializer);
-			}
-            return storageTypeSerializer;
-        }
-
-        private Type RegisterLookupType(TableMetaData sourceTableMetaData, TableMetaData lookupTableMetaData)
-        {
-			var otherFields = new List<PropertyInfo>();
-			otherFields.AddRange(sourceTableMetaData.HierarchicalPartitionKeys.Values);
-			otherFields.AddRange(sourceTableMetaData.IdProperties.Values);
-
-			//Generate the dynamic type for the Lookup entity
-            Type dynamicType = DynamicTypeCreator.CreateLookupType(sourceTableMetaData.LookupHpks, sourceTableMetaData.LookupIds, otherFields, lookupTableMetaData);
-            var lookupTypeSerializer = RegisterType(dynamicType);
-
-			//Add to the lookup table
-			lookupTableMetaData.ConcreteType = dynamicType;
-			lookupTableMetaData.StorageType = lookupTypeSerializer.StoredEntityType;
-			lookupTableMetaData.HierarchicalPartitionKeys = sourceTableMetaData.LookupHpks.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
-			
-			//ToDo: not sure about this...does this need to be set on the lookup table?
-			lookupTableMetaData.LookupIds = sourceTableMetaData.LookupIds.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
-
-            Tables.Add(lookupTableMetaData);
-            TableMappings.Add(dynamicType, lookupTableMetaData);
-			return dynamicType;
-        }
-
-		//private void SetAttributedProperty(TypeBuilder typeBuilder, PropertyInfo property, DiiBaseAttribute attribute, Type attributeType)
-		//{
-		//	//var att = property.GetCustomAttribute<SearchableAttribute>();
-		//	if (attribute != null)
-		//	{
-		//		// Define a single property "Name" of type string
-		//		var propertyName = property.Name;
-		//		var fieldBuilder = typeBuilder.DefineField($"_{propertyName}", property.PropertyType, FieldAttributes.Private);
-		//		var propertyBuilder = typeBuilder.DefineProperty(propertyName, PropertyAttributes.HasDefault, property.PropertyType, null);
-
-		//		// Getting the right constructor
-		//		//var ctor = attributeType.GetConstructor(new[] { typeof(Type), typeof(int) });
-
-		//		// Creating the CustomAttributeBuilder with extracted values
-		//		var attributeBuilder = attribute.GetConstructorBuilder();
-  //              //	new CustomAttributeBuilder(
-  //              //	ctor,
-  //              //	new object[] { attribute.IdKeyType, attribute.Order }
-  //              //);
-
-  //              propertyBuilder.SetCustomAttribute(attributeBuilder);
-
-		//		// Create get and set methods for the property and associate them with the property
-		//		var getMethodBuilder = typeBuilder.DefineMethod($"get_{propertyName}", MethodAttributes.Public, property.PropertyType, Type.EmptyTypes);
-		//		var getIL = getMethodBuilder.GetILGenerator();
-		//		getIL.Emit(OpCodes.Ldarg_0);
-		//		getIL.Emit(OpCodes.Ldfld, fieldBuilder);
-		//		getIL.Emit(OpCodes.Ret);
-
-		//		var setMethodBuilder = typeBuilder.DefineMethod($"set_{propertyName}", MethodAttributes.Public, null, new Type[] { property.PropertyType });
-		//		var setIL = setMethodBuilder.GetILGenerator();
-		//		setIL.Emit(OpCodes.Ldarg_0);
-		//		setIL.Emit(OpCodes.Ldarg_1);
-		//		setIL.Emit(OpCodes.Stfld, fieldBuilder);
-		//		setIL.Emit(OpCodes.Ret);
-
-		//		propertyBuilder.SetGetMethod(getMethodBuilder);
-		//		propertyBuilder.SetSetMethod(setMethodBuilder);
-		//	}
-		//}
 
 		/// <summary>
 		/// Identified whether a <see cref="Type"/> is already registered with the <see cref="Optimizer"/>
@@ -728,45 +637,56 @@ namespace dii.storage
 			return _instance;
 		}
 
-		private static PropertyBuilder AddPropertyX(TypeBuilder typeBuilder, string name, Type propertyType, params CustomAttributeBuilder[] customAttributeBuilders)
-		{
-			var field = typeBuilder.DefineField($"_{name}", propertyType, FieldAttributes.Private);
-			var prop = typeBuilder.DefineProperty(name, PropertyAttributes.None, propertyType, null);
+        private Serializer RegisterType(Type type)
+        {
+            Serializer storageTypeSerializer = null;
+            try
+            {
+                //Wiring to the new typeGenerator structure from 05/08/2023
+                var typeGenerator = new TableTypeGenerator(type, _builder, SubPropertyMapping, _ignoreInvalidDiiEntities);
+                storageTypeSerializer = typeGenerator.Generate();
+            }
+            catch
+            {
+                //Duplicate type initialization will yield this exception.
+                //This trapping is preventing Init(typeof(SameType), typeof(SameType))
+                if (_ignoreInvalidDiiEntities)
+                    return null;
+                else
+                    throw;
+            }
 
-			// Create the Get Accessor
-			var propGet = typeBuilder.DefineMethod($"get_{name}",
-				MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig,
-				propertyType,
-				Type.EmptyTypes);
+            if (storageTypeSerializer != null && storageTypeSerializer.StoredEntityType != null)
+            {
+                OptimizedTypeRegistrar.Register(type, storageTypeSerializer);
+            }
+            return storageTypeSerializer;
+        }
 
-			var getIL = propGet.GetILGenerator();
-			getIL.Emit(OpCodes.Ldarg_0);
-			getIL.Emit(OpCodes.Ldfld, field);
-			getIL.Emit(OpCodes.Ret);
+        private Type RegisterLookupType(TableMetaData sourceTableMetaData, TableMetaData lookupTableMetaData)
+        {
+            var otherFields = new List<PropertyInfo>();
+            otherFields.AddRange(sourceTableMetaData.HierarchicalPartitionKeys.Values);
+            otherFields.AddRange(sourceTableMetaData.IdProperties.Values);
 
-			// Create the Set Accessor
-			var propSet = typeBuilder.DefineMethod($"set_{name}",
-				MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig,
-				null,
-				new Type[] { propertyType });
+            //Generate the dynamic type for the Lookup entity
+            Type dynamicType = DynamicTypeCreator.CreateLookupType(sourceTableMetaData.LookupHpks, sourceTableMetaData.LookupIds, otherFields, lookupTableMetaData);
+            var lookupTypeSerializer = RegisterType(dynamicType);
 
-			var setIL = propSet.GetILGenerator();
-			setIL.Emit(OpCodes.Ldarg_0);
-			setIL.Emit(OpCodes.Ldarg_1);
-			setIL.Emit(OpCodes.Stfld, field);
-			setIL.Emit(OpCodes.Ret);
+            //Add to the lookup table
+            lookupTableMetaData.ConcreteType = dynamicType;
+            lookupTableMetaData.StorageType = lookupTypeSerializer.StoredEntityType;
+            lookupTableMetaData.HierarchicalPartitionKeys = sourceTableMetaData.LookupHpks.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
 
-			// Bind them to the prop
-			prop.SetGetMethod(propGet);
-			prop.SetSetMethod(propSet);
+            //ToDo: not sure about this...does this need to be set on the lookup table?
+            lookupTableMetaData.LookupIds = sourceTableMetaData.LookupIds.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
 
-			foreach (var customAttributeBuilder in customAttributeBuilders)
-			{
-				prop.SetCustomAttribute(customAttributeBuilder);
-			}
+            Tables.Add(lookupTableMetaData);
+            TableMappings.Add(dynamicType, lookupTableMetaData);
+            return dynamicType;
+        }
 
-			return prop;
-		}
-		#endregion Private Methods
-	}
+
+        #endregion Private Methods
+    }
 }

@@ -708,5 +708,29 @@ namespace dii.storage.cosmos.examples
             Assert.NotNull(bok);
             Assert.Equal(bok, true);
         }
+
+        #region Teardown
+        [Fact, TestPriorityOrder(int.MaxValue)]
+        public async Task Teardown()
+        {
+            try
+            {
+                Optimizer.Clear();
+                DiiCosmosContext.Reset();
+                //var context = DiiCosmosContext.Get();
+
+                //if (context.Dbs != null)
+                //{
+                //    foreach (var db in context.Dbs)
+                //    {
+                //        _ = await db.DeleteAsync().ConfigureAwait(false);
+                //    }
+                //}
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+        #endregion
     }
 }
