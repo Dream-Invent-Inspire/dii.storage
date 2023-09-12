@@ -116,5 +116,11 @@ namespace dii.storage.Models
 
 		public Container LookupContainer { get; set; } 
 		public Type LookupType { get; set;}
+		public int? DefaultPageSize { get; set; } = 10;
+
+        public bool HasLookup()
+		{
+			return this.LookupIds?.Count > 0;
+		}
     }
 }

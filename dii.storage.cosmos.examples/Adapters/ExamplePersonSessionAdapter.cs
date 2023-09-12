@@ -24,7 +24,7 @@ namespace dii.storage.cosmos.examples.Adapters
             return await base.GetAsync(sessionId, dic, cancellationToken: cancellationToken);
         }
 
-        public async Task<List<PersonSession>> GetManyBySessionIdsAsync(IReadOnlyList<Tuple<string, Dictionary<string, string>>> idAndPks)
+        public async Task<List<PersonSession>> GetManyBySessionIdsAsync(IReadOnlyList<(string, Dictionary<string, string>)> idAndPks)
         {
             var results = await base.GetManyAsync(idAndPks).ConfigureAwait(false);
             return results.ToList();
@@ -82,6 +82,11 @@ namespace dii.storage.cosmos.examples.Adapters
             return await base.UpsertAsync(session, cancellationToken: cancellationToken);
         }
 
+        public async Task<List<PersonSession>> UpsertManyAsync(List<PersonSession> sessions, CancellationToken cancellationToken = default)
+        {
+            return await base.UpsertBulkAsync(sessions.AsReadOnly(), cancellationToken: cancellationToken);
+        }
+
         public async Task<PersonSession> AddEndTimeAsync(string personId, string clientId, string sessionId, DateTime started, DateTime ended, CancellationToken cancellationToken = default)
         {
             var patchItemRequestOptions = new PatchItemRequestOptions
@@ -126,6 +131,12 @@ namespace dii.storage.cosmos.examples.Adapters
             return await base.DeleteEntitiesBulkAsync(sessions, cancellationToken: cancellationToken);
         }
 
+        public async Task<bool> PatchBulkAsync(IReadOnlyList<(string, Dictionary<string, string>)> idAndPks, CancellationToken cancellationToken = default)
+        {
+            var ops = idAndPks.Select(x => (x.Item1, x.Item2, new Dictionary<string, object> { { "/duration", 1000 } })).ToList();
+            var results = await base.PatchBulkAsync(ops, cancellationToken: cancellationToken);
+            return results?.Any() ?? false;
+        }
     }
 
 }

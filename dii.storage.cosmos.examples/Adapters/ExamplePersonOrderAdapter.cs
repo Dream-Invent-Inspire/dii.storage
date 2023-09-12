@@ -32,13 +32,13 @@ namespace dii.storage.cosmos.examples.Adapters
             return await base.GetAsync(paymentId, dic, cancellationToken: cancellationToken);
         }
 
-        public async Task<List<PersonOrder>> GetManyByOrderIdsAsync(IReadOnlyList<Tuple<string, Dictionary<string, string>>> idAndPks)
+        public async Task<List<PersonOrder>> GetManyByOrderIdsAsync(IReadOnlyList<(string, Dictionary<string, string>)> idAndPks)
         {
             var results = await base.GetManyAsync(idAndPks).ConfigureAwait(false);
             return results.ToList();
         }
 
-        public async Task<PagedList<PersonOrder>> GetManyByClientIdAsync(string clientId, string personId)
+        public async Task<PagedList<PersonOrder>> GetManyByClientAndPersonIdAsync(string clientId, string personId)
         {
             var queryDefinition = new QueryDefinition($"SELECT * FROM c WHERE c.ClientId = @clientId AND c.PersonId = @personId");
 
@@ -46,6 +46,37 @@ namespace dii.storage.cosmos.examples.Adapters
             queryDefinition.WithParameter("@personId", personId);
 
             return await base.GetPagedAsync(queryDefinition);
+        }
+
+        public async Task<PagedList<PersonOrder>> GetManyByClientIdAsync(string clientId, string continuationToken = null, CancellationToken cancellationToken = default)
+        {
+            var reqops = new QueryRequestOptions { MaxItemCount = 4 };
+
+            var queryDefinition = new QueryDefinition($"SELECT * FROM c WHERE c.ClientId = @clientId");
+
+            queryDefinition.WithParameter("@clientId", clientId);
+
+            return await base.GetPagedAsync(queryDefinition, continuationToken, reqops, cancellationToken);
+        }
+
+        public async Task<PagedList<PersonOrder>> GetManyByOrderDateAsync(string clientId, DateTime orderFromDate, DateTime orderToDate, string continuationToken = null, CancellationToken cancellationToken = default)
+        {
+            var reqops = new QueryRequestOptions { MaxItemCount = 4 };
+
+            var dayCnt = orderToDate.Subtract(orderFromDate);
+            List<string> days = new List<string>();
+            for(int i=0; i<dayCnt.Days; i++)
+            {
+                var date = orderFromDate.AddDays(i);
+                var dateStr = date.ToString("yyyy-MM-dd");
+                days.Add(dateStr);
+            }
+            var queryDefinition = new QueryDefinition($"SELECT * FROM c WHERE c.ClientId = @clientId AND c.OrderDateString in (\"{string.Join("\",\"", days)}\")");
+            queryDefinition.WithParameter("@clientId", clientId);
+
+            var adapter = new DiiCosmosLookupAdapter(this._table);
+            var retOrders = await adapter.LookupByQueryAsync(queryDefinition, continuationToken, reqops, cancellationToken);
+            return PagedList<PersonOrder>.CreateFromList(retOrders.Cast<PersonOrder>().ToList(), retOrders.ContinuationToken);
         }
 
         public async Task<PersonOrder> CreateAsync(PersonOrder session, CancellationToken cancellationToken = default)
@@ -102,11 +133,17 @@ namespace dii.storage.cosmos.examples.Adapters
             return await base.DeleteEntityByIdAsync(sessionId, dic, cancellationToken: cancellationToken);
         }
 
-        public async Task<bool> DeleteBulkAsync(IReadOnlyList<PersonOrder> sessions, CancellationToken cancellationToken = default)
+        public async Task<bool> DeleteBulkAsync(IReadOnlyList<PersonOrder> orders, CancellationToken cancellationToken = default)
         {
-            return await base.DeleteEntitiesBulkAsync(sessions, cancellationToken: cancellationToken);
+            return await base.DeleteEntitiesBulkAsync(orders, cancellationToken: cancellationToken);
         }
 
+        public async Task<bool> PatchBulkAsync(IReadOnlyList<(string, Dictionary<string, string>)> idAndPks, CancellationToken cancellationToken = default)
+        {
+            var ops = idAndPks.Select(x => (x.Item1, x.Item2, new Dictionary<string, object> { { "/Catalog", "BrandX" } })).ToList();
+            var results = await base.PatchBulkAsync(ops, cancellationToken: cancellationToken);
+            return results?.Any() ?? false;
+        }
 
         //Alternate access patterns for Lookup tables
 
@@ -137,6 +174,21 @@ namespace dii.storage.cosmos.examples.Adapters
             return obj as PersonOrder;
         }
 
+        public async Task<List<PersonOrder>> GetByClientIdAsync(string clientId, CancellationToken cancellationToken = default)
+        {
+            var dic = new Dictionary<string, string>
+            {
+                { "ClientId", clientId }
+            };
+            QueryDefinition query = new QueryDefinition("SELECT * FROM c WHERE c.ClientId = @clientId")
+                    .WithParameter("@clientId", clientId);
+
+            //Lookup adapter stuff
+            var adapter = new DiiCosmosLookupAdapter(this._table);
+
+            var objs = await adapter.LookupByQueryAsync(query, null, null, cancellationToken);
+            return objs?.Cast<PersonOrder>().ToList();
+        }
     }
 
 }

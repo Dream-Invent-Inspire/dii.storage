@@ -54,50 +54,29 @@ namespace dii.storage.cosmos
             var lookupResponse = await ReadStreamAsync(this._lookupContainer, _tableMetaData.LookupType, id, partitionKey, requestOptions, cancellationToken);
             if (lookupResponse != null)
             {
-                //pull the values from the lookup response to read the source
-                var lookupProperties = lookupResponse.GetType().GetProperties().ToDictionary(p => p.Name, p => p);
-                var sourceKeys = new Dictionary<string, string>();
-                var sourceId = string.Empty;
-                foreach (var key in _tableMetaData.HierarchicalPartitionKeys)
-                {
-                    if (lookupProperties.ContainsKey(key.Value.Name))
-                    {
-                        var res = lookupProperties[key.Value.Name].GetValue(lookupResponse);
-                        if (res != null)
-                            sourceKeys.Add(key.Value.Name, res.ToString());
-                        else
-                        {
-                            //wtf.... this key property value is null in the dynamic lookup object
-                        }
-                    }
-                }
-                foreach (var idProp in _tableMetaData.IdProperties)
-                {
-                    if (!string.IsNullOrWhiteSpace(sourceId)) sourceId += $"{_tableMetaData.IdSeparator}";
-                    if (lookupProperties.ContainsKey(idProp.Value.Name))
-                    {
-                        var res = lookupProperties[idProp.Value.Name].GetValue(lookupResponse);
-                        if (res != null)
-                            sourceId += lookupProperties[idProp.Value.Name].GetValue(lookupResponse).ToString();
-                        else
-                        {
-                            //wtf....this id property value is null in the dynamic lookup object
-                        }
-                    }
-                }
-                partitionKey = GetPK(_tableMetaData.HierarchicalPartitionKeys, sourceKeys);
+                object pkBuilder = new PartitionKeyBuilder();
+                _tableMetaData.HierarchicalPartitionKeys.TransferProperties(lookupResponse, ref pkBuilder);
+
+                object ids = string.Empty;
+                _tableMetaData.IdProperties.TransferProperties(lookupResponse, ref ids);
+
+                var sourceId = ids.ToString();
                 if (string.IsNullOrWhiteSpace(sourceId))
                 {
                     throw new Exception("No source Id was found in the lookup response.");
                 }
-                var sourceObject = await ReadStreamAsync(this._sourceContainer, _tableMetaData.ConcreteType, sourceId, partitionKey, requestOptions, cancellationToken);
-                ((DiiCosmosEntity)sourceObject).SetInitialState(_tableMetaData);
-                return sourceObject;
+                var sourceObject = await ReadStreamAsync(this._sourceContainer, _tableMetaData.ConcreteType, sourceId, (PartitionKeyBuilder)pkBuilder, requestOptions, cancellationToken);
+                if (sourceObject != null)
+                {
+                    ((DiiCosmosEntity)sourceObject).SetInitialState(_tableMetaData);
+                    return sourceObject;
+                }
             }
             return null;
         }
 
-        public async Task<List<object>> LookupByQueryAsync(QueryDefinition queryDefinition, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        
+        public async Task<PagedList<object>> LookupByQueryAsync(QueryDefinition queryDefinition, string continuationToken, QueryRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             if (_tableMetaData.LookupType == null)
             {
@@ -106,83 +85,96 @@ namespace dii.storage.cosmos
 
             //For the source object lookup
             List<object> ids = new List<object>();
-            List<object> key1 = new List<object>();
-            List<object> key2 = new List<object>();
-            List<object> key3 = new List<object>();
-            string keycol1 = string.Empty, keycol2 = string.Empty, keycol3 = string.Empty;
+            //List<object> key1 = new List<object>();
+            //List<object> key2 = new List<object>();
+            //List<object> key3 = new List<object>();
+            string keycol1 = (_tableMetaData.HierarchicalPartitionKeys.Count > 0) ? _tableMetaData.HierarchicalPartitionKeys?.ElementAt(0).Value?.Name : null;
+            string keycol2 = (_tableMetaData.HierarchicalPartitionKeys.Count > 1) ? _tableMetaData.HierarchicalPartitionKeys?.ElementAt(1).Value?.Name : null;
+            string keycol3 = (_tableMetaData.HierarchicalPartitionKeys.Count > 2) ? _tableMetaData.HierarchicalPartitionKeys?.ElementAt(2).Value?.Name : null;
+
+
+            object dicpk = new Dictionary<int, List<string>>();
 
             // Retrieve an iterator for the result set
-            List<object> objs = new List<object>();
+            PagedList<object> objs = new PagedList<object>();
             using FeedIterator<object> results = this._lookupContainer.GetItemQueryIterator<object>(queryDefinition);
             while (results.HasMoreResults)
             {
-                //List<Tuple<string, Dictionary<string, string>>> idAndPks = new List<Tuple<string, Dictionary<string, string>>>();
                 FeedResponse<object> resultsPage = await results.ReadNextAsync();
 
                 foreach (var result in resultsPage)
                 {
                     var lookupObj = this._optimizer.HydrateEntityByType(this._tableMetaData.LookupType, result.ToString());
 
-                    //pull the values from the lookup response to read the source
-                    var lookupProperties = lookupObj.GetType().GetProperties().ToDictionary(p => p.Name, p => p);
+                    _tableMetaData.HierarchicalPartitionKeys.TransferProperties(lookupObj, ref dicpk);
 
-                    var innerdic = _tableMetaData.HierarchicalPartitionKeys;
-                    if (innerdic.Count() > 0 && lookupProperties.ContainsKey(innerdic.ElementAt(0).Value.Name))
-                    {
-                        var res = lookupProperties[innerdic.ElementAt(0).Value.Name].GetValue(lookupObj);
-                        if (res != null)
-                        {
-                            key1.Add(res.ToString());
-                            if (string.IsNullOrEmpty(keycol1)) keycol1 = innerdic.ElementAt(0).Value.Name;
-                        }
-                        else
-                        {
-                            //wtf.... this key property value is null in the dynamic lookup object
-                        }
-                    }
-                    if (innerdic.Count() > 1 && lookupProperties.ContainsKey(innerdic.ElementAt(1).Value.Name))
-                    {
-                        var res = lookupProperties[innerdic.ElementAt(1).Value.Name].GetValue(lookupObj);
-                        if (res != null)
-                        {
-                            key2.Add(res.ToString());
-                            if (string.IsNullOrEmpty(keycol2)) keycol2 = innerdic.ElementAt(1).Value.Name;
-                        }
-                        else
-                        {
-                            //wtf.... this key property value is null in the dynamic lookup object
-                        }
-                    }
-                    if (innerdic.Count() > 2 && lookupProperties.ContainsKey(innerdic.ElementAt(2).Value.Name))
-                    {
-                        var res = lookupProperties[innerdic.ElementAt(2).Value.Name].GetValue(lookupObj);
-                        if (res != null)
-                        {
-                            key3.Add(res.ToString());
-                            if (string.IsNullOrEmpty(keycol3)) keycol3 = innerdic.ElementAt(2).Value.Name;
-                        }
-                        else
-                        {
-                            //wtf.... this key property value is null in the dynamic lookup object
-                        }
-                    }
+                    object eids = string.Empty;
+                    _tableMetaData.IdProperties.TransferProperties(lookupObj, ref eids);
+                    ids.Add(eids);
 
-                    string sourceId = string.Empty;
-                    foreach (var idProp in _tableMetaData.IdProperties)
-                    {
-                        if (!string.IsNullOrWhiteSpace(sourceId)) sourceId += $"{_tableMetaData.IdSeparator}";
-                        if (lookupProperties.ContainsKey(idProp.Value.Name))
-                        {
-                            var res = lookupProperties[idProp.Value.Name].GetValue(lookupObj);
-                            if (res != null)
-                                sourceId += lookupProperties[idProp.Value.Name].GetValue(lookupObj).ToString();
-                            else
-                            {
-                                //wtf....this id property value is null in the dynamic lookup object
-                            }
-                        }
-                    }
-                    ids.Add(sourceId);
+                    #region old
+                    ////pull the values from the lookup response to read the source
+                    //var lookupProperties = lookupObj.GetType().GetProperties().ToDictionary(p => p.Name, p => p);
+
+                    //var innerdic = _tableMetaData.HierarchicalPartitionKeys;
+                    //if (innerdic.Count() > 0 && lookupProperties.ContainsKey(innerdic.ElementAt(0).Value.Name))
+                    //{
+                    //    var res = lookupProperties[innerdic.ElementAt(0).Value.Name].GetValue(lookupObj);
+                    //    if (res != null)
+                    //    {
+                    //        key1.Add(res.ToString());
+                    //        if (string.IsNullOrEmpty(keycol1)) keycol1 = innerdic.ElementAt(0).Value.Name;
+                    //    }
+                    //    else
+                    //    {
+                    //        //wtf.... this key property value is null in the dynamic lookup object
+                    //    }
+                    //}
+                    //if (innerdic.Count() > 1 && lookupProperties.ContainsKey(innerdic.ElementAt(1).Value.Name))
+                    //{
+                    //    var res = lookupProperties[innerdic.ElementAt(1).Value.Name].GetValue(lookupObj);
+                    //    if (res != null)
+                    //    {
+                    //        key2.Add(res.ToString());
+                    //        if (string.IsNullOrEmpty(keycol2)) keycol2 = innerdic.ElementAt(1).Value.Name;
+                    //    }
+                    //    else
+                    //    {
+                    //        //wtf.... this key property value is null in the dynamic lookup object
+                    //    }
+                    //}
+                    //if (innerdic.Count() > 2 && lookupProperties.ContainsKey(innerdic.ElementAt(2).Value.Name))
+                    //{
+                    //    var res = lookupProperties[innerdic.ElementAt(2).Value.Name].GetValue(lookupObj);
+                    //    if (res != null)
+                    //    {
+                    //        key3.Add(res.ToString());
+                    //        if (string.IsNullOrEmpty(keycol3)) keycol3 = innerdic.ElementAt(2).Value.Name;
+                    //    }
+                    //    else
+                    //    {
+                    //        //wtf.... this key property value is null in the dynamic lookup object
+                    //    }
+                    //}
+
+                    //string sourceId = string.Empty;
+                    //foreach (var idProp in _tableMetaData.IdProperties)
+                    //{
+                    //    if (!string.IsNullOrWhiteSpace(sourceId)) sourceId += $"{_tableMetaData.IdSeparator}";
+                    //    if (lookupProperties.ContainsKey(idProp.Value.Name))
+                    //    {
+                    //        var res = lookupProperties[idProp.Value.Name].GetValue(lookupObj);
+                    //        if (res != null)
+                    //            sourceId += lookupProperties[idProp.Value.Name].GetValue(lookupObj).ToString();
+                    //        else
+                    //        {
+                    //            //wtf....this id property value is null in the dynamic lookup object
+                    //        }
+                    //    }
+                    //}
+                    //ids.Add(sourceId);
+
+                    #endregion
                 }
             }
             if (ids.Count() == 0)
@@ -195,15 +187,15 @@ namespace dii.storage.cosmos
 
             if (!string.IsNullOrEmpty(keycol1))
             {
-                stringBuilder.Append($"c.{keycol1} IN ({string.Join(",", key1.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
+                stringBuilder.Append($"c.{keycol1} IN ({string.Join(",", ((Dictionary<int, List<string>>)dicpk).ElementAt(0).Value.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
             }
             if (!string.IsNullOrEmpty(keycol2))
             {
-                stringBuilder.Append($"c.{keycol2} IN ({string.Join(",", key2.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
+                stringBuilder.Append($"c.{keycol2} IN ({string.Join(",", ((Dictionary<int, List<string>>)dicpk).ElementAt(1).Value.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
             }
             if (!string.IsNullOrEmpty(keycol3))
             {
-                stringBuilder.Append($"c.{keycol3} IN ({string.Join(",", key3.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
+                stringBuilder.Append($"c.{keycol3} IN ({string.Join(",", ((Dictionary<int, List<string>>)dicpk).ElementAt(2).Value.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
             }
 
             stringBuilder.Append($"c.id IN ({string.Join(",", ids.Distinct().Select(x => $"\"{x}\"").ToList())})");
@@ -279,8 +271,7 @@ namespace dii.storage.cosmos
             // 2. Build the partition key
             // 3. Get the object
             // 4. Compare the idempotant key
-            // 5. Compare the optimistic concurrency key
-            // 6. If the source object is more recent, then update the CosmosDB entity
+            // 5. If the source object is more recent, then update the CosmosDB entity
 
 
             //But first, we need to check if the source object has changed the idempotant key
@@ -295,13 +286,15 @@ namespace dii.storage.cosmos
                 //structure needs to have any/all changes to either the Lookup container's HPK or its Ids
 
                 //check ids
-                string oldStrId = null;
                 bool hasIdChanges = _tableMetaData.LookupIds.Values.Select(x => x.Name).Any(key => sourceChanges.ContainsKey(key));
                 bool hasHpkChanges = _tableMetaData.LookupHpks.Values.Select(x => x.Name).Any(key => sourceChanges.ContainsKey(key));
+                bool hasHasBeenDeleted = sourceChanges.ContainsKey(Constants.ReservedDeletedKey);
                 bool bDeleteFailed = false;
-                if (hasIdChanges || hasHpkChanges) //either changes will cause the lookup object to be orphaned
+                
+                if (hasIdChanges || hasHpkChanges || hasHasBeenDeleted) //any of these changes will cause the lookup object to be orphaned
                 {
                     //build the old id
+                    string oldStrId = null;
                     foreach (var id in _tableMetaData.LookupIds)
                     {
                         string val = (sourceProperties.ContainsKey(id.Value.Name) && sourceChanges.ContainsKey(id.Value.Name)) ? sourceChanges[id.Value.Name] : //grab the old id value from changes
@@ -349,49 +342,17 @@ namespace dii.storage.cosmos
             }
 
             //construct the id
-            string strId = null;
-            for (int i = 0; i < _tableMetaData.LookupIds.Count(); i++)
-            {
-                if (sourceProperties.ContainsKey(_tableMetaData.LookupIds[i].Name))
-                {
-                    var sourceProp = sourceProperties[_tableMetaData.LookupIds[i].Name].GetValue(lookupType)?.ToString();
-                    if (string.IsNullOrEmpty(sourceProp))
-                    {
-                        throw new InvalidOperationException("Invalid Id value.");
-                    }
+            object sid = string.Empty;
+            _tableMetaData.LookupIds.TransferProperties(lookupType, ref sid);
 
-                    if (strId != null) strId += $"|";
-                    strId += $"{sourceProp}";
-                }
-            }
-
+            string strId = sid.ToString();
             if (string.IsNullOrEmpty(strId))
             {
                 throw new InvalidOperationException("Invalid Id value.");
             }
 
-            //Construct the partition key
-            if (_tableMetaData.LookupHpks.Count() > 0 && sourceProperties.ContainsKey(_tableMetaData.LookupHpks.ElementAt(0).Value.Name))
-            {
-                var sourceProp = sourceProperties[_tableMetaData.LookupHpks.ElementAt(0).Value.Name];
-                var sourceValue = sourceProp.GetValue(lookupType)?.ToString();
-                if (string.IsNullOrEmpty(sourceValue)) throw new InvalidOperationException("Invalid Partition Key value.");
-                partitionKey.Add(sourceValue);
-            }
-            if (_tableMetaData.LookupHpks.Count() > 1 && sourceProperties.ContainsKey(_tableMetaData.LookupHpks.ElementAt(1).Value.Name))
-            {
-                var sourceProp = sourceProperties[_tableMetaData.LookupHpks.ElementAt(1).Value.Name];
-                var sourceValue = sourceProp.GetValue(lookupType)?.ToString();
-                if (string.IsNullOrEmpty(sourceValue)) throw new InvalidOperationException("Invalid Partition Key value.");
-                partitionKey.Add(sourceValue);
-            }
-            if (_tableMetaData.LookupHpks.Count() > 2 && sourceProperties.ContainsKey(_tableMetaData.LookupHpks.ElementAt(2).Value.Name))
-            {
-                var sourceProp = sourceProperties[_tableMetaData.LookupHpks.ElementAt(2).Value.Name];
-                var sourceValue = sourceProp.GetValue(lookupType)?.ToString();
-                if (string.IsNullOrEmpty(sourceValue)) throw new InvalidOperationException("Invalid Partition Key value.");
-                partitionKey.Add(sourceValue);
-            }
+            object pkBuilder = new PartitionKeyBuilder();
+            _tableMetaData.LookupHpks.TransferProperties(lookupType, ref pkBuilder);
 
             //Look up the entity
             object lookupResponse = null;
@@ -400,7 +361,7 @@ namespace dii.storage.cosmos
                 try
                 {
                     // Perform a point read
-                    lookupResponse = await ReadStreamAsync(this._lookupContainer, _tableMetaData.LookupType, strId, partitionKey, requestOptions, cancellationToken);
+                    lookupResponse = await ReadStreamAsync(this._lookupContainer, _tableMetaData.LookupType, strId.ToString(), (PartitionKeyBuilder)pkBuilder, requestOptions, cancellationToken);
                 }
                 catch (CosmosException ex)
                 {
@@ -409,6 +370,7 @@ namespace dii.storage.cosmos
                 }
             }
 
+            //Idempotency check
             if (lookupResponse != null) // && lookupResponse.Resource != null)
             {
                 var fetchedObjProperties = lookupResponse.GetType().GetProperties().ToDictionary(p => p.Name, p => p);
@@ -439,8 +401,9 @@ namespace dii.storage.cosmos
             var packmethod = _optimizer.GetType().GetMethod("ToEntity").MakeGenericMethod(_tableMetaData.LookupType);
             var packedEntity = packmethod.Invoke(_optimizer, new object[] { lookupType });
 
-            var returnedEntity = await this._lookupContainer.UpsertItemAsync(packedEntity, partitionKey.Build(), requestOptions, cancellationToken).ConfigureAwait(false);
+            var returnedEntity = await this._lookupContainer.UpsertItemAsync(packedEntity, ((PartitionKeyBuilder)pkBuilder).Build(), requestOptions, cancellationToken).ConfigureAwait(false);
 
+            //return the entity
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
             if (returnResult && returnedEntity?.Resource != null)
             {
