@@ -64,7 +64,7 @@ namespace dii.storage
         /// A reserved searchable key. Cannot be used as the <see cref="SearchableAttribute.Abbreviation"/>.
         /// </summary>
         /// <value>
-        /// id
+        /// _ts
         /// </value>
         public const string ReservedTimestampKey = "_ts";
 
@@ -72,10 +72,33 @@ namespace dii.storage
         /// A reserved searchable key. Cannot be used as the <see cref="SearchableAttribute.Abbreviation"/>.
         /// </summary>
         /// <value>
-        /// _sv
+        /// ttl
+        /// </value>
+        public const string ReservedTTLKey = "ttl";
+        public const int ReservedTTLDefault = 2147483647; //this is the max value....over 68 years
+
+        /// <summary>
+        /// A reserved searchable key. Cannot be used as the <see cref="SearchableAttribute.Abbreviation"/>.
+        /// </summary>
+        /// <value>
+        /// _isDeleted
+        /// </value>
+        public const string ReservedDeletedKey = "_isDeleted";
+
+        /// <summary>
+        /// A reserved searchable key. Cannot be used as the <see cref="SearchableAttribute.Abbreviation"/>.
+        /// </summary>
+        /// <value>
+        /// _etag
         /// </value>
         public const string ReservedDataVersionKey = "_etag";
 
+        /// <summary>
+        /// A reserved searchable key. Cannot be used as the <see cref="SearchableAttribute.Abbreviation"/>.
+        /// </summary>
+        /// <value>
+        /// _diiChangeTrackerString
+        /// </value>
         public const string ReservedChangeTrackerKey = "DiiChangeTrackerString";
 
         /// <summary>

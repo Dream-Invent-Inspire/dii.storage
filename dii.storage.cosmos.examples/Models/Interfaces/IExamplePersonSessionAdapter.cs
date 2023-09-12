@@ -12,7 +12,7 @@ namespace dii.storage.cosmos.examples.Models.Interfaces
     public interface IExamplePersonSessionAdapter
     {
         Task<PersonSession> FetchAsync(string personId, string clientId, string sessionId, CancellationToken cancellationToken = default);
-        Task<List<PersonSession>> GetManyBySessionIdsAsync(IReadOnlyList<Tuple<string, Dictionary<string, string>>> idAndPks);
+        Task<List<PersonSession>> GetManyBySessionIdsAsync(IReadOnlyList<(string, Dictionary<string, string>)> idAndPks);
 
         Task<PagedList<PersonSession>> GetManyByClientIdAsync(string clientId, string personId);
 

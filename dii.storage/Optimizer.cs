@@ -243,14 +243,11 @@ namespace dii.storage
                             Tables.Add(tableMetaData);
 							TableMappings.Add(type, tableMetaData);
 
-							if (tableMetaData.LookupIds?.Any() ?? false) //Note: We really only care if there are Lookup Ids, odds are in those cases there should also be HPKs
+							if (tableMetaData.HasLookup()) //Note: We really only care if there are Lookup Ids, odds are in those cases there should also be HPKs
 							{
 								//Create the dynamic Lookup table and register it
 								string tblName = type.GetCustomAttribute<StorageNameAttribute>()?.Name ?? type.Name;
 								var lookupType = RegisterLookupType(
-                                    //                           tableMetaData.LookupHpks,
-                                    //tableMetaData.LookupIds,
-                                    //tableMetaData.SearchableFields?.ToList(),
                                     sourceTableMetaData: tableMetaData, // Source table metadata
                                     lookupTableMetaData: new TableMetaData
 									{
@@ -265,6 +262,10 @@ namespace dii.storage
 									});
 
 								tableMetaData.LookupType = lookupType; //this is for the lookup object unpacking
+
+                                // As this is a source (of a Lookup) table, it must have a TTL (-1 = never expire)
+								// this is so when we need to delete a source item, we patch it with a short TTL so change feed can pick it up and delete the Lookup item(s)
+                                tableMetaData.TimeToLiveInSeconds = tableMetaData.TimeToLiveInSeconds ?? Constants.ReservedTTLDefault;
 							}
 						}
 					}

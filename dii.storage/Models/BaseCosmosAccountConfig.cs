@@ -58,7 +58,4 @@ namespace dii.storage.Models
         public bool AutoScaling { get; set; } = true;
         public string TypeCollectionMame { get; set; }
     }
-
-
-
 }

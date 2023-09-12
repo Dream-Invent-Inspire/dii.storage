@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 using System.Threading;
+using Microsoft.Azure.Cosmos;
 
 namespace dii.storage.cosmos.examples
 {
@@ -150,71 +151,6 @@ namespace dii.storage.cosmos.examples
             return orders;
         }
 
-        //[Fact, TestPriorityOrder(10)]
-        public async Task RunHPKExample1()
-        {
-
-            // Create new item
-            var o1 = new PersonOrder
-            {
-                PaymentAmount = 100,
-                PaymentType = "Credit",
-                ClientId = "SomeEnterprise",
-                OrderId = "1",
-                PaymentId = Guid.NewGuid().ToString(),
-                PersonId = Guid.NewGuid().ToString(),
-                OrderDate = DateTimeOffset.Parse("2023-07-02T21:14:37.3066349Z")
-            };
-
-            var o2 = new PersonOrder
-            {
-                PaymentAmount = 200,
-                PaymentType = "Credit",
-                ClientId = "SomeEnterprise",
-                OrderId = "2",
-                PaymentId = Guid.NewGuid().ToString(),
-                PersonId = Guid.NewGuid().ToString(),
-                OrderDate = DateTimeOffset.Parse("2023-07-20T21:14:37.3066349Z")
-            };
-
-            try
-            {
-                var result1 = await _fixture.PersonOrderAdapter.CreateAsync(o1).ConfigureAwait(false);
-                Task.Delay(100).Wait();
-                var result2 = await _fixture.PersonOrderAdapter.CreateAsync(o2).ConfigureAwait(false);
-                Task.Delay(100).Wait();
-
-
-                o1.Catalog = "Catalog1";
-                var result3 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
-                Task.Delay(100).Wait();
-
-                o1.PaymentType = "Cash";
-                var result4 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
-                Task.Delay(100).Wait();
-
-
-            }
-            catch (Exception ex)
-            {
-            }
-
-            //var storedsession = await _fixture.OrderLookupAdapter.LookupAsync(o1);
-
-            //Assert.NotNull(storedsession);
-            //Assert.Equal(storedsession.ClientId, createdPersonSession.ClientId);
-            //Assert.Equal(storedsession.PersonId, createdPersonSession.PersonId);
-            //Assert.Equal(storedsession.SessionId, createdPersonSession.SessionId);
-            //Assert.Equal(storedsession.SessionStartDate, createdPersonSession.SessionStartDate);
-            //Assert.Equal(storedsession.Catalog, createdPersonSession.Catalog);
-            //Assert.Equal(storedsession.SessionEndDate, createdPersonSession.SessionEndDate);
-            int x = 100;
-            while (--x >= 0)
-            {
-                Task.Delay(1000).Wait();
-            }
-
-        }
 
         [Fact, TestPriorityOrder(20)]
         public async Task RunHPKExample2()
@@ -231,61 +167,48 @@ namespace dii.storage.cosmos.examples
                 OrderDate = DateTimeOffset.Parse("2023-08-22T21:14:07.3066349Z")
             };
 
-            try
+            //Create/update
+            PersonOrder result1 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
+
+            //Fetch
+            var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            int go = 50;
+            while (getres1 == null && --go > 0)
             {
-                //Create/update
-                PersonOrder result1 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
-
-                //Fetch
-                var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
-                int go = 50;
-                while (getres1 == null && --go > 0)
-                {
-                    Task.Delay(100).Wait();
-                    getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
-                }
-                Assert.NotNull(getres1);
-
-                //Update a "normal" field
-                getres1.Catalog = "Catalog2";
-                var result2 = await _fixture.PersonOrderAdapter.UpsertAsync(getres1 ?? o1).ConfigureAwait(false);
-
-                //Fetch again
-                var getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result2.PaymentType, result2.PaymentAmount.ToString(), result2.ClientId, result2.PersonId, result2.OrderDate).ConfigureAwait(false);
-                go = 50;
-                while (getres2 == null && --go > 0)
-                {
-                    Task.Delay(100).Wait();
-                    getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result2.PaymentType, result2.PaymentAmount.ToString(), result2.ClientId, result2.PersonId, result2.OrderDate).ConfigureAwait(false);
-                }
-                if (go > 0) Task.Delay(1000).Wait();
-                Assert.NotNull(getres2);
-
-                //Update a "id" field
-                getres2.PaymentType = "Cash";
-                var result3 = await _fixture.PersonOrderAdapter.UpsertAsync(getres2).ConfigureAwait(false);
-
-                //Last fetch...will the "new" record be there? ...and the old record deleted?
-                var result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
-                go = 50;
-                while (result4 == null && --go > 0)
-                {
-                    Task.Delay(100).Wait();
-                    result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
-                }
-                if (go > 0) Task.Delay(1000).Wait();
-                Assert.NotNull(result4);
-
+                Task.Delay(100).Wait();
+                getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            Assert.NotNull(getres1);
+
+            //Update a "normal" field
+            getres1.Catalog = "Catalog2";
+            var result2 = await _fixture.PersonOrderAdapter.UpsertAsync(getres1 ?? o1).ConfigureAwait(false);
+
+            //Fetch again
+            var getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result2.PaymentType, result2.PaymentAmount.ToString(), result2.ClientId, result2.PersonId, result2.OrderDate).ConfigureAwait(false);
+            go = 50;
+            while (getres2 == null && --go > 0)
             {
+                Task.Delay(100).Wait();
+                getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result2.PaymentType, result2.PaymentAmount.ToString(), result2.ClientId, result2.PersonId, result2.OrderDate).ConfigureAwait(false);
             }
+            if (go > 0) Task.Delay(1000).Wait();
+            Assert.NotNull(getres2);
 
-            //int x = 100;
-            //while (--x >= 0)
-            //{
-            //    Task.Delay(1000).Wait();
-            //}
+            //Update a "id" field
+            getres2.PaymentType = "Cash";
+            var result3 = await _fixture.PersonOrderAdapter.UpsertAsync(getres2).ConfigureAwait(false);
+
+            //Last fetch...will the "new" record be there? ...and the old record deleted?
+            var result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
+            go = 50;
+            while (result4 == null && --go > 0)
+            {
+                Task.Delay(100).Wait();
+                result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
+            }
+            if (go > 0) Task.Delay(1000).Wait();
+            Assert.NotNull(result4);
 
         }
 
@@ -304,13 +227,7 @@ namespace dii.storage.cosmos.examples
                 OrderDate = DateTimeOffset.Parse("2023-08-03T21:14:07.3066349Z")
             };
 
-            try
-            {
-                var result = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-            }
+            var result = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
         }
 
         [Fact, TestPriorityOrder(40)]
@@ -328,14 +245,71 @@ namespace dii.storage.cosmos.examples
                 OrderDate = DateTimeOffset.Parse("2023-08-04T21:14:07.3066349Z")
             };
 
+            //Create/update
+            PersonOrder result1 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
+
+            //Fetch
+            var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            int go = 50;
+            while (getres1 == null && --go > 0)
+            {
+                Task.Delay(100).Wait();
+                getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            }
+            Assert.NotNull(getres1);
+
+            //Update a "normal" field
+            getres1.Catalog = "Catalog2";
+            var result2 = await _fixture.PersonOrderAdapter.UpsertAsync(getres1 ?? o1).ConfigureAwait(false);
+
+            //Fetch again
+            var getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result2.PaymentType, result2.PaymentAmount.ToString(), result2.ClientId, result2.PersonId, result2.OrderDate).ConfigureAwait(false);
+            go = 20;
+            while (getres2 == null && --go > 0)
+            {
+                Task.Delay(100).Wait();
+                getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result2.PaymentType, result2.PaymentAmount.ToString(), result2.ClientId, result2.PersonId, result2.OrderDate).ConfigureAwait(false);
+            }
+            Assert.NotNull(getres2);
+
+            //Update a "hpk" field
+            getres2.PersonId = "personX";
+            var result3 = await _fixture.PersonOrderAdapter.UpsertAsync(getres2).ConfigureAwait(false);
+
+            //Last fetch...will the "new" record be there? ...and the old record deleted?
+            var result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
+            go = 50;
+            while (result4 == null && --go > 0)
+            {
+                Task.Delay(100).Wait();
+                result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
+            }
+            Assert.NotNull(result4);
+        }
+
+        [Fact, TestPriorityOrder(50)]
+        public async Task RunHPKExample5()
+        {
             try
             {
+                // Create new item
+                var o1 = new PersonOrder
+                {
+                    PaymentAmount = 300,
+                    PaymentType = "XXX",
+                    ClientId = "SomeEnterprise",
+                    OrderId = "orderid3",
+                    PaymentId = "pmtid3",
+                    PersonId = "person3",
+                    OrderDate = DateTimeOffset.Parse("2023-08-03T21:14:07.3066349Z")
+                };
+
                 //Create/update
                 PersonOrder result1 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
 
                 //Fetch
                 var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
-                int go = 20;
+                int go = 50;
                 while (getres1 == null && --go > 0)
                 {
                     Task.Delay(100).Wait();
@@ -343,69 +317,95 @@ namespace dii.storage.cosmos.examples
                 }
                 Assert.NotNull(getres1);
 
-                //Update a "normal" field
-                getres1.Catalog = "Catalog2";
-                var result2 = await _fixture.PersonOrderAdapter.UpsertAsync(getres1 ?? o1).ConfigureAwait(false);
+                var result = await _fixture.PersonOrderAdapter.DeleteEntityAsync(o1).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                //throw;
+            }
 
-                //Fetch again
-                var getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result2.PaymentType, result2.PaymentAmount.ToString(), result2.ClientId, result2.PersonId, result2.OrderDate).ConfigureAwait(false);
-                go = 10;
-                while (getres2 == null && --go > 0)
+            int cnt = 0;
+            while (++cnt < 1000)
+            {
+                Task.Delay(100).Wait();
+            }
+        }
+
+        [Fact, TestPriorityOrder(60)]
+        public async Task RunHPKExample6()
+        {
+            try
+            {
+                // Create orders
+                foreach(var order in _fixture.Orders)
                 {
-                    Task.Delay(100).Wait();
-                    getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result2.PaymentType, result2.PaymentAmount.ToString(), result2.ClientId, result2.PersonId, result2.OrderDate).ConfigureAwait(false);
+                    await _fixture.PersonOrderAdapter.UpsertAsync(order).ConfigureAwait(false);
                 }
-                Assert.NotNull(getres2);
 
-                //Update a "hpk" field
-                getres2.OrderId = "orderidX";
-                var result3 = await _fixture.PersonOrderAdapter.UpsertAsync(getres2).ConfigureAwait(false);
+                //bulk patch
+                List<(string, Dictionary<string, string>)> ops = _fixture.Orders.Select(x => (x.PaymentId, new Dictionary<string, string> { { "ClientId", x.ClientId }, { "OrderId", x.OrderId } } )).ToList();
+                var res = await _fixture.PersonOrderAdapter.PatchBulkAsync(ops).ConfigureAwait(false);
 
-                //Last fetch...will the "new" record be there? ...and the old record deleted?
-                var result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
-                go = 10;
-                while (result4 == null && --go > 0)
-                {
-                    Task.Delay(100).Wait();
-                    result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
-                }
-                Assert.NotNull(result4);
+                //bulk fetch
+                var res2 = await _fixture.PersonOrderAdapter.GetManyByOrderIdsAsync(ops);
+                Assert.Equal(ops.Count, res2.Count);
+
+                //Page thru
+                var res3 = await _fixture.PersonOrderAdapter.GetManyByClientIdAsync("SomeEnterprise");
+                var res4 = await _fixture.PersonOrderAdapter.GetManyByClientIdAsync("SomeEnterprise", res3.ContinuationToken);
 
             }
             catch (Exception ex)
             {
+                //throw;
             }
-
-            //int x = 100;
-            //while (--x >= 0)
-            //{
-            //    Task.Delay(1000).Wait();
-            //}
-
         }
 
-        [Fact, TestPriorityOrder(50)]
-        public async Task Test_ts()
+        [Fact, TestPriorityOrder(70)]
+        public async Task RunHPKExample7()
         {
-            DateTime dateTime = new DateTime(2023, 8, 24, 12, 01, 01);
-            long unixEpoch = ConvertDateTimeToUnix(dateTime);
+            try
+            {
+                // Create orders
+                foreach (var order in _fixture.Orders)
+                {
+                    await _fixture.PersonOrderAdapter.UpsertAsync(order).ConfigureAwait(false);
+                }
 
-            long newEpoch = 1693064914; // Example Unix epoch timestamp
-            dateTime = ConvertUnixToDateTime(newEpoch);
+                //bulk fetch
+                var res2 = await _fixture.PersonOrderAdapter.GetManyByClientIdAsync("SomeEnterprise");
+                //Assert.Equal(_fixture.Orders.Count, res2.Count);
+
+            }
+            catch (Exception ex)
+            {
+                //throw;
+            }
         }
 
-        public static DateTime ConvertUnixToDateTime(long unixEpoch)
+        [Fact, TestPriorityOrder(80)]
+        public async Task RunHPKExample8()
         {
-            DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            return epoch.AddSeconds(unixEpoch);
-        }
-        public static long ConvertDateTimeToUnix(DateTime dateTime)
-        {
-            DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            TimeSpan timeSpan = dateTime.ToUniversalTime() - epoch;
-            return (long)timeSpan.TotalSeconds;
-        }
+            try
+            {
+                // Create orders
+                foreach (var order in _fixture.Orders)
+                {
+                    await _fixture.PersonOrderAdapter.UpsertAsync(order).ConfigureAwait(false);
+                }
 
+                //bulk fetch
+                var dtfrom = DateTime.Parse("2023-07-01");
+                var dtto = DateTime.Parse("2023-08-03");
+                var res2 = await _fixture.PersonOrderAdapter.GetManyByOrderDateAsync("SomeEnterprise", dtfrom, dtto);
+                //Assert.Equal(_fixture.Orders.Count, res2.Count);
+
+            }
+            catch (Exception ex)
+            {
+                //throw;
+            }
+        }
 
         #region Teardown
         [Fact, TestPriorityOrder(int.MaxValue)]

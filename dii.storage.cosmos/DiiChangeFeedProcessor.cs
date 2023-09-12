@@ -46,7 +46,6 @@ namespace dii.storage.cosmos
                 }
                 catch (CosmosException cre)
                 {
-                    //   now notice the failure when attempting the update 
                     //   this is because the ETag on the server no longer matches the ETag of this changed item...out of order..?
                     if (cre.StatusCode == HttpStatusCode.PreconditionFailed)
                     {
@@ -94,6 +93,8 @@ namespace dii.storage.cosmos
                     if (sourceProp.PropertyType == targetProp.PropertyType) // Ensure the property types match
                     {
                         var valueToSet = sourceProp.GetValue(sourceObj);
+                        //this makes Lookup container (item) string fields case insensitive
+                        //targetProp.SetValue(dynamicObject, (sourceProp.PropertyType == typeof(string)) ? ((string)valueToSet).ToLowerInvariant() : valueToSet);
                         targetProp.SetValue(dynamicObject, valueToSet);
                     }
                 }

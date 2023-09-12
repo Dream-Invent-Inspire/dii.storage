@@ -72,6 +72,7 @@ namespace dii.storage.cosmos.examples
         [Fact, TestPriorityOrder(20)]
         public async Task RunHPKExample2()
         {
+            List<PersonSession> sessions = new List<PersonSession>();
             PersonSession session = new PersonSession()
             {
                 ClientId = "SomeEnterprise",
@@ -81,9 +82,10 @@ namespace dii.storage.cosmos.examples
                 Catalog = "Pets",
                 SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
             };
+            sessions.Add(session);
 
             // Create the entity with our adapter.
-            var createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session).ConfigureAwait(false);
+            //var createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session).ConfigureAwait(false);
 
             PersonSession session2 = new PersonSession()
             {
@@ -94,9 +96,10 @@ namespace dii.storage.cosmos.examples
                 Catalog = "Pets",
                 SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
             };
+            sessions.Add(session2);
 
             // Create the entity with our adapter.
-            createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session2).ConfigureAwait(false);
+            //createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session2).ConfigureAwait(false);
 
             PersonSession session3 = new PersonSession()
             {
@@ -107,9 +110,10 @@ namespace dii.storage.cosmos.examples
                 Catalog = "Pets",
                 SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
             };
+            sessions.Add(session3);
 
             // Create the entity with our adapter.
-            createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session3).ConfigureAwait(false);
+            //createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session3).ConfigureAwait(false);
 
             PersonSession session4 = new PersonSession()
             {
@@ -120,9 +124,10 @@ namespace dii.storage.cosmos.examples
                 Catalog = "Pets",
                 SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
             };
+            sessions.Add(session4);
 
             // Create the entity with our adapter.
-            createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session4).ConfigureAwait(false);
+            //createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session4).ConfigureAwait(false);
 
             PersonSession session5 = new PersonSession()
             {
@@ -133,9 +138,10 @@ namespace dii.storage.cosmos.examples
                 Catalog = "Pets",
                 SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
             };
+            sessions.Add(session5);
 
             // Create the entity with our adapter.
-            createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session5).ConfigureAwait(false);
+            //createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session5).ConfigureAwait(false);
 
             PersonSession session6 = new PersonSession()
             {
@@ -146,9 +152,10 @@ namespace dii.storage.cosmos.examples
                 Catalog = "Pets",
                 SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
             };
+            sessions.Add(session6);
 
             // Create the entity with our adapter.
-            createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session6).ConfigureAwait(false);
+            //createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session6).ConfigureAwait(false);
 
             PersonSession session7 = new PersonSession()
             {
@@ -159,9 +166,10 @@ namespace dii.storage.cosmos.examples
                 Catalog = "Pets",
                 SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
             };
+            sessions.Add(session7);
 
             // Create the entity with our adapter.
-            createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session7).ConfigureAwait(false);
+            //createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session7).ConfigureAwait(false);
 
             PersonSession session8 = new PersonSession()
             {
@@ -172,56 +180,19 @@ namespace dii.storage.cosmos.examples
                 Catalog = "Pets",
                 SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
             };
+            sessions.Add(session8);
 
             // Create the entity with our adapter.
-            createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session8).ConfigureAwait(false);
+            //createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session8).ConfigureAwait(false);
 
-            List<Tuple<string, Dictionary<string, string>>> lst = new List<Tuple<string, Dictionary<string, string>>>();
+            //Bulk Upsert
+            var createdPersonSessions = await _fixture.PersonSessionAdapter.UpsertManyAsync(sessions).ConfigureAwait(false);
 
-            lst.Add(Tuple.Create("111",
-                new Dictionary<string, string>() {
-                    { "ClientId", "SomeEnterprise" },
-                    { "PersonId", "1" }
-                }));
-
-            lst.Add(Tuple.Create("112",
-                new Dictionary<string, string>() {
-                    { "ClientId", "SomeEnterprise" },
-                    { "PersonId", "1" }
-                }));
-            lst.Add(Tuple.Create("113",
-                new Dictionary<string, string>() {
-                    { "ClientId", "SomeEnterprise" },
-                    { "PersonId", "1" }
-                }));
-
-            lst.Add(Tuple.Create("211",
-                new Dictionary<string, string>() {
-                    { "ClientId", "SomeEnterprise" },
-                    { "PersonId", "2" }
-                }));
-            lst.Add(Tuple.Create("212",
-                new Dictionary<string, string>() {
-                    { "ClientId", "SomeEnterprise" },
-                    { "PersonId", "2" }
-                }));
-            lst.Add(Tuple.Create("213",
-                new Dictionary<string, string>() {
-                    { "ClientId", "SomeEnterprise" },
-                    { "PersonId", "2" }
-                }));
-            lst.Add(Tuple.Create("214",
-                new Dictionary<string, string>() {
-                    { "ClientId", "SomeEnterprise" },
-                    { "PersonId", "2" }
-                }));
-
-            lst.Add(Tuple.Create("311",
-                new Dictionary<string, string>() {
-                    { "ClientId", "SomeEnterprise" },
-                    { "PersonId", "3" }
-                }));
-
+            List<(string, Dictionary<string, string>)> lst = sessions.Select(s => (s.SessionId, new Dictionary<string, string>()
+            {
+                    { "ClientId", s.ClientId },
+                    { "PersonId", s.PersonId }
+                })).ToList();
 
             var storedsessions = await _fixture.PersonSessionAdapter.GetManyBySessionIdsAsync(lst.AsReadOnly()).ConfigureAwait(false);
 
@@ -405,8 +376,8 @@ namespace dii.storage.cosmos.examples
             PersonSession session = new PersonSession()
             {
                 ClientId = "SomeEnterprise",
-                PersonId = "8411f20f-be3e-416a-a3e7-dcd5a3c1f28b",
-                SessionId = "e7da01b0-090b-41d2-8416-dacae09fbb6b",
+                PersonId = "1",
+                SessionId = "111",
                 SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
                 Catalog = "Flowers",
                 SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)

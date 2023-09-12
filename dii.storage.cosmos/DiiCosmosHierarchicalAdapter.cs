@@ -21,6 +21,7 @@ using System.Collections;
 using System.Security.Principal;
 using System.Reflection;
 using dii.storage.Attributes;
+using System.Numerics;
 
 namespace dii.storage.cosmos
 {
@@ -34,6 +35,11 @@ namespace dii.storage.cosmos
     public abstract class DiiCosmosHierarchicalAdapter<T> : DiiCosmosBaseAdapter
         where T : DiiCosmosEntity, new()
     {
+
+        public const int MAX_BATCH_SIZE = 1000;
+        public const int MAX_CONCURRENCY = 100;
+        public const long DELETE_TTL = 300;
+
         #region protected Fields
         protected readonly Container _container;
         protected readonly Optimizer _optimizer;
@@ -57,7 +63,15 @@ namespace dii.storage.cosmos
         #region Public Methods
 
         #region Fetch APIs
-
+        /// <summary>
+        /// Determines if the entity exists in the cosmos database.
+        /// It is most efficient for this purpose because it doesn't deserialize the entity.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="partitionKeys"></param>
+        /// <param name="requestOptions"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         protected virtual async Task<bool> ItemExistsAsync(string id, Dictionary<string, string> partitionKeys, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(id) || partitionKeys == default(Dictionary<string, string>))
@@ -66,13 +80,7 @@ namespace dii.storage.cosmos
             }
 
             // Build the full partition key path
-            var partitionKey = new PartitionKeyBuilder();
-
-            var dic = GetPK(partitionKeys);
-
-            if (dic.Count() > 0) partitionKey.Add(dic.ElementAt(0).Value);
-            if (dic.Count() > 1) partitionKey.Add(dic.ElementAt(1).Value);
-            if (dic.Count() > 2) partitionKey.Add(dic.ElementAt(2).Value);
+            var partitionKey = GetPKBuilder(partitionKeys);
 
             //Note: we just care if the entity is present so avoid deserializing the entity
             var strEntity = await ReadStreamToStringAsync(id, partitionKey, requestOptions, cancellationToken);
@@ -83,7 +91,7 @@ namespace dii.storage.cosmos
         /// Reads an entity from the service as an asynchronous operation.
         /// </summary>
         /// <param name="id">The entity id.</param>
-        /// <param name="partitionKey">The partition key for the entity.</param>
+        /// <param name="partitionKeys">The partition key for the entity.</param>
         /// <param name="requestOptions">(Optional) The options for the entity request.</param>
         /// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
         /// <returns>
@@ -102,44 +110,63 @@ namespace dii.storage.cosmos
             }
 
             // Build the full partition key path
-            var partitionKey = new PartitionKeyBuilder();
-
-            var dic = GetPK(partitionKeys);
-            
-            if (dic.Count() > 0) partitionKey.Add(dic.ElementAt(0).Value);
-            if (dic.Count() > 1) partitionKey.Add(dic.ElementAt(1).Value);
-            if (dic.Count() > 2) partitionKey.Add(dic.ElementAt(2).Value);
+            var partitionKey = GetPKBuilder(partitionKeys);
 
             diiEntity = await ReadStreamAsync(id, partitionKey, requestOptions, cancellationToken);
             return diiEntity;
         }
 
+        /// <summary>
+        /// Fetch an entity with the provided entity id and partition key.
+        /// </summary>
+        /// <param name="diiEntity"></param>
+        /// <param name="requestOptions"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        protected virtual async Task<T> GetEntityAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        {
+            var partitionKey = GetPK(diiEntity);
+            var id = GetId(diiEntity);
+
+            diiEntity = await ReadStreamAsync(id, partitionKey, requestOptions, cancellationToken);
+            return diiEntity;
+        }
+
+        
+        /// <summary>
+        /// Centralized method for fetching entities from the database.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="pkBuilder"></param>
+        /// <param name="requestOptions"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         protected async Task<T> ReadStreamAsync(string id, PartitionKeyBuilder pkBuilder, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             // Read the same item but as a stream.
-            var strEntity = await ReadStreamToStringAsync(id, pkBuilder, requestOptions, cancellationToken);
-            if (!string.IsNullOrWhiteSpace(strEntity))
-            {
-                T returnObj = _optimizer.UnpackageFromJson<T>(strEntity);
-                returnObj.SetInitialState(_table);
-                return returnObj;
-            }
-            return null;
+            var strEntity = await ReadStreamToStringAsync(id, pkBuilder, requestOptions, cancellationToken).ConfigureAwait(false);
+            return await HydrateEntityAsync(strEntity).ConfigureAwait(false);
         }
+
+        
+        /// <summary>
+        /// Centralized method for fetching entities from the database as serialized strings.
+        /// For use with <see cref="ReadStreamAsync(string, PartitionKeyBuilder, ItemRequestOptions, CancellationToken)"/>
+        /// and <see cref="ItemExistsAsync(string, Dictionary{string, string}, ItemRequestOptions, CancellationToken)"/>
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="pkBuilder"></param>
+        /// <param name="requestOptions"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         protected async Task<string> ReadStreamToStringAsync(string id, PartitionKeyBuilder pkBuilder, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
-            //Remove case sensitivity
-            //var ids = id.Split($"{Constants.DefaultIdDelimitor}");
-            //if (ids.Length > 0)
-            //{
-            //    var newlst = ids.Select(x => x.ToLower()).ToList();
-            //    id = string.Join($"{Constants.DefaultIdDelimitor}", newlst);
-            //}
-
             // Read the same item but as a stream.
             using (ResponseMessage responseMessage = await _container.ReadItemStreamAsync(
-                               partitionKey: pkBuilder.Build(),
-                                              id: id))
+                partitionKey: pkBuilder.Build(),
+                id: id,
+                requestOptions: requestOptions,
+                cancellationToken: cancellationToken))
             {
                 // Item stream operations do not throw exceptions for better performance
                 if (responseMessage.IsSuccessStatusCode && responseMessage?.Content != null)
@@ -170,7 +197,7 @@ namespace dii.storage.cosmos
         /// This is meant to perform better latency-wise than a query with IN statements to fetch
         /// a large number of independent entities.
         /// </remarks>
-        protected virtual async Task<List<T>> GetManyAsync(IReadOnlyList<Tuple<string, Dictionary<string, string>>> idAndPks, ReadManyRequestOptions readManyRequestOptions = null, CancellationToken cancellationToken = default)
+        protected virtual async Task<List<T>> GetManyAsync(IReadOnlyList<(string, Dictionary<string, string>)> idAndPks, ReadManyRequestOptions readManyRequestOptions = null, CancellationToken cancellationToken = default)
         {
             var diiEntities = default(List<T>);
 
@@ -178,36 +205,102 @@ namespace dii.storage.cosmos
             {
                 return diiEntities;
             }
+            if (idAndPks.Count > MAX_BATCH_SIZE)
+            {
+                throw new ArgumentException($"Cannot read more than {MAX_BATCH_SIZE} entities at a time.");
+            }
 
-            //DJ: As of july 2023, CosmosDB support only up to 3 hierarchical partition keys.
+            //build query
+            var stringBuilder = GetByIdListPrep(idAndPks);
 
-            List<object> ids = new List<object>();
-            List<object> key1 = new List<object>();
-            List<object> key2 = new List<object>();
-            List<object> key3 = new List<object>();
-            string keycol1 = string.Empty, keycol2 = string.Empty, keycol3 = string.Empty;
+            //run query
+            diiEntities = new List<T>();
+
+            using FeedIterator results = _container.GetItemQueryStreamIterator(stringBuilder.ToString(), requestOptions: new QueryRequestOptions()
+            {
+                MaxItemCount = MAX_BATCH_SIZE
+            });
+
+            diiEntities = await GetPagedInternalAsync(results, null, cancellationToken).ConfigureAwait(false);
+            return diiEntities;
+        }
+
+        private StringBuilder GetByIdListPrep(IReadOnlyList<(string, Dictionary<string, string>)> idAndPks)
+        {
+            List<string> ids = new List<string>();
+            List<string> key1 = new List<string>();
+            List<string> key2 = new List<string>();
+            List<string> key3 = new List<string>();
+            string keycol1 = (_table.HierarchicalPartitionKeys.Count > 0) ? _table.HierarchicalPartitionKeys?.ElementAt(0).Value?.Name : null;
+            string keycol2 = (_table.HierarchicalPartitionKeys.Count > 1) ? _table.HierarchicalPartitionKeys?.ElementAt(1).Value?.Name : null;
+            string keycol3 = (_table.HierarchicalPartitionKeys.Count > 2) ? _table.HierarchicalPartitionKeys?.ElementAt(2).Value?.Name : null;
 
             foreach (var set in idAndPks)
             {
                 ids.Add(set.Item1.ToString());
-                var innerdic = GetPK(set.Item2);
-                for (int i=0; i < innerdic.Values.Count(); i++)
+                if (!string.IsNullOrEmpty(keycol1))
                 {
-                    if (i == 0)
-                    {
-                        key1.Add(innerdic.ElementAt(0).Value);
-                        if (string.IsNullOrEmpty(keycol1)) keycol1 = innerdic.ElementAt(0).Key;
-                    }
-                    if (i == 1 && innerdic.Count() > 1)
-                    {
-                        key2.Add(innerdic.ElementAt(1).Value);
-                        if (string.IsNullOrEmpty(keycol2)) keycol2 = innerdic.ElementAt(1).Key;
-                    }
-                    if (i == 2 && innerdic.Count() > 2)
-                    {
-                        key3.Add(innerdic.ElementAt(2).Value);
-                        if (string.IsNullOrEmpty(keycol3)) keycol3 = innerdic.ElementAt(2).Key;
-                    }
+                    var curkey = set.Item2.Where(x => x.Key.Equals(keycol1, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+                    if (!string.IsNullOrEmpty(curkey.Value)) key1.Add(curkey.Value);
+                }
+                if (!string.IsNullOrEmpty(keycol2))
+                {
+                    var curkey = set.Item2.Where(x => x.Key.Equals(keycol2, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+                    if (!string.IsNullOrEmpty(curkey.Value)) key2.Add(curkey.Value);
+                }
+                if (!string.IsNullOrEmpty(keycol3))
+                {
+                    var curkey = set.Item2.Where(x => x.Key.Equals(keycol3, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+                    if (!string.IsNullOrEmpty(curkey.Value)) key3.Add(curkey.Value);
+                }
+            }
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.Append("SELECT * FROM c WHERE ");
+
+            if (!string.IsNullOrEmpty(keycol1))
+            {
+                stringBuilder.Append($"c.{keycol1} IN ({string.Join(",", key1.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
+            }
+            if (!string.IsNullOrEmpty(keycol2))
+            {
+                stringBuilder.Append($"c.{keycol2} IN ({string.Join(",", key2.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
+            }
+            if (!string.IsNullOrEmpty(keycol3))
+            {
+                stringBuilder.Append($"c.{keycol3} IN ({string.Join(",", key3.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
+            }
+
+            stringBuilder.Append($"c.id IN ({string.Join(",", ids.Distinct().Select(x => $"\"{x}\"").ToList())})");
+            
+            return stringBuilder;
+        }
+        private StringBuilder GetByEntityListPrep(List<T> entities)
+        {
+            List<object> ids = new List<object>();
+            List<object> key1 = new List<object>();
+            List<object> key2 = new List<object>();
+            List<object> key3 = new List<object>();
+            string keycol1 = (_table.HierarchicalPartitionKeys.Count > 0) ? _table.HierarchicalPartitionKeys?.ElementAt(0).Value?.Name : null;
+            string keycol2 = (_table.HierarchicalPartitionKeys.Count > 1) ? _table.HierarchicalPartitionKeys?.ElementAt(1).Value?.Name : null;
+            string keycol3 = (_table.HierarchicalPartitionKeys.Count > 2) ? _table.HierarchicalPartitionKeys?.ElementAt(2).Value?.Name : null;
+
+            foreach (var entity in entities)
+            {
+                ids.Add(GetId(entity));
+                if (!string.IsNullOrEmpty(keycol1))
+                {
+                    var curkey = GetPropertyValue(entity, keycol1)?.ToString();
+                    if (!string.IsNullOrEmpty(curkey)) key1.Add(curkey);
+                }
+                if (!string.IsNullOrEmpty(keycol2))
+                {
+                    var curkey = GetPropertyValue(entity, keycol2)?.ToString();
+                    if (!string.IsNullOrEmpty(curkey)) key2.Add(curkey);
+                }
+                if (!string.IsNullOrEmpty(keycol3))
+                {
+                    var curkey = GetPropertyValue(entity, keycol3)?.ToString();
+                    if (!string.IsNullOrEmpty(curkey)) key3.Add(curkey);
                 }
             }
 
@@ -229,26 +322,7 @@ namespace dii.storage.cosmos
 
             stringBuilder.Append($"c.id IN ({string.Join(",", ids.Distinct().Select(x => $"\"{x}\"").ToList())})");
 
-            //run query
-            diiEntities = new List<T>();
-
-            // Retrieve an iterator for the result set
-            using FeedIterator<object> results = _container.GetItemQueryIterator<object>(stringBuilder.ToString());
-
-            while (results.HasMoreResults)
-            {
-                FeedResponse<object> resultsPage = await results.ReadNextAsync();
-                foreach (object result in resultsPage)
-                {
-                    // Process result
-                    //diiEntities.Add(_optimizer.UnpackageFromJson<T>(result.ToString()));
-                    var returnObj = _optimizer.UnpackageFromJson<T>(result.ToString());
-                    returnObj.SetInitialState(_table);
-                    diiEntities.Add(returnObj);
-                }
-            }
-
-            return diiEntities;
+            return stringBuilder;
         }
 
         /// <summary>
@@ -260,41 +334,23 @@ namespace dii.storage.cosmos
         /// <param name="queryDefinition">The Cosmos SQL query definition.</param>
         /// <param name="continuationToken">(Optional) The continuation token for subsequent calls.</param>
         /// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>
         /// A PagedList of entities.
         /// </returns>
         /// <remarks>
         /// 
         /// </remarks>
-        protected virtual async Task<PagedList<T>> GetPagedAsync(QueryDefinition queryDefinition, string continuationToken = null, QueryRequestOptions requestOptions = null)
+        protected virtual async Task<PagedList<T>> GetPagedAsync(QueryDefinition queryDefinition, string continuationToken = null, QueryRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
+            requestOptions ??= new QueryRequestOptions
+            {
+                MaxItemCount = _table.DefaultPageSize
+            };
+
             var iterator = _container.GetItemQueryStreamIterator(queryDefinition, continuationToken, requestOptions);
 
-            var results = new PagedList<T>();
-
-            while (iterator.HasMoreResults)
-            {
-                var responseMessage = await iterator.ReadNextAsync().ConfigureAwait(false);
-
-                using (var reader = new StreamReader(responseMessage.Content))
-                {
-                    var json = reader.ReadToEnd();
-                    var wrapper = JsonSerializer.Deserialize<StreamIteratorContentWrapper>(json);
-
-                    foreach (var element in wrapper.Documents)
-                    {
-                        var doc = element.ToString();
-                        //results.Add(_optimizer.UnpackageFromJson<T>(doc));
-                        var returnObj = _optimizer.UnpackageFromJson<T>(doc);
-                        returnObj.SetInitialState(_table);
-                        results.Add(returnObj);
-                    }
-                }
-
-                results.ContinuationToken = responseMessage.ContinuationToken;
-            }
-
-            return results;
+            return await GetPagedInternalAsync(iterator, continuationToken, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -303,21 +359,27 @@ namespace dii.storage.cosmos
         /// <param name="queryText">The SQL query text.</param>
         /// <param name="continuationToken">(Optional) The continuation token for subsequent calls.</param>
         /// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>
         /// A PagedList of entities.
         /// </returns>
         /// <remarks>
         /// Only supports single partition queries.
         /// </remarks>
-        protected virtual async Task<PagedList<T>> GetPagedAsync(string queryText = null, string continuationToken = null, QueryRequestOptions requestOptions = null)
+        protected virtual async Task<PagedList<T>> GetPagedAsync(string queryText = null, string continuationToken = null, QueryRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             var iterator = _container.GetItemQueryStreamIterator(queryText, continuationToken, requestOptions);
 
+            return await GetPagedInternalAsync(iterator, continuationToken, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task<PagedList<T>> GetPagedInternalAsync(FeedIterator iterator, string continuationToken = null, CancellationToken cancellationToken = default)
+        {
             var results = new PagedList<T>();
 
             while (iterator.HasMoreResults)
             {
-                var responseMessage = await iterator.ReadNextAsync().ConfigureAwait(false);
+                var responseMessage = await iterator.ReadNextAsync(cancellationToken).ConfigureAwait(false);
 
                 using (var reader = new StreamReader(responseMessage.Content))
                 {
@@ -327,9 +389,8 @@ namespace dii.storage.cosmos
                     foreach (var element in wrapper.Documents)
                     {
                         var doc = element.ToString();
-                        var returnObj = _optimizer.UnpackageFromJson<T>(doc);
-                        returnObj.SetInitialState(_table);
-                        results.Add(returnObj);
+                        if (!string.IsNullOrEmpty(doc))
+                            results.Add(await HydrateEntityAsync(doc).ConfigureAwait(false));
                     }
                 }
 
@@ -338,6 +399,7 @@ namespace dii.storage.cosmos
 
             return results;
         }
+
         #endregion Fetch APIs
 
         #region Create APIs
@@ -364,11 +426,7 @@ namespace dii.storage.cosmos
             {
                 return default(T);
             }
-
-            var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
-            unpackedEntity.SetInitialState(_table);
-
-            return unpackedEntity;
+            return await HydrateEntityAsync(returnedEntity.Resource?.ToString()).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -393,21 +451,35 @@ namespace dii.storage.cosmos
                 return unpackedEntities;
             }
 
+            if (diiEntities.Count() > MAX_BATCH_SIZE)
+            {
+                throw new ArgumentException($"The number of entities to create exceeds the maximum batch size of {MAX_BATCH_SIZE}.");
+            }
+
             var packedEntities = diiEntities.Select(x => new
             {
-                //PartitionKey = _optimizer.GetPartitionKey(x),
                 Entity = _optimizer.ToEntity(x)
             });
 
             var concurrentTasks = new List<Task<ItemResponse<object>>>();
-
+            var itemResponses = new List<ItemResponse<object>>();
             foreach (var packedEntity in packedEntities)
             {
+                //ToDo: Should likely be CreateItemStreamAsync for better performance (since this is bulk)
                 var task = _container.CreateItemAsync(packedEntity.Entity, null, requestOptions, cancellationToken);
                 concurrentTasks.Add(task);
+                if (concurrentTasks.Count() == MAX_CONCURRENCY)
+                {
+                    var res = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+                    itemResponses.AddRange(res);
+                    concurrentTasks.Clear();
+                }
             }
-
-            var itemResponses = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+            if (concurrentTasks.Count() > 0)
+            {
+                var lastres = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+                itemResponses.AddRange(lastres);
+            }
 
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
 
@@ -416,14 +488,9 @@ namespace dii.storage.cosmos
                 return unpackedEntities;
             }
 
-            unpackedEntities = itemResponses.Select(x =>
-            {
-                var obj = _optimizer.FromEntity<T>(x.Resource);
-                obj.SetInitialState(_table);
-                return obj;
-            }).ToList();
-
-            return unpackedEntities;
+            var ents = itemResponses.Select(async x => await HydrateEntityAsync(x.Resource?.ToString()).ConfigureAwait(false));
+            var hydrateres = await Task.WhenAll(ents);
+            return hydrateres?.ToList();
         }
         #endregion Create APIs
 
@@ -464,9 +531,7 @@ namespace dii.storage.cosmos
                 var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
                 if (returnResult)
                 {
-                    var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
-                    unpackedEntity.SetInitialState(_table);
-                    return unpackedEntity;
+                    return await HydrateEntityAsync(returnedEntity.Resource?.ToString()).ConfigureAwait(false);
                 }
             }
             catch (CosmosException ex)
@@ -504,6 +569,10 @@ namespace dii.storage.cosmos
             {
                 return unpackedEntities;
             }
+            if (diiEntities.Count() > MAX_CONCURRENCY) //Thread constraint
+            {
+                throw new ArgumentException($"The number of entities to replace exceeds the maximum Replace batch size of 100.");
+            }
 
             var concurrentTasks = new List<Task<ItemResponse<object>>>();
             var generateRequestOptions = (requestOptions == null);
@@ -514,8 +583,6 @@ namespace dii.storage.cosmos
 
                 // Build the full partition key path
                 var keyBuilder = GetPK(entity);
-
-                //var partitionKey = _optimizer.GetPartitionKey(diiEntity);
                 var id = _optimizer.GetId(entity);
 
                 if (generateRequestOptions && !string.IsNullOrEmpty(entity.DataVersion))
@@ -541,14 +608,9 @@ namespace dii.storage.cosmos
                 return unpackedEntities;
             }
 
-            unpackedEntities = itemResponses.Select(x =>
-            {
-                var obj = _optimizer.FromEntity<T>(x.Resource);
-                obj.SetInitialState(_table);
-                return obj;
-            }).ToList();
-
-            return unpackedEntities;
+            var ents = itemResponses.Select(async x => await HydrateEntityAsync(x.Resource?.ToString()).ConfigureAwait(false));
+            var hydraters = await Task.WhenAll(ents);
+            return hydraters?.ToList();
         }
 
         protected virtual async Task<T> ModifyHierarchicalPartitionKeyValueReplaceAsync(T diiEntity, Dictionary<string, string> newPartitionKeys, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
@@ -569,8 +631,7 @@ namespace dii.storage.cosmos
             }
 
             // Build the full partition key path
-            var partitionKey = new PartitionKeyBuilder();
-            var dic = GetPK(newPartitionKeys);
+            var partitionKey = GetPKBuilder(newPartitionKeys);
 
             //delete original (old) entity
             var bok = false;
@@ -579,47 +640,43 @@ namespace dii.storage.cosmos
                 await DeleteEntityAsync(diiEntity, requestOptions, cancellationToken).ConfigureAwait(false);
 
                 //Now update original object with new key(s)
-                if (dic.Count() > 0)
+                if (newPartitionKeys.Count() > 0)
                 {
-                    partitionKey.Add(dic.ElementAt(0).Value);
-                    var curkey = GetPropertyValue(diiEntity, dic.ElementAt(0).Key);
-                    if (!curkey.Equals(dic.ElementAt(0).Value))
+                    var curkey = GetPropertyValue(diiEntity, newPartitionKeys.ElementAt(0).Key);
+                    if (!curkey.Equals(newPartitionKeys.ElementAt(0).Value))
                     {
-                        SetPropertyValue(diiEntity, dic.ElementAt(0).Key, dic.ElementAt(0).Value);
+                        SetPropertyValue(diiEntity, newPartitionKeys.ElementAt(0).Key, newPartitionKeys.ElementAt(0).Value);
                     }
                 }
-                if (dic.Count() > 1)
+                if (newPartitionKeys.Count() > 1)
                 {
-                    partitionKey.Add(dic.ElementAt(1).Value);
-                    var curkey = GetPropertyValue(diiEntity, dic.ElementAt(1).Key);
-                    if (!curkey.Equals(dic.ElementAt(1).Value))
+                    var curkey = GetPropertyValue(diiEntity, newPartitionKeys.ElementAt(1).Key);
+                    if (!curkey.Equals(newPartitionKeys.ElementAt(1).Value))
                     {
-                        SetPropertyValue(diiEntity, dic.ElementAt(1).Key, dic.ElementAt(1).Value);
+                        SetPropertyValue(diiEntity, newPartitionKeys.ElementAt(1).Key, newPartitionKeys.ElementAt(1).Value);
                     }
                 }
-                if (dic.Count() > 2)
+                if (newPartitionKeys.Count() > 2)
                 {
-                    partitionKey.Add(dic.ElementAt(2).Value);
-                    var curkey = GetPropertyValue(diiEntity, dic.ElementAt(2).Key);
-                    if (!curkey.Equals(dic.ElementAt(2).Value))
+                    var curkey = GetPropertyValue(diiEntity, newPartitionKeys.ElementAt(2).Key);
+                    if (!curkey.Equals(newPartitionKeys.ElementAt(2).Value))
                     {
-                        SetPropertyValue(diiEntity, dic.ElementAt(2).Key, dic.ElementAt(2).Value);
+                        SetPropertyValue(diiEntity, newPartitionKeys.ElementAt(2).Key, newPartitionKeys.ElementAt(2).Value);
                     }
                 }
 
                 //insert new entity
+                diiEntity.SetChangeTracker(_table);
                 var packedEntity = _optimizer.ToEntity(diiEntity);
                 var returnedEntity = await _container.CreateItemAsync(packedEntity, partitionKey.Build(), requestOptions, cancellationToken).ConfigureAwait(false);
+                bok = true;
 
                 var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
                 if (!returnResult)
                 {
                     return default(T);
                 }
-                bok = true;
-                var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
-                unpackedEntity.SetInitialState(_table);
-                return unpackedEntity;
+                return await HydrateEntityAsync(returnedEntity.Resource?.ToString()).ConfigureAwait(false);
             }
             catch (CosmosException ex)
             {
@@ -632,6 +689,10 @@ namespace dii.storage.cosmos
                     //re-insert original (old) entity
                     var packedEntity = _optimizer.ToEntity(diiEntity);
                     var returnedEntity = await _container.UpsertItemAsync(packedEntity, oldKeyBuilder.Build(), requestOptions, cancellationToken).ConfigureAwait(false);
+                    if (returnedEntity.StatusCode != System.Net.HttpStatusCode.OK)
+                    {
+                        //ToDo: log this
+                    }
                 }
             }
         }
@@ -641,6 +702,9 @@ namespace dii.storage.cosmos
         #region Upsert APIs
         /// <summary>
         /// Upserts an entity as an asynchronous operation.
+        /// NOTE: This method performs a GetAsync() call to get the current version of the entity, if this container has a lookup.
+        /// If entity updates are infrequent, consider using CreateAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        ///  and handle exceptions for duplicate entities (ie. perform update)
         /// </summary>
         /// <param name="diiEntity">The <typeparamref name="T"/> to upsert.</param>
         /// <param name="requestOptions">(Optional) The options for the entity query request.</param>
@@ -657,6 +721,20 @@ namespace dii.storage.cosmos
             {
                 requestOptions = new ItemRequestOptions { IfMatchEtag = diiEntity.DataVersion };
             }
+
+            //If this type has a lookup, then we may have to fetch current version first
+            //If there are any entities that are not new (DataVersion != null) AND have NO initial state (HasInitialState == false)
+            // They have not been initialized but should have been because this is a Lookup container source
+            if ((_table.HasLookup()) && !diiEntity.HasInitialState)
+            {
+                //lookup the current version
+                var currentVersion = await GetEntityAsync(diiEntity, requestOptions, cancellationToken).ConfigureAwait(false);
+                if (currentVersion != null)
+                {
+                    diiEntity.SetInitialState(_table, currentVersion);
+                }
+            }
+
             diiEntity.SetChangeTracker(_table);
             var packedEntity = _optimizer.ToEntity(diiEntity);
 
@@ -672,9 +750,7 @@ namespace dii.storage.cosmos
                 return default(T);
             }
 
-            var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
-            unpackedEntity.SetInitialState(_table);
-            return unpackedEntity;
+            return await HydrateEntityAsync(returnedEntity.Resource?.ToString()).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -694,19 +770,52 @@ namespace dii.storage.cosmos
         {
             var unpackedEntities = default(List<T>);
 
-            if (diiEntities == null || !diiEntities.Any())
+            if (diiEntities == null || diiEntities.Count() == 0)
             {
                 return unpackedEntities;
             }
+            if (diiEntities.Count() > MAX_BATCH_SIZE)
+            {
+                throw new ArgumentException($"The number of entities to upsert exceeds the maximum batch size of {MAX_BATCH_SIZE}.");
+            }
 
             var concurrentTasks = new List<Task<ItemResponse<object>>>();
+            var itemResponses = new List<ItemResponse<object>>();
             var generateRequestOptions = (requestOptions == null);
+            var prevs = new Dictionary<string, T>();
+
+            //if this container has a lookup, then we may have to fetch current version first
+            if (this._table.HasLookup())
+            {
+                //See if there are any entities that have NO initial state (HasInitialState == false)
+                //Concern: They have not been initialized but should have been because this is a Lookup container source 
+                var fetchList = diiEntities.Where(x => !x.HasInitialState).ToList();
+                if (fetchList?.Any() ?? false)
+                {
+                    //lookup the current version
+                    var stringBuilder = GetByEntityListPrep(fetchList.ToList());
+                    using FeedIterator results = _container.GetItemQueryStreamIterator(stringBuilder.ToString(), requestOptions: new QueryRequestOptions()
+                    {
+                        MaxItemCount = MAX_BATCH_SIZE
+                    });
+
+                    var currentVersions = await GetPagedInternalAsync(results, null, cancellationToken).ConfigureAwait(false);
+                    prevs = currentVersions?.ToDictionary(x => GetId(x), x => x) ?? new Dictionary<string, T>();
+                }
+            }
 
             foreach (var entity in diiEntities)
             {
                 if (generateRequestOptions && !string.IsNullOrEmpty(entity.DataVersion))
                 {
                     requestOptions = new ItemRequestOptions { IfMatchEtag = entity.DataVersion };
+                }
+                //If there is a previous version, set the initial state
+                //This could happen if this container has a lookup
+                if (prevs.Count() > 0 && prevs.ContainsKey(GetId(entity)))
+                {
+                    //This will ensure we save any changes to Lookup container Ids or Hpks...so we don't orphan the Lookup records
+                    entity.SetInitialState(_table, prevs[GetId(entity)]);
                 }
                 entity.SetChangeTracker(_table);
                 var packedEntity = _optimizer.ToEntity(entity);
@@ -717,13 +826,18 @@ namespace dii.storage.cosmos
                 var task = _container.UpsertItemAsync(packedEntity, keyBuilder.Build(), requestOptions, cancellationToken);
                 concurrentTasks.Add(task);
 
-                if (generateRequestOptions)
+                if (concurrentTasks.Count() == MAX_CONCURRENCY)
                 {
-                    requestOptions = null;
+                    var res = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+                    itemResponses.AddRange(res);
+                    concurrentTasks.Clear();
                 }
             }
-
-            var itemResponses = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+            if (concurrentTasks.Count() > 0)
+            {
+                var lastres = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+                itemResponses.AddRange(lastres);
+            }
 
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
 
@@ -732,14 +846,9 @@ namespace dii.storage.cosmos
                 return unpackedEntities;
             }
 
-            unpackedEntities = itemResponses.Select(x =>
-            {
-                var obj = _optimizer.FromEntity<T>(x.Resource);
-                obj.SetInitialState(_table);
-                return obj;
-            }).ToList();
-
-            return unpackedEntities;
+            var ents = itemResponses.Select(async x => await HydrateEntityAsync(x.Resource?.ToString()).ConfigureAwait(false));
+            var hydrateres = await Task.WhenAll(ents);
+            return hydrateres?.ToList();
         }
         #endregion Upsert APIs
 
@@ -765,31 +874,20 @@ namespace dii.storage.cosmos
         protected virtual async Task<T> PatchAsync(string id, Dictionary<string, string> partitionKeys, Dictionary<string, object> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             // Build the full partition key path
-            var partitionKey = new PartitionKeyBuilder();
+            var partitionKey = GetPKBuilder(partitionKeys);
 
-            var dic = GetPK(partitionKeys);
-            if (dic.Count() > 0) partitionKey.Add(dic.ElementAt(0).Value);
-            if (dic.Count() > 1) partitionKey.Add(dic.ElementAt(1).Value);
-            if (dic.Count() > 2) partitionKey.Add(dic.ElementAt(2).Value);
-
-            var changes = new Dictionary<string, string>();
-            foreach(var op in patchOperations)
-            {
-                var path = op.Key.Split('/')?.ElementAt(1) ?? op.Key;
-                foreach(var lid in _table.LookupIds)
-                {
-                    var sat = lid.Value.GetCustomAttribute<SearchableAttribute>();
-                    if (lid.Value.Name.Equals(path, StringComparison.InvariantCultureIgnoreCase) ||
-                        (sat?.Abbreviation?.Equals(path, StringComparison.InvariantCultureIgnoreCase) ?? false))
-                    {
-                        changes.Add(sat?.Abbreviation ?? lid.Value.Name, op.Value.ToString());
-                    }
-                }
-            }
+            return await PatchInternalAsync(id, partitionKey, patchOperations, requestOptions, cancellationToken).ConfigureAwait(false);
+        }
+        private async Task<T> PatchInternalAsync(string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        {
+            //Here we need to check the patch operations and determine if we need to flag an Id of Hpk change
+            var changes = DiiBasicEntity.GetAnyKeyChangesSerialized(_table, patchOperations);
 
             var ops = patchOperations.Select(x => PatchOperation.Set(x.Key, x.Value)).ToList(); //convert from Dictionary<string, object> to List<PatchOperation>
-            ops.Add(PatchOperation.Set("/LastUpdated", DateTime.UtcNow));
-            ops.Add(PatchOperation.Set("/ChangeTracker", changes));
+            if (!string.IsNullOrEmpty(changes))
+            {
+                ops.Add(PatchOperation.Set($"/{Constants.ReservedChangeTrackerKey}", changes));
+            }
 
             var returnedEntity = await _container.PatchItemAsync<object>(id, partitionKey.Build(), (IReadOnlyList<PatchOperation>)ops, requestOptions, cancellationToken).ConfigureAwait(false);
 
@@ -798,11 +896,9 @@ namespace dii.storage.cosmos
             {
                 return default(T);
             }
-
-            var unpackedEntity = _optimizer.FromEntity<T>(returnedEntity.Resource);
-            unpackedEntity.SetInitialState(_table);
-            return unpackedEntity;
+            return await HydrateEntityAsync(returnedEntity.Resource?.ToString()).ConfigureAwait(false);
         }
+
 
         /// <summary>
         /// Patches multiple entities as an asynchronous operation.
@@ -824,32 +920,51 @@ namespace dii.storage.cosmos
         /// flag to false.
         /// </para>
         /// </remarks>
-        protected virtual async Task<List<T>> PatchBulkAsync(IReadOnlyList<(string id, Dictionary<string, string> partitionKeys, IReadOnlyList<PatchOperation> listOfPatchOperations)> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        protected virtual async Task<List<T>> PatchBulkAsync(IReadOnlyList<(string id, Dictionary<string, string> partitionKeys, Dictionary<string, object> listOfPatchOperations)> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        {
+            if (patchOperations == null || patchOperations.Count() == 0)
+            {
+                return default(List<T>);
+            }
+            if (patchOperations.Count() > MAX_BATCH_SIZE)
+            {
+                throw new ArgumentException($"The number of entities to patch exceeds the maximum batch size of {MAX_BATCH_SIZE}.");
+            }
+
+            var ops = patchOperations.Select<(string id, Dictionary<string, string> partitionKeys, Dictionary<string, object> listOfPatchOperations), 
+                                            (string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations)>(x => new (x.id, GetPKBuilder(x.partitionKeys), x.listOfPatchOperations)).ToList();
+
+            return await PatchBulkInternalAsync(ops, requestOptions, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task<List<T>> PatchBulkInternalAsync(IReadOnlyList<(string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations)> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             var unpackedEntities = default(List<T>);
 
-            if (patchOperations == null || !patchOperations.Any())
-            {
-                return unpackedEntities;
-            }
-
-            var concurrentTasks = new List<Task<ItemResponse<object>>>();
-
+            var concurrentTasks = new List<Task<T>>();
+            var itemResponses = new List<T>();
             foreach (var (id, partitionKeys, listOfPatchOperations) in patchOperations)
             {
-                // Build the full partition key path
-                var partitionKey = new PartitionKeyBuilder();
+                if (listOfPatchOperations == null || listOfPatchOperations.Count() == 0)
+                {
+                    continue;
+                }
 
-                var dic = GetPK(partitionKeys);
-                if (dic.Count() > 0) partitionKey.Add(dic.ElementAt(0).Value);
-                if (dic.Count() > 1) partitionKey.Add(dic.ElementAt(1).Value);
-                if (dic.Count() > 2) partitionKey.Add(dic.ElementAt(2).Value);
-
-                var task = _container.PatchItemAsync<object>(id, partitionKey.Build(), listOfPatchOperations, requestOptions, cancellationToken);
+                var task = PatchInternalAsync(id, partitionKeys, listOfPatchOperations, requestOptions, cancellationToken);
                 concurrentTasks.Add(task);
-            }
 
-            var itemResponses = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+                if (concurrentTasks.Count() == MAX_CONCURRENCY)
+                {
+                    var res = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+                    itemResponses.AddRange(res);
+                    concurrentTasks.Clear();
+                }
+            }
+            if (concurrentTasks.Count() > 0)
+            {
+                var lastres = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+                itemResponses.AddRange(lastres);
+            }
 
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
 
@@ -858,9 +973,7 @@ namespace dii.storage.cosmos
                 return unpackedEntities;
             }
 
-            unpackedEntities = itemResponses.Select(x => _optimizer.FromEntity<T>(x.Resource)).ToList();
-
-            return unpackedEntities;
+            return itemResponses;
         }
         #endregion Patch APIs
 
@@ -877,12 +990,25 @@ namespace dii.storage.cosmos
         /// <remarks>
         /// <see cref="ItemRequestOptions.EnableContentResponseOnWrite"/> is ignored.
         /// </remarks>
-        protected virtual Task<bool> DeleteEntityAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        protected virtual async Task<bool> DeleteEntityAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             var partitionKey = GetPK(diiEntity);
             var id = _optimizer.GetId(diiEntity);
 
-            return DeleteAsync(id, partitionKey, requestOptions, cancellationToken);
+            if (this._table.HasLookup())
+            {
+                //We have to mark this entities ttl so that it passes through change feed to ensure deletion of Lookup item(s)
+                var patchItemRequestOptions = new PatchItemRequestOptions
+                {
+                    EnableContentResponseOnWrite = false
+                };
+                _ = await PatchInternalAsync(id, partitionKey, GetDeletePatch(DELETE_TTL), patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
+                return true;
+            }
+            else
+            {
+                return await DeleteInternalAsync(id, partitionKey, requestOptions, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         /// <summary>
@@ -898,19 +1024,24 @@ namespace dii.storage.cosmos
         /// <remarks>
         /// <see cref="ItemRequestOptions.EnableContentResponseOnWrite"/> is ignored.
         /// </remarks>
-        protected virtual Task<bool> DeleteEntityByIdAsync(string id, Dictionary<string, string> partitionKeys, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        protected virtual async Task<bool> DeleteEntityByIdAsync(string id, Dictionary<string, string> partitionKeys, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
-
-            // Build the full partition key path
-            var partitionKey = new PartitionKeyBuilder();
-
-            var dic = GetPK(partitionKeys);
-
-            if (dic.Count() > 0) partitionKey.Add(dic.ElementAt(0).Value);
-            if (dic.Count() > 1) partitionKey.Add(dic.ElementAt(1).Value);
-            if (dic.Count() > 2) partitionKey.Add(dic.ElementAt(2).Value);
-
-            return DeleteAsync(id, partitionKey, requestOptions, cancellationToken);
+            if (this._table.HasLookup())
+            {
+                //We have to mark this entities ttl so that it passes through change feed to ensure deletion of Lookup item(s)
+                var patchItemRequestOptions = new PatchItemRequestOptions
+                {
+                    EnableContentResponseOnWrite = false
+                };
+                _ = await PatchAsync(id, partitionKeys, GetDeletePatch(DELETE_TTL), patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
+                return true;
+            }
+            else
+            {
+                // Build the full partition key path
+                var partitionKey = GetPKBuilder(partitionKeys);
+                return await DeleteInternalAsync(id, partitionKey, requestOptions, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         /// <summary>
@@ -926,10 +1057,9 @@ namespace dii.storage.cosmos
         /// <remarks>
         /// <see cref="ItemRequestOptions.EnableContentResponseOnWrite"/> is ignored.
         /// </remarks>
-        private async Task<bool> DeleteAsync(string id, PartitionKeyBuilder partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        private async Task<bool> DeleteInternalAsync(string id, PartitionKeyBuilder partitionKey, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             var response = await _container.DeleteItemStreamAsync(id, partitionKey.Build(), requestOptions, cancellationToken).ConfigureAwait(false);
-
             return response.IsSuccessStatusCode;
         }
 
@@ -949,13 +1079,40 @@ namespace dii.storage.cosmos
         /// </remarks>
         protected virtual async Task<bool> DeleteEntitiesBulkAsync(IReadOnlyList<T> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
-            var idAndPks = diiEntities.Select<T, (string, PartitionKeyBuilder)>(x => new
-            (
-                _optimizer.GetId(x),
-                GetPK(x)
-            )).ToList();
+            if (diiEntities == null || diiEntities.Count == 0)
+            {
+                return true;
+            }
+            if (diiEntities.Count > MAX_BATCH_SIZE)
+            {
+                throw new ArgumentException($"The number of entities to delete exceeds the maximum batch size of {MAX_BATCH_SIZE}.");
+            }
 
-            return await DeleteBulkAsync(idAndPks, requestOptions, cancellationToken);
+            if (this._table.HasLookup())
+            {
+                //We have to mark this entities ttl so that it passes through change feed to ensure deletion of Lookup item(s)
+                var patchItemRequestOptions = new PatchItemRequestOptions
+                {
+                    EnableContentResponseOnWrite = false
+                };
+                
+                var ops = diiEntities.Select<T, (string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations)>
+                    ((x) => new (GetId(x), GetPK(x), GetDeletePatch(DELETE_TTL)))
+                    .ToList();
+                
+                _ = await PatchBulkInternalAsync(ops, patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
+                return true;
+            }
+            else
+            {
+                var idAndPks = diiEntities.Select<T, (string, PartitionKeyBuilder)>(x => new
+                (
+                    _optimizer.GetId(x),
+                    GetPK(x)
+                )).ToList();
+
+                return await DeleteBulkInternalAsync(idAndPks, requestOptions, cancellationToken);
+            }
         }
 
         /// <summary>
@@ -972,21 +1129,73 @@ namespace dii.storage.cosmos
         /// to the service. This option is recommended for non-latency sensitive scenarios only as it trades latency for throughput.
         /// <see cref="ItemRequestOptions.EnableContentResponseOnWrite"/> is ignored.
         /// </remarks>
-        protected virtual async Task<bool> DeleteBulkAsync(IReadOnlyList<(string id, PartitionKeyBuilder partitionKey)> idAndPks, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        protected virtual async Task<bool> DeleteBulkAsync(IReadOnlyList<(string id, Dictionary<string, string> partitionKeys)> idAndPks, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        {
+            if (idAndPks == null || idAndPks.Count == 0)
+            {
+                return true;
+            }
+            if (idAndPks.Count > MAX_BATCH_SIZE)
+            {
+                throw new ArgumentException($"The number of entities to delete exceeds the maximum batch size of {MAX_BATCH_SIZE}.");
+            }
+
+            if (this._table.HasLookup())
+            {
+                //We have to mark this entities ttl so that it passes through change feed to ensure deletion of Lookup item(s)
+                var patchItemRequestOptions = new PatchItemRequestOptions
+                {
+                    EnableContentResponseOnWrite = false
+                };
+                
+                var ops = idAndPks.Select<(string id, Dictionary<string, string> partitionKeys), (string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations)>
+                    ((x) => new (x.id, GetPKBuilder(x.partitionKeys), GetDeletePatch(DELETE_TTL)))
+                    .ToList();
+                
+                _ = await PatchBulkInternalAsync(ops, patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
+                return true;
+            }
+            else
+            {
+                var internalIdAndPks = idAndPks.Select<(string id, Dictionary<string, string> partitionKeys), (string, PartitionKeyBuilder)>(x => new
+                (
+                    x.id,
+                    GetPKBuilder(x.partitionKeys)
+                )).ToList();
+                
+                return await DeleteBulkInternalAsync(internalIdAndPks, requestOptions, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        private async Task<bool> DeleteBulkInternalAsync(IReadOnlyList<(string id, PartitionKeyBuilder partitionKey)> idAndPks, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             var response = false;
 
-            if (idAndPks == null || !idAndPks.Any())
+            if (idAndPks == null || idAndPks.Count == 0)
             {
-                return response;
+                return true;
             }
-
+            if (idAndPks.Count > MAX_BATCH_SIZE)
+            {
+                throw new ArgumentException($"The number of entities to delete exceeds the maximum batch size of {MAX_BATCH_SIZE}.");
+            }
             var concurrentTasks = new List<Task<ResponseMessage>>();
-
+            var itemResponses = new List<ResponseMessage>();
             foreach (var (id, partitionKey) in idAndPks)
             {
                 var task = _container.DeleteItemStreamAsync(id, partitionKey.Build(), requestOptions, cancellationToken);
                 concurrentTasks.Add(task);
+
+                if (concurrentTasks.Count() == MAX_CONCURRENCY)
+                {
+                    var res = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+                    itemResponses.AddRange(res);
+                    concurrentTasks.Clear();
+                }
+            }
+            if (concurrentTasks.Count() > 0)
+            {
+                var lastres = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+                itemResponses.AddRange(lastres);
             }
 
             var responseMessages = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
@@ -999,9 +1208,10 @@ namespace dii.storage.cosmos
 
         #endregion Public Methods
 
-        private Dictionary<string, string> GetPK(Dictionary<string, string> partitionKeys)
+
+        private PartitionKeyBuilder GetPKBuilder(Dictionary<string, string> partitionKeys)
         {
-            var ret = new Dictionary<string, string>();
+            var partitionKey = new PartitionKeyBuilder();
 
             var key1 = (_table.HierarchicalPartitionKeys.ContainsKey(0)) ? this._table.HierarchicalPartitionKeys[0] : null;
             var key2 = (_table.HierarchicalPartitionKeys.ContainsKey(1)) ? this._table.HierarchicalPartitionKeys[1] : null;
@@ -1017,56 +1227,95 @@ namespace dii.storage.cosmos
             {
                 throw new Exception("No valid partition key provided for this query");
             }
-            ret.Add(key1.Name, curkey.Value);
+            partitionKey.Add(curkey.Value);
 
             if (key2 != null)
             {
                 curkey = partitionKeys.Where(x => x.Key.Equals(key2.Name, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
-                if (curkey.Value != null) ret.Add(key2.Name, curkey.Value);
+                if (curkey.Value != null) partitionKey.Add(curkey.Value);
             }
 
             if (key3 != null)
             {
                 curkey = partitionKeys.Where(x => x.Key.Equals(key3.Name, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
-                if (curkey.Value != null) ret.Add(key3.Name, curkey.Value);
+                if (curkey.Value != null) partitionKey.Add(curkey.Value);
             }
-            return ret;
+
+            return partitionKey;
         }
 
         private PartitionKeyBuilder GetPK(T diiEntity)
         {
-            var ret = new PartitionKeyBuilder();
+            object ret = new PartitionKeyBuilder();
+            _table.HierarchicalPartitionKeys.TransferProperties(diiEntity, ref ret);
+            return (PartitionKeyBuilder)ret;
 
-            var key1 = (_table.HierarchicalPartitionKeys.ContainsKey(0)) ? this._table.HierarchicalPartitionKeys[0] : null;
-            var key2 = (_table.HierarchicalPartitionKeys.ContainsKey(1)) ? this._table.HierarchicalPartitionKeys[1] : null;
-            var key3 = (_table.HierarchicalPartitionKeys.ContainsKey(2)) ? this._table.HierarchicalPartitionKeys[2] : null;
+            //var key1 = (_table.HierarchicalPartitionKeys.ContainsKey(0)) ? this._table.HierarchicalPartitionKeys[0] : null;
+            //var key2 = (_table.HierarchicalPartitionKeys.ContainsKey(1)) ? this._table.HierarchicalPartitionKeys[1] : null;
+            //var key3 = (_table.HierarchicalPartitionKeys.ContainsKey(2)) ? this._table.HierarchicalPartitionKeys[2] : null;
 
-            if (key1 == null)
-            {
-                throw new Exception("No partition key defined for this table");
-            }
+            //if (key1 == null)
+            //{
+            //    return ret;
+            //}
 
-            var curkey = GetPropertyValue(diiEntity, key1.Name);
-            if (curkey == null)
-            {
-                throw new Exception("No valid partition key provided for this query");
-            }
-            ret.Add(curkey.ToString());
+            //var curkey = GetPropertyValue(diiEntity, key1.Name);
+            //if (curkey == null)
+            //{
+            //    throw new Exception("No valid partition key provided for this query");
+            //}
+            //ret.Add(curkey.ToString());
 
-            if (key2 != null)
-            {
-                curkey = GetPropertyValue(diiEntity, key2.Name);
-                if (curkey != null) ret.Add(curkey.ToString());
-            }
+            //if (key2 != null)
+            //{
+            //    curkey = GetPropertyValue(diiEntity, key2.Name);
+            //    if (curkey != null) ret.Add(curkey.ToString());
+            //}
 
-            if (key3 != null)
-            {
-                curkey = GetPropertyValue(diiEntity, key3.Name);
-                if (curkey != null) ret.Add(curkey.ToString());
-            }
-            return ret;
+            //if (key3 != null)
+            //{
+            //    curkey = GetPropertyValue(diiEntity, key3.Name);
+            //    if (curkey != null) ret.Add(curkey.ToString());
+            //}
+            //return ret;
         }
 
+        private string GetId(T diiEntity)
+        {
+            object retId = string.Empty;
+
+            _table.IdProperties.TransferProperties(diiEntity, ref retId, _table.IdSeparator);
+
+            //var sep = (!string.IsNullOrEmpty(_table.IdSeparator)) ? _table.IdSeparator : Constants.DefaultIdDelimitor.ToString();
+            //for (int i = 0; i < _table.IdProperties.Count; i++)
+            //{
+            //    var val = GetPropertyValue(diiEntity, _table.IdProperties[i].Name)?.ToString();
+            //    if (val != null)
+            //        retId += ((retId != string.Empty) ? $"{sep}" : "") + val;
+            //}
+
+            return retId.ToString();
+        }
+
+        private async Task<T> HydrateEntityAsync(string json)
+        {
+            if (!string.IsNullOrWhiteSpace(json))
+            {
+                T returnObj = _optimizer.UnpackageFromJson<T>(json);
+                returnObj.SetInitialState(_table);
+                return returnObj;
+            }
+            return null;
+        }
+
+        private Dictionary<string, object> GetDeletePatch(long duration)
+        {
+            return new Dictionary<string, object> 
+            { 
+                { $"/{Constants.ReservedTTLKey}", duration },
+                { $"/{Constants.ReservedDeletedKey}", true }
+            };
+        }
 
         public async Task<List<T>> RunConcurrentQueriesAsync(List<string> queries)
         {
