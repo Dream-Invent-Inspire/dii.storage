@@ -22,6 +22,8 @@ using System.Security.Principal;
 using System.Reflection;
 using dii.storage.Attributes;
 using System.Numerics;
+using dii.storage.Utilities;
+using System.Reflection.PortableExecutable;
 
 namespace dii.storage.cosmos
 {
@@ -37,8 +39,7 @@ namespace dii.storage.cosmos
     {
 
         public const int MAX_BATCH_SIZE = 1000;
-        public const int MAX_CONCURRENCY = 100;
-        public const long DELETE_TTL = 300;
+        public const long DELETE_TTL = 10;
 
         #region protected Fields
         protected readonly Container _container;
@@ -132,7 +133,6 @@ namespace dii.storage.cosmos
             return diiEntity;
         }
 
-        
         /// <summary>
         /// Centralized method for fetching entities from the database.
         /// </summary>
@@ -148,7 +148,6 @@ namespace dii.storage.cosmos
             return await HydrateEntityAsync(strEntity).ConfigureAwait(false);
         }
 
-        
         /// <summary>
         /// Centralized method for fetching entities from the database as serialized strings.
         /// For use with <see cref="ReadStreamAsync(string, PartitionKeyBuilder, ItemRequestOptions, CancellationToken)"/>
@@ -254,32 +253,18 @@ namespace dii.storage.cosmos
                     if (!string.IsNullOrEmpty(curkey.Value)) key3.Add(curkey.Value);
                 }
             }
-            StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.Append("SELECT * FROM c WHERE ");
 
-            if (!string.IsNullOrEmpty(keycol1))
-            {
-                stringBuilder.Append($"c.{keycol1} IN ({string.Join(",", key1.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
-            }
-            if (!string.IsNullOrEmpty(keycol2))
-            {
-                stringBuilder.Append($"c.{keycol2} IN ({string.Join(",", key2.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
-            }
-            if (!string.IsNullOrEmpty(keycol3))
-            {
-                stringBuilder.Append($"c.{keycol3} IN ({string.Join(",", key3.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
-            }
-
-            stringBuilder.Append($"c.id IN ({string.Join(",", ids.Distinct().Select(x => $"\"{x}\"").ToList())})");
-            
-            return stringBuilder;
+            return base.GetSQLWithIdsAndHpks(ids.Cast<string>().ToList(),
+                (keycol1, ((!string.IsNullOrEmpty(keycol1)) ? key1 : null)),
+                (keycol2, ((!string.IsNullOrEmpty(keycol2)) ? key2 : null)),
+                (keycol3, ((!string.IsNullOrEmpty(keycol3)) ? key3 : null)));
         }
         private StringBuilder GetByEntityListPrep(List<T> entities)
         {
-            List<object> ids = new List<object>();
-            List<object> key1 = new List<object>();
-            List<object> key2 = new List<object>();
-            List<object> key3 = new List<object>();
+            List<string> ids = new List<string>();
+            List<string> key1 = new List<string>();
+            List<string> key2 = new List<string>();
+            List<string> key3 = new List<string>();
             string keycol1 = (_table.HierarchicalPartitionKeys.Count > 0) ? _table.HierarchicalPartitionKeys?.ElementAt(0).Value?.Name : null;
             string keycol2 = (_table.HierarchicalPartitionKeys.Count > 1) ? _table.HierarchicalPartitionKeys?.ElementAt(1).Value?.Name : null;
             string keycol3 = (_table.HierarchicalPartitionKeys.Count > 2) ? _table.HierarchicalPartitionKeys?.ElementAt(2).Value?.Name : null;
@@ -304,25 +289,10 @@ namespace dii.storage.cosmos
                 }
             }
 
-            StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.Append("SELECT * FROM c WHERE ");
-
-            if (!string.IsNullOrEmpty(keycol1))
-            {
-                stringBuilder.Append($"c.{keycol1} IN ({string.Join(",", key1.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
-            }
-            if (!string.IsNullOrEmpty(keycol2))
-            {
-                stringBuilder.Append($"c.{keycol2} IN ({string.Join(",", key2.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
-            }
-            if (!string.IsNullOrEmpty(keycol3))
-            {
-                stringBuilder.Append($"c.{keycol3} IN ({string.Join(",", key3.Distinct().Select(x => $"\"{x}\"").ToList())}) AND ");
-            }
-
-            stringBuilder.Append($"c.id IN ({string.Join(",", ids.Distinct().Select(x => $"\"{x}\"").ToList())})");
-
-            return stringBuilder;
+            return base.GetSQLWithIdsAndHpks(ids.Cast<string>().ToList(),
+                (keycol1, ((!string.IsNullOrEmpty(keycol1)) ? key1 : null)),
+                (keycol2, ((!string.IsNullOrEmpty(keycol2)) ? key2 : null)),
+                (keycol3, ((!string.IsNullOrEmpty(keycol3)) ? key3 : null)));
         }
 
         /// <summary>
@@ -453,33 +423,15 @@ namespace dii.storage.cosmos
 
             if (diiEntities.Count() > MAX_BATCH_SIZE)
             {
-                throw new ArgumentException($"The number of entities to create exceeds the maximum batch size of {MAX_BATCH_SIZE}.");
+                throw new ArgumentException($"The number of entities to create exceeds the maximum Create batch size of {MAX_BATCH_SIZE}.");
             }
 
-            var packedEntities = diiEntities.Select(x => new
-            {
-                Entity = _optimizer.ToEntity(x)
-            });
+            var packedEntities = diiEntities.Select(x => _optimizer.ToEntity(x));
 
-            var concurrentTasks = new List<Task<ItemResponse<object>>>();
-            var itemResponses = new List<ItemResponse<object>>();
-            foreach (var packedEntity in packedEntities)
-            {
-                //ToDo: Should likely be CreateItemStreamAsync for better performance (since this is bulk)
-                var task = _container.CreateItemAsync(packedEntity.Entity, null, requestOptions, cancellationToken);
-                concurrentTasks.Add(task);
-                if (concurrentTasks.Count() == MAX_CONCURRENCY)
-                {
-                    var res = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
-                    itemResponses.AddRange(res);
-                    concurrentTasks.Clear();
-                }
-            }
-            if (concurrentTasks.Count() > 0)
-            {
-                var lastres = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
-                itemResponses.AddRange(lastres);
-            }
+            var itemResponses = await base.ProcessConcurrently<object, ItemResponse<object>>(packedEntities,
+                ((object x) => { return _container.CreateItemAsync(x, null, requestOptions, cancellationToken); }),
+                requestOptions,
+                cancellationToken);
 
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
 
@@ -518,25 +470,32 @@ namespace dii.storage.cosmos
                 requestOptions = new ItemRequestOptions { IfMatchEtag = diiEntity.DataVersion };
             }
 
+            //If this type has a lookup, then we may have to fetch current version first
+            //If there are any entities that are not new (DataVersion != null) AND have NO initial state (HasInitialState == false)
+            // They have not been initialized but should have been because this is a Lookup container source
+            if ((_table.HasLookup()) && !diiEntity.HasInitialState)
+            {
+                //lookup the current version
+                var currentVersion = await GetEntityAsync(diiEntity, requestOptions, cancellationToken).ConfigureAwait(false);
+                if (currentVersion != null)
+                {
+                    diiEntity.SetInitialState(_table, currentVersion);
+                }
+            }
+
+            diiEntity.SetChangeTracker(_table);
             var packedEntity = _optimizer.ToEntity(diiEntity);
 
             // Build the full partition key path
             var keyBuilder = GetPK(diiEntity);
-            var id = _optimizer.GetId(diiEntity);
+            var id = GetId(diiEntity);
 
-            try
-            {
-                var returnedEntity = await _container.ReplaceItemAsync(packedEntity, id, keyBuilder.Build(), requestOptions, cancellationToken).ConfigureAwait(false);
+            var returnedEntity = await _container.ReplaceItemAsync(packedEntity, id, keyBuilder.Build(), requestOptions, cancellationToken).ConfigureAwait(false);
 
-                var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
-                if (returnResult)
-                {
-                    return await HydrateEntityAsync(returnedEntity.Resource?.ToString()).ConfigureAwait(false);
-                }
-            }
-            catch (CosmosException ex)
+            var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
+            if (returnResult)
             {
-                throw;
+                return await HydrateEntityAsync(returnedEntity.Resource?.ToString()).ConfigureAwait(false);
             }
             return default(T);
         }
@@ -569,37 +528,31 @@ namespace dii.storage.cosmos
             {
                 return unpackedEntities;
             }
-            if (diiEntities.Count() > MAX_CONCURRENCY) //Thread constraint
+            if (diiEntities.Count() > MAX_BATCH_SIZE)
             {
-                throw new ArgumentException($"The number of entities to replace exceeds the maximum Replace batch size of 100.");
+                throw new ArgumentException($"The number of entities to replace exceeds the maximum Replace batch size of {MAX_BATCH_SIZE}.");
             }
 
-            var concurrentTasks = new List<Task<ItemResponse<object>>>();
-            var generateRequestOptions = (requestOptions == null);
+            //if this container has a lookup, then we may have to fetch current version first
+            var prevs = await GetPrevSet(diiEntities, cancellationToken).ConfigureAwait(false);
 
-            foreach (var entity in diiEntities)
-            {
-                var packedEntity = _optimizer.ToEntity(entity);
-
-                // Build the full partition key path
-                var keyBuilder = GetPK(entity);
-                var id = _optimizer.GetId(entity);
-
-                if (generateRequestOptions && !string.IsNullOrEmpty(entity.DataVersion))
+            var itemResponses = await base.ProcessConcurrently<T, ItemResponse<object>>(diiEntities,
+                ((T entity) =>
                 {
-                    requestOptions = new ItemRequestOptions { IfMatchEtag = entity.DataVersion };
-                }
-
-                var task = _container.ReplaceItemAsync(packedEntity, id, keyBuilder.Build(), requestOptions, cancellationToken);
-                concurrentTasks.Add(task);
-
-                if (generateRequestOptions)
-                {
-                    requestOptions = null;
-                }
-            }
-
-            var itemResponses = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
+                    requestOptions ??= (!string.IsNullOrEmpty(entity.DataVersion)) ? new ItemRequestOptions { IfMatchEtag = entity.DataVersion } : null;
+                    
+                    //If there is a previous version, set the initial state
+                    //This could happen if this container has a lookup
+                    if (prevs.Count() > 0 && prevs.ContainsKey(GetId(entity)))
+                    {
+                        //This will ensure we save any changes to Lookup container Ids or Hpks...so we don't orphan the Lookup records
+                        entity.SetInitialState(_table, prevs[GetId(entity)]);
+                    }
+                    entity.SetChangeTracker(_table);
+                    return _container.ReplaceItemAsync(_optimizer.ToEntity(entity), GetId(entity), GetPK(entity).Build(), requestOptions, cancellationToken); 
+                }),
+                requestOptions,
+                cancellationToken);
 
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
 
@@ -613,6 +566,32 @@ namespace dii.storage.cosmos
             return hydraters?.ToList();
         }
 
+        private async Task<Dictionary<string, T>> GetPrevSet(IReadOnlyList<T> diiEntities, CancellationToken cancellationToken = default)
+        {
+            var prevs = new Dictionary<string, T>();
+
+            //if this container has a lookup, then we may have to fetch current version first
+            if (this._table.HasLookup())
+            {
+                //See if there are any entities that have NO initial state (HasInitialState == false)
+                //Concern: They have not been initialized but should have been because this is a Lookup container source 
+                var fetchList = diiEntities.Where(x => !x.HasInitialState).ToList();
+                if (fetchList?.Any() ?? false)
+                {
+                    //lookup the current version
+                    var stringBuilder = GetByEntityListPrep(fetchList.ToList());
+                    using FeedIterator results = _container.GetItemQueryStreamIterator(stringBuilder.ToString(), requestOptions: new QueryRequestOptions()
+                    {
+                        MaxItemCount = MAX_BATCH_SIZE
+                    });
+
+                    var currentVersions = await GetPagedInternalAsync(results, null, cancellationToken).ConfigureAwait(false);
+                    prevs = currentVersions?.ToDictionary(x => GetId(x), x => x) ?? new Dictionary<string, T>();
+                }
+            }
+            return prevs;
+        }
+
         protected virtual async Task<T> ModifyHierarchicalPartitionKeyValueReplaceAsync(T diiEntity, Dictionary<string, string> newPartitionKeys, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             if (requestOptions == null && !string.IsNullOrEmpty(diiEntity.DataVersion))
@@ -621,7 +600,7 @@ namespace dii.storage.cosmos
             }
 
             var oldKeyBuilder = GetPK(diiEntity); //needed for roll back on error
-            var oldId = _optimizer.GetId(diiEntity); //needed for initial verification
+            var oldId = GetId(diiEntity); //needed for initial verification
 
             //first verify that the new partition key(s) are valid...as in, there does not exist a record with the (new) partition key(s)
             bool itemAlreadyExists = await ItemExistsAsync(oldId, newPartitionKeys, requestOptions, cancellationToken);
@@ -779,65 +758,31 @@ namespace dii.storage.cosmos
                 throw new ArgumentException($"The number of entities to upsert exceeds the maximum batch size of {MAX_BATCH_SIZE}.");
             }
 
-            var concurrentTasks = new List<Task<ItemResponse<object>>>();
-            var itemResponses = new List<ItemResponse<object>>();
-            var generateRequestOptions = (requestOptions == null);
-            var prevs = new Dictionary<string, T>();
-
             //if this container has a lookup, then we may have to fetch current version first
-            if (this._table.HasLookup())
-            {
-                //See if there are any entities that have NO initial state (HasInitialState == false)
-                //Concern: They have not been initialized but should have been because this is a Lookup container source 
-                var fetchList = diiEntities.Where(x => !x.HasInitialState).ToList();
-                if (fetchList?.Any() ?? false)
+            var prevs = await GetPrevSet(diiEntities, cancellationToken).ConfigureAwait(false);
+
+            var itemResponses = await base.ProcessConcurrently<T, ItemResponse<object>>(diiEntities,
+                ((T entity) => 
                 {
-                    //lookup the current version
-                    var stringBuilder = GetByEntityListPrep(fetchList.ToList());
-                    using FeedIterator results = _container.GetItemQueryStreamIterator(stringBuilder.ToString(), requestOptions: new QueryRequestOptions()
+                    requestOptions ??= (!string.IsNullOrEmpty(entity.DataVersion)) ? new ItemRequestOptions { IfMatchEtag = entity.DataVersion } : null;
+
+                    //If there is a previous version, set the initial state
+                    //This could happen if this container has a lookup
+                    if (prevs.Count() > 0 && prevs.ContainsKey(GetId(entity)))
                     {
-                        MaxItemCount = MAX_BATCH_SIZE
-                    });
+                        //This will ensure we save any changes to Lookup container Ids or Hpks...so we don't orphan the Lookup records
+                        entity.SetInitialState(_table, prevs[GetId(entity)]);
+                    }
+                    entity.SetChangeTracker(_table);
+                    var packedEntity = _optimizer.ToEntity(entity);
 
-                    var currentVersions = await GetPagedInternalAsync(results, null, cancellationToken).ConfigureAwait(false);
-                    prevs = currentVersions?.ToDictionary(x => GetId(x), x => x) ?? new Dictionary<string, T>();
-                }
-            }
+                    // Build the full partition key path
+                    var keyBuilder = GetPK(entity);
 
-            foreach (var entity in diiEntities)
-            {
-                if (generateRequestOptions && !string.IsNullOrEmpty(entity.DataVersion))
-                {
-                    requestOptions = new ItemRequestOptions { IfMatchEtag = entity.DataVersion };
-                }
-                //If there is a previous version, set the initial state
-                //This could happen if this container has a lookup
-                if (prevs.Count() > 0 && prevs.ContainsKey(GetId(entity)))
-                {
-                    //This will ensure we save any changes to Lookup container Ids or Hpks...so we don't orphan the Lookup records
-                    entity.SetInitialState(_table, prevs[GetId(entity)]);
-                }
-                entity.SetChangeTracker(_table);
-                var packedEntity = _optimizer.ToEntity(entity);
-
-                // Build the full partition key path
-                var keyBuilder = GetPK(entity);
-
-                var task = _container.UpsertItemAsync(packedEntity, keyBuilder.Build(), requestOptions, cancellationToken);
-                concurrentTasks.Add(task);
-
-                if (concurrentTasks.Count() == MAX_CONCURRENCY)
-                {
-                    var res = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
-                    itemResponses.AddRange(res);
-                    concurrentTasks.Clear();
-                }
-            }
-            if (concurrentTasks.Count() > 0)
-            {
-                var lastres = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
-                itemResponses.AddRange(lastres);
-            }
+                    return _container.UpsertItemAsync(packedEntity, keyBuilder.Build(), requestOptions, cancellationToken);
+                }),
+                requestOptions,
+                cancellationToken);
 
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
 
@@ -881,7 +826,8 @@ namespace dii.storage.cosmos
         private async Task<T> PatchInternalAsync(string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             //Here we need to check the patch operations and determine if we need to flag an Id of Hpk change
-            var changes = DiiBasicEntity.GetAnyKeyChangesSerialized(_table, patchOperations);
+            var hlpr = new ChangeTrackerHelper();
+            var changes = hlpr.GetAnyKeyChangesSerialized(_table, patchOperations);
 
             var ops = patchOperations.Select(x => PatchOperation.Set(x.Key, x.Value)).ToList(); //convert from Dictionary<string, object> to List<PatchOperation>
             if (!string.IsNullOrEmpty(changes))
@@ -941,30 +887,11 @@ namespace dii.storage.cosmos
         {
             var unpackedEntities = default(List<T>);
 
-            var concurrentTasks = new List<Task<T>>();
-            var itemResponses = new List<T>();
-            foreach (var (id, partitionKeys, listOfPatchOperations) in patchOperations)
-            {
-                if (listOfPatchOperations == null || listOfPatchOperations.Count() == 0)
-                {
-                    continue;
-                }
-
-                var task = PatchInternalAsync(id, partitionKeys, listOfPatchOperations, requestOptions, cancellationToken);
-                concurrentTasks.Add(task);
-
-                if (concurrentTasks.Count() == MAX_CONCURRENCY)
-                {
-                    var res = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
-                    itemResponses.AddRange(res);
-                    concurrentTasks.Clear();
-                }
-            }
-            if (concurrentTasks.Count() > 0)
-            {
-                var lastres = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
-                itemResponses.AddRange(lastres);
-            }
+            var itemResponses = await base.ProcessConcurrently<(string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations), T>(patchOperations,
+                (((string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations) x) => 
+                    { return PatchInternalAsync(x.id, x.partitionKey, x.listOfPatchOperations, requestOptions, cancellationToken); }),
+                requestOptions,
+                cancellationToken);
 
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
 
@@ -993,7 +920,7 @@ namespace dii.storage.cosmos
         protected virtual async Task<bool> DeleteEntityAsync(T diiEntity, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             var partitionKey = GetPK(diiEntity);
-            var id = _optimizer.GetId(diiEntity);
+            var id = GetId(diiEntity);
 
             if (this._table.HasLookup())
             {
@@ -1107,7 +1034,7 @@ namespace dii.storage.cosmos
             {
                 var idAndPks = diiEntities.Select<T, (string, PartitionKeyBuilder)>(x => new
                 (
-                    _optimizer.GetId(x),
+                    GetId(x),
                     GetPK(x)
                 )).ToList();
 
@@ -1178,29 +1105,13 @@ namespace dii.storage.cosmos
             {
                 throw new ArgumentException($"The number of entities to delete exceeds the maximum batch size of {MAX_BATCH_SIZE}.");
             }
-            var concurrentTasks = new List<Task<ResponseMessage>>();
-            var itemResponses = new List<ResponseMessage>();
-            foreach (var (id, partitionKey) in idAndPks)
-            {
-                var task = _container.DeleteItemStreamAsync(id, partitionKey.Build(), requestOptions, cancellationToken);
-                concurrentTasks.Add(task);
 
-                if (concurrentTasks.Count() == MAX_CONCURRENCY)
-                {
-                    var res = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
-                    itemResponses.AddRange(res);
-                    concurrentTasks.Clear();
-                }
-            }
-            if (concurrentTasks.Count() > 0)
-            {
-                var lastres = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
-                itemResponses.AddRange(lastres);
-            }
+            var itemResponses = await base.ProcessConcurrently<(string id, PartitionKeyBuilder partitionKey), ResponseMessage>(idAndPks,
+                (((string id, PartitionKeyBuilder partitionKey) x) => { return _container.DeleteItemStreamAsync(x.id, x.partitionKey.Build(), requestOptions, cancellationToken); }),
+                requestOptions,
+                cancellationToken);
 
-            var responseMessages = await Task.WhenAll(concurrentTasks).ConfigureAwait(false);
-
-            response = responseMessages.All(x => x.IsSuccessStatusCode);
+            response = itemResponses.All(x => x.IsSuccessStatusCode);
 
             return response;
         }
@@ -1249,35 +1160,6 @@ namespace dii.storage.cosmos
             object ret = new PartitionKeyBuilder();
             _table.HierarchicalPartitionKeys.TransferProperties(diiEntity, ref ret);
             return (PartitionKeyBuilder)ret;
-
-            //var key1 = (_table.HierarchicalPartitionKeys.ContainsKey(0)) ? this._table.HierarchicalPartitionKeys[0] : null;
-            //var key2 = (_table.HierarchicalPartitionKeys.ContainsKey(1)) ? this._table.HierarchicalPartitionKeys[1] : null;
-            //var key3 = (_table.HierarchicalPartitionKeys.ContainsKey(2)) ? this._table.HierarchicalPartitionKeys[2] : null;
-
-            //if (key1 == null)
-            //{
-            //    return ret;
-            //}
-
-            //var curkey = GetPropertyValue(diiEntity, key1.Name);
-            //if (curkey == null)
-            //{
-            //    throw new Exception("No valid partition key provided for this query");
-            //}
-            //ret.Add(curkey.ToString());
-
-            //if (key2 != null)
-            //{
-            //    curkey = GetPropertyValue(diiEntity, key2.Name);
-            //    if (curkey != null) ret.Add(curkey.ToString());
-            //}
-
-            //if (key3 != null)
-            //{
-            //    curkey = GetPropertyValue(diiEntity, key3.Name);
-            //    if (curkey != null) ret.Add(curkey.ToString());
-            //}
-            //return ret;
         }
 
         private string GetId(T diiEntity)
@@ -1285,14 +1167,6 @@ namespace dii.storage.cosmos
             object retId = string.Empty;
 
             _table.IdProperties.TransferProperties(diiEntity, ref retId, _table.IdSeparator);
-
-            //var sep = (!string.IsNullOrEmpty(_table.IdSeparator)) ? _table.IdSeparator : Constants.DefaultIdDelimitor.ToString();
-            //for (int i = 0; i < _table.IdProperties.Count; i++)
-            //{
-            //    var val = GetPropertyValue(diiEntity, _table.IdProperties[i].Name)?.ToString();
-            //    if (val != null)
-            //        retId += ((retId != string.Empty) ? $"{sep}" : "") + val;
-            //}
 
             return retId.ToString();
         }
@@ -1316,6 +1190,7 @@ namespace dii.storage.cosmos
                 { $"/{Constants.ReservedDeletedKey}", true }
             };
         }
+
 
         public async Task<List<T>> RunConcurrentQueriesAsync(List<string> queries)
         {

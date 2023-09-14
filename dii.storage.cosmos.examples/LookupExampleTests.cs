@@ -207,7 +207,6 @@ namespace dii.storage.cosmos.examples
                 Task.Delay(100).Wait();
                 result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
             }
-            if (go > 0) Task.Delay(1000).Wait();
             Assert.NotNull(result4);
 
         }
@@ -290,121 +289,162 @@ namespace dii.storage.cosmos.examples
         [Fact, TestPriorityOrder(50)]
         public async Task RunHPKExample5()
         {
-            try
+            // Create new item
+            var o1 = new PersonOrder
             {
-                // Create new item
-                var o1 = new PersonOrder
-                {
-                    PaymentAmount = 300,
-                    PaymentType = "XXX",
-                    ClientId = "SomeEnterprise",
-                    OrderId = "orderid3",
-                    PaymentId = "pmtid3",
-                    PersonId = "person3",
-                    OrderDate = DateTimeOffset.Parse("2023-08-03T21:14:07.3066349Z")
-                };
+                PaymentAmount = 500,
+                PaymentType = "Cash",
+                ClientId = "SomeEnterprise",
+                OrderId = "orderid5",
+                PaymentId = "pmtid5",
+                PersonId = "person6",
+                OrderDate = DateTimeOffset.Parse("2023-08-05T21:14:07.3066349Z")
+            };
 
-                //Create/update
-                PersonOrder result1 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
+            //Create/update
+            PersonOrder result1 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
 
-                //Fetch
-                var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
-                int go = 50;
-                while (getres1 == null && --go > 0)
-                {
-                    Task.Delay(100).Wait();
-                    getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
-                }
-                Assert.NotNull(getres1);
-
-                var result = await _fixture.PersonOrderAdapter.DeleteEntityAsync(o1).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                //throw;
-            }
-
-            int cnt = 0;
-            while (++cnt < 1000)
+            //Fetch
+            var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            int go = 50;
+            while (getres1 == null && --go > 0)
             {
                 Task.Delay(100).Wait();
+                getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
             }
+            Assert.NotNull(getres1);
+
+            var result = await _fixture.PersonOrderAdapter.DeleteEntityAsync(o1).ConfigureAwait(false);
+
+            var getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            go = 50;
+            while (getres2 != null && --go > 0)
+            {
+                Task.Delay(100).Wait();
+                getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            }
+            Assert.Null(getres2);
         }
 
         [Fact, TestPriorityOrder(60)]
         public async Task RunHPKExample6()
         {
-            try
-            {
-                // Create orders
-                foreach(var order in _fixture.Orders)
-                {
-                    await _fixture.PersonOrderAdapter.UpsertAsync(order).ConfigureAwait(false);
-                }
+            // Create orders
+            await _fixture.PersonOrderAdapter.BulkUpsertAsync(_fixture.Orders).ConfigureAwait(false);
 
-                //bulk patch
-                List<(string, Dictionary<string, string>)> ops = _fixture.Orders.Select(x => (x.PaymentId, new Dictionary<string, string> { { "ClientId", x.ClientId }, { "OrderId", x.OrderId } } )).ToList();
-                var res = await _fixture.PersonOrderAdapter.PatchBulkAsync(ops).ConfigureAwait(false);
+            //bulk patch
+            List<(string, Dictionary<string, string>)> ops = _fixture.Orders.Select(x => (x.PaymentId, new Dictionary<string, string> { { "ClientId", x.ClientId }, { "OrderId", x.OrderId } } )).ToList();
+            var res = await _fixture.PersonOrderAdapter.PatchBulkAsync(ops).ConfigureAwait(false);
 
-                //bulk fetch
-                var res2 = await _fixture.PersonOrderAdapter.GetManyByOrderIdsAsync(ops);
-                Assert.Equal(ops.Count, res2.Count);
+            //bulk fetch
+            var res2 = await _fixture.PersonOrderAdapter.GetManyByOrderIdsAsync(ops);
+            Assert.Equal(ops.Count, res2.Count);
 
-                //Page thru
-                var res3 = await _fixture.PersonOrderAdapter.GetManyByClientIdAsync("SomeEnterprise");
-                var res4 = await _fixture.PersonOrderAdapter.GetManyByClientIdAsync("SomeEnterprise", res3.ContinuationToken);
+            //Page thru
+            var res3 = await _fixture.PersonOrderAdapter.GetManyByClientIdAsync("SomeEnterprise");
+            var res4 = await _fixture.PersonOrderAdapter.GetManyByClientIdAsync("SomeEnterprise", res3.ContinuationToken);
 
-            }
-            catch (Exception ex)
-            {
-                //throw;
-            }
         }
 
         [Fact, TestPriorityOrder(70)]
         public async Task RunHPKExample7()
         {
-            try
+            // Create orders
+            foreach (var order in _fixture.Orders)
             {
-                // Create orders
-                foreach (var order in _fixture.Orders)
-                {
-                    await _fixture.PersonOrderAdapter.UpsertAsync(order).ConfigureAwait(false);
-                }
-
-                //bulk fetch
-                var res2 = await _fixture.PersonOrderAdapter.GetManyByClientIdAsync("SomeEnterprise");
-                //Assert.Equal(_fixture.Orders.Count, res2.Count);
-
+                await _fixture.PersonOrderAdapter.UpsertAsync(order).ConfigureAwait(false);
             }
-            catch (Exception ex)
-            {
-                //throw;
-            }
+
+            //bulk fetch
+            var res2 = await _fixture.PersonOrderAdapter.GetManyByClientIdAsync("SomeEnterprise");
+            //Assert.Equal(_fixture.Orders.Count, res2.Count);
         }
 
         [Fact, TestPriorityOrder(80)]
         public async Task RunHPKExample8()
         {
-            try
+            // Create orders
+            foreach (var order in _fixture.Orders)
             {
-                // Create orders
-                foreach (var order in _fixture.Orders)
-                {
-                    await _fixture.PersonOrderAdapter.UpsertAsync(order).ConfigureAwait(false);
-                }
-
-                //bulk fetch
-                var dtfrom = DateTime.Parse("2023-07-01");
-                var dtto = DateTime.Parse("2023-08-03");
-                var res2 = await _fixture.PersonOrderAdapter.GetManyByOrderDateAsync("SomeEnterprise", dtfrom, dtto);
-                //Assert.Equal(_fixture.Orders.Count, res2.Count);
-
+                await _fixture.PersonOrderAdapter.UpsertAsync(order).ConfigureAwait(false);
             }
-            catch (Exception ex)
+
+            //bulk fetch
+            var dtfrom = DateTime.Parse("2023-07-01");
+            var dtto = DateTime.Parse("2023-08-03");
+            var res2 = await _fixture.PersonOrderAdapter.GetManyByOrderDateAsync("SomeEnterprise", dtfrom, dtto);
+            //Assert.Equal(_fixture.Orders.Count, res2.Count);
+        }
+
+        [Fact, TestPriorityOrder(90)]
+        public async Task RunHPKExample9()
+        {
+            // Create orders
+            foreach (var order in _fixture.Orders)
             {
-                //throw;
+                await _fixture.PersonOrderAdapter.UpsertAsync(order).ConfigureAwait(false);
             }
+
+            //bulk fetch
+            var dtfrom = DateTime.Parse("2023-07-01");
+            var dtto = DateTime.Parse("2023-08-03");
+            var res2 = await _fixture.PersonOrderAdapter.GetManyByOrderDateAsync("SomeEnterprise", dtfrom, dtto);
+            //Assert.Equal(_fixture.Orders.Count, res2.Count);
+        }
+
+        [Fact, TestPriorityOrder(100)]
+        public async Task RunHPKExample10()
+        {
+            var o1 = _fixture.Orders[0];
+
+            //Replace
+            o1.PaymentType = "Examplle10-CC";
+            var res1 = await _fixture.PersonOrderAdapter.ReplaceAsync(o1).ConfigureAwait(false);
+
+
+            //Fetch
+            var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            int go = 50;
+            while (getres1 == null && --go > 0)
+            {
+                Task.Delay(100).Wait();
+                getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            }
+            Assert.NotNull(getres1);
+
+            //Assert.Equal(_fixture.Orders.Count, res2.Count);
+        }
+
+        [Fact, TestPriorityOrder(110)]
+        public async Task RunHPKExample11()
+        {
+            var tmporders = _fixture.Orders.Select(x => new PersonOrder
+            {
+                ClientId = x.ClientId,
+                OrderId = x.OrderId,
+                OrderDate = x.OrderDate,
+                PaymentAmount = x.PaymentAmount,
+                PaymentId = x.PaymentId,
+                PaymentType = "Examplle11-CC", // x.PaymentType,
+                PersonId = x.PersonId
+            }).ToList();
+
+            //Replace
+            var res1 = await _fixture.PersonOrderAdapter.ReplaceBulkAsync(tmporders).ConfigureAwait(false);
+
+
+            //Fetch
+            var o1 = tmporders[tmporders.Count - 1];
+            var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            int go = 50;
+            while (getres1 == null && --go > 0)
+            {
+                Task.Delay(1000).Wait();
+                getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            }
+            Assert.NotNull(getres1);
+
+            //Assert.Equal(_fixture.Orders.Count, res2.Count);
         }
 
         #region Teardown

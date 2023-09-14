@@ -294,7 +294,7 @@ namespace dii.storage.cosmos
 						
 						_changeFeedProcessors.Add(changeFeedProcessor);
                         await changeFeedProcessor.StartAsync();
-                        //Task.Delay(1000).Wait(); //give it a second to start
+						//ToDo: Wire up observation of change feed processor health
                     }
                     tableMetaData.Initialized = true;
                 }

@@ -79,20 +79,26 @@ namespace dii.storage.cosmos.examples.Adapters
             return PagedList<PersonOrder>.CreateFromList(retOrders.Cast<PersonOrder>().ToList(), retOrders.ContinuationToken);
         }
 
-        public async Task<PersonOrder> CreateAsync(PersonOrder session, CancellationToken cancellationToken = default)
+        public async Task<PersonOrder> CreateAsync(PersonOrder order, CancellationToken cancellationToken = default)
         {
-            return await base.CreateAsync(session, cancellationToken: cancellationToken);
+            return await base.CreateAsync(order, cancellationToken: cancellationToken);
         }
 
-        public async Task<PersonOrder> ReplaceAsync(PersonOrder session, CancellationToken cancellationToken = default)
+        public async Task<PersonOrder> ReplaceAsync(PersonOrder order, CancellationToken cancellationToken = default)
         {
-            return await base.ReplaceAsync(session, cancellationToken: cancellationToken);
+            return await base.ReplaceAsync(order, cancellationToken: cancellationToken);
         }
 
-        public async Task<PersonOrder> UpsertAsync(PersonOrder session, CancellationToken cancellationToken = default)
+        public async Task<PersonOrder> UpsertAsync(PersonOrder order, CancellationToken cancellationToken = default)
         {
-            return await base.UpsertAsync(session, cancellationToken: cancellationToken);
+            return await base.UpsertAsync(order, cancellationToken: cancellationToken);
         }
+
+        public async Task<List<PersonOrder>> BulkUpsertAsync(List<PersonOrder> orders, CancellationToken cancellationToken = default)
+        {
+            return await base.UpsertBulkAsync(orders, cancellationToken: cancellationToken);
+        }
+
 
         public async Task<PersonOrder> AddEndTimeAsync(string personId, string clientId, string sessionId, DateTime started, DateTime ended, CancellationToken cancellationToken = default)
         {
@@ -144,6 +150,12 @@ namespace dii.storage.cosmos.examples.Adapters
             var results = await base.PatchBulkAsync(ops, cancellationToken: cancellationToken);
             return results?.Any() ?? false;
         }
+
+        public Task<List<PersonOrder>> ReplaceBulkAsync(IReadOnlyList<PersonOrder> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        {
+            return base.ReplaceBulkAsync(diiEntities, requestOptions, cancellationToken);
+        }
+
 
         //Alternate access patterns for Lookup tables
 
