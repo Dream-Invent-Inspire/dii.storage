@@ -72,123 +72,10 @@ namespace dii.storage.cosmos.examples
         [Fact, TestPriorityOrder(20)]
         public async Task RunHPKExample2()
         {
-            List<PersonSession> sessions = new List<PersonSession>();
-            PersonSession session = new PersonSession()
-            {
-                ClientId = "SomeEnterprise",
-                PersonId = "1",
-                SessionId = "111",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            sessions.Add(session);
-
-            // Create the entity with our adapter.
-            //var createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session).ConfigureAwait(false);
-
-            PersonSession session2 = new PersonSession()
-            {
-                ClientId = "SomeEnterprise",
-                PersonId = "1",
-                SessionId = "112",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            sessions.Add(session2);
-
-            // Create the entity with our adapter.
-            //createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session2).ConfigureAwait(false);
-
-            PersonSession session3 = new PersonSession()
-            {
-                ClientId = "SomeEnterprise",
-                PersonId = "1",
-                SessionId = "113",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            sessions.Add(session3);
-
-            // Create the entity with our adapter.
-            //createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session3).ConfigureAwait(false);
-
-            PersonSession session4 = new PersonSession()
-            {
-                ClientId = "SomeEnterprise",
-                PersonId = "2",
-                SessionId = "211",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            sessions.Add(session4);
-
-            // Create the entity with our adapter.
-            //createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session4).ConfigureAwait(false);
-
-            PersonSession session5 = new PersonSession()
-            {
-                ClientId = "SomeEnterprise",
-                PersonId = "2",
-                SessionId = "212",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            sessions.Add(session5);
-
-            // Create the entity with our adapter.
-            //createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session5).ConfigureAwait(false);
-
-            PersonSession session6 = new PersonSession()
-            {
-                ClientId = "SomeEnterprise",
-                PersonId = "2",
-                SessionId = "213",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            sessions.Add(session6);
-
-            // Create the entity with our adapter.
-            //createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session6).ConfigureAwait(false);
-
-            PersonSession session7 = new PersonSession()
-            {
-                ClientId = "SomeEnterprise",
-                PersonId = "2",
-                SessionId = "214",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            sessions.Add(session7);
-
-            // Create the entity with our adapter.
-            //createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session7).ConfigureAwait(false);
-
-            PersonSession session8 = new PersonSession()
-            {
-                ClientId = "SomeEnterprise",
-                PersonId = "3",
-                SessionId = "311",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            sessions.Add(session8);
-
-            // Create the entity with our adapter.
-            //createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session8).ConfigureAwait(false);
-
             //Bulk Upsert
-            var createdPersonSessions = await _fixture.PersonSessionAdapter.UpsertManyAsync(sessions).ConfigureAwait(false);
+            var createdPersonSessions = await _fixture.PersonSessionAdapter.UpsertManyAsync(_fixture.sessions).ConfigureAwait(false);
 
-            List<(string, Dictionary<string, string>)> lst = sessions.Select(s => (s.SessionId, new Dictionary<string, string>()
+            List<(string, Dictionary<string, string>)> lst = _fixture.sessions.Select(s => (s.SessionId, new Dictionary<string, string>()
             {
                     { "ClientId", s.ClientId },
                     { "PersonId", s.PersonId }
@@ -203,170 +90,18 @@ namespace dii.storage.cosmos.examples
         [Fact, TestPriorityOrder(30)]
         public async Task RunHPKExample3()
         {
-            #region set up
-            // Create new items
-            try
-            {
-                PersonSession session = new PersonSession()
-                {
-                    ClientId = "SomeEnterprise",
-                    PersonId = "1",
-                    SessionId = "111",
-                    SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                    Catalog = "Pets",
-                    SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-                };
+            //Delete bulk
+            var res1 = await _fixture.PersonSessionAdapter.DeleteBulkAsync(_fixture.sessions).ConfigureAwait(false);
 
-                // Create the entity with our adapter.
-                var createdPersonSession = await _fixture.PersonSessionAdapter.CreateAsync(session).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-            }
+            //Create bulk
+            var res2 = await _fixture.PersonSessionAdapter.CreateBulkAsync(_fixture.sessions).ConfigureAwait(false);
 
-            try
-            {
-                PersonSession session = new PersonSession()
-                {
-                    ClientId = "SomeEnterprise",
-                    PersonId = "1",
-                    SessionId = "112",
-                    SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                    Catalog = "Pets",
-                    SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-                };
-
-                // Create the entity with our adapter.
-                var createdPersonSession = await _fixture.PersonSessionAdapter.CreateAsync(session).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-            }
-
-            try
-            {
-                PersonSession session = new PersonSession()
-                {
-                    ClientId = "SomeEnterprise",
-                    PersonId = "1",
-                    SessionId = "113",
-                    SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                    Catalog = "Pets",
-                    SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-                };
-
-                // Create the entity with our adapter.
-                var createdPersonSession = await _fixture.PersonSessionAdapter.CreateAsync(session).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-            }
-
-            try
-            {
-                PersonSession session = new PersonSession()
-                {
-                    ClientId = "SomeEnterprise",
-                    PersonId = "2",
-                    SessionId = "211",
-                    SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                    Catalog = "Pets",
-                    SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-                };
-
-                // Create the entity with our adapter.
-                var createdPersonSession = await _fixture.PersonSessionAdapter.CreateAsync(session).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-            }
-
-            try
-            {
-                PersonSession session = new PersonSession()
-                {
-                    ClientId = "SomeEnterprise",
-                    PersonId = "2",
-                    SessionId = "212",
-                    SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                    Catalog = "Pets",
-                    SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-                };
-
-                // Create the entity with our adapter.
-                var createdPersonSession = await _fixture.PersonSessionAdapter.CreateAsync(session).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-            }
-
-            try
-            {
-                PersonSession session = new PersonSession()
-                {
-                    ClientId = "SomeEnterprise",
-                    PersonId = "2",
-                    SessionId = "213",
-                    SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                    Catalog = "Pets",
-                    SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-                };
-
-                // Create the entity with our adapter.
-                var createdPersonSession = await _fixture.PersonSessionAdapter.CreateAsync(session).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-            }
-
-            try
-            {
-                PersonSession session = new PersonSession()
-                {
-                    ClientId = "SomeEnterprise",
-                    PersonId = "2",
-                    SessionId = "214",
-                    SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                    Catalog = "Pets",
-                    SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-                };
-
-                // Create the entity with our adapter.
-                var createdPersonSession = await _fixture.PersonSessionAdapter.CreateAsync(session).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-            }
-
-            try
-            {
-                PersonSession session = new PersonSession()
-                {
-                    ClientId = "SomeEnterprise",
-                    PersonId = "3",
-                    SessionId = "311",
-                    SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                    Catalog = "Pets",
-                    SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-                };
-
-                // Create the entity with our adapter.
-                var createdPersonSession = await _fixture.PersonSessionAdapter.CreateAsync(session).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-            }
-            #endregion
-
+            //fetch them
             var storedsessions = await _fixture.PersonSessionAdapter.GetManyByClientIdAsync("SomeEnterprise", "1").ConfigureAwait(false);
 
             Assert.NotNull(storedsessions);
             Assert.Equal(storedsessions.Count(), 3);
 
-            storedsessions = await _fixture.PersonSessionAdapter.SearchByRunDurationAsync("SomeEnterprise", "2", 3600000).ConfigureAwait(false);
-
-            Assert.NotNull(storedsessions);
-            //Assert.Equal(storedsessions.Count(), 4);
         }
 
         [Fact, TestPriorityOrder(40)]
@@ -558,127 +293,43 @@ namespace dii.storage.cosmos.examples
         [Fact, TestPriorityOrder(95)]
         public async Task RunHPKExample95()
         {
-            List<PersonSession> lst = new List<PersonSession>();
-
-            PersonSession session = new PersonSession()
+            var tmpsessions = _fixture.sessions.Select(x => new PersonSession()
             {
-                ClientId = "SomeEnterprise",
-                PersonId = "1",
-                SessionId = "111",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            lst.Add(session);
+                ClientId = x.ClientId,
+                PersonId = x.PersonId,
+                SessionId = x.SessionId,
+                SessionStartDate = x.SessionStartDate,
+                Catalog = "TempCatalog", // x.Catalog,
+                SessionEndDate = x.SessionEndDate
+            }).ToList();
 
-            // Create the entity with our adapter.
-            var createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session).ConfigureAwait(false);
-
-            PersonSession session2 = new PersonSession()
+            foreach (var s in tmpsessions)
             {
-                ClientId = "SomeEnterprise",
-                PersonId = "1",
-                SessionId = "112",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            lst.Add(session2);
-
-            // Create the entity with our adapter.
-            createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session2).ConfigureAwait(false);
-
-            PersonSession session3 = new PersonSession()
-            {
-                ClientId = "SomeEnterprise",
-                PersonId = "1",
-                SessionId = "113",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            lst.Add(session3);
-
-            // Create the entity with our adapter.
-            createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session3).ConfigureAwait(false);
-
-            PersonSession session4 = new PersonSession()
-            {
-                ClientId = "SomeEnterprise",
-                PersonId = "2",
-                SessionId = "211",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            lst.Add(session4);
-
-            // Create the entity with our adapter.
-            createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session4).ConfigureAwait(false);
-
-            PersonSession session5 = new PersonSession()
-            {
-                ClientId = "SomeEnterprise",
-                PersonId = "2",
-                SessionId = "212",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            lst.Add(session5);
-
-            // Create the entity with our adapter.
-            createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session5).ConfigureAwait(false);
-
-            PersonSession session6 = new PersonSession()
-            {
-                ClientId = "SomeEnterprise",
-                PersonId = "2",
-                SessionId = "213",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            lst.Add(session6);
-
-            // Create the entity with our adapter.
-            createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session6).ConfigureAwait(false);
-
-            PersonSession session7 = new PersonSession()
-            {
-                ClientId = "SomeEnterprise",
-                PersonId = "2",
-                SessionId = "214",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            lst.Add(session7);
-
-            // Create the entity with our adapter.
-            createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session7).ConfigureAwait(false);
-
-            PersonSession session8 = new PersonSession()
-            {
-                ClientId = "SomeEnterprise",
-                PersonId = "3",
-                SessionId = "311",
-                SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
-                Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
-            };
-            lst.Add(session8);
-
-            // Create the entity with our adapter.
-            createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session8).ConfigureAwait(false);
-
+                await _fixture.PersonSessionAdapter.UpsertAsync(s).ConfigureAwait(false);
+            }
 
             //verify bulk delete
-            var bok = await _fixture.PersonSessionAdapter.DeleteBulkAsync(lst.AsReadOnly()).ConfigureAwait(false);
+            var sessions = await _fixture.PersonSessionAdapter.ReplaceBulkAsync(_fixture.sessions.AsReadOnly()).ConfigureAwait(false);
+
+            Assert.NotNull(sessions);
+            //Assert.Equal(bok, true);
+        }
+
+        [Fact, TestPriorityOrder(100)]
+        public async Task RunHPKExample100()
+        {
+            foreach (var s in _fixture.sessions)
+            {
+                await _fixture.PersonSessionAdapter.UpsertAsync(s).ConfigureAwait(false);
+            }
+
+            //verify bulk delete
+            var bok = await _fixture.PersonSessionAdapter.DeleteBulkAsync(_fixture.sessions.AsReadOnly()).ConfigureAwait(false);
 
             Assert.NotNull(bok);
             Assert.Equal(bok, true);
         }
+
 
         #region Teardown
         [Fact, TestPriorityOrder(int.MaxValue)]

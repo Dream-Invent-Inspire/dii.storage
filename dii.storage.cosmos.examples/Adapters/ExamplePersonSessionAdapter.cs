@@ -62,6 +62,19 @@ namespace dii.storage.cosmos.examples.Adapters
             return await base.CreateAsync(session, cancellationToken: cancellationToken);
         }
 
+        public async Task<List<PersonSession>> CreateBulkAsync(List<PersonSession> sessions, CancellationToken cancellationToken = default)
+        {
+            sessions.ForEach(s =>
+            {
+                if (s.SessionEndDate != null)
+                {
+                    s.Duration = (long)(s.SessionEndDate.Value - s.SessionStartDate).TotalMilliseconds;
+                }
+            });
+
+            return await base.CreateBulkAsync(sessions.AsReadOnly(), cancellationToken: cancellationToken);
+        }
+
         public async Task<PersonSession> ReplaceAsync(PersonSession session, CancellationToken cancellationToken = default)
         {
             return await base.ReplaceAsync(session, cancellationToken: cancellationToken);
@@ -125,7 +138,12 @@ namespace dii.storage.cosmos.examples.Adapters
 
             return await base.DeleteEntityByIdAsync(sessionId, dic, cancellationToken: cancellationToken);
         }
-        
+
+        public Task<List<PersonSession>> ReplaceBulkAsync(IReadOnlyList<PersonSession> diiEntities, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        {
+            return base.ReplaceBulkAsync(diiEntities, requestOptions, cancellationToken);
+        }
+
         public async Task<bool> DeleteBulkAsync(IReadOnlyList<PersonSession> sessions, CancellationToken cancellationToken = default)
         {
             return await base.DeleteEntitiesBulkAsync(sessions, cancellationToken: cancellationToken);
