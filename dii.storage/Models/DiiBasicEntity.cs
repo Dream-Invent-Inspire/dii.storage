@@ -103,15 +103,17 @@ namespace dii.storage.Models
             return;
         }
 
-        public void SetInitialState(TableMetaData table, DiiBasicEntity source)
+        public void SetInitialState(TableMetaData table, DiiBasicEntity source = null)
         {
             if (table.HasLookup())
             {
                 InitialState = new Dictionary<string, string>();
                 var entity = source ?? this;
-                foreach (var hpk in table.LookupHpks)
+                
+                var hpks = table.LookupHpks.Values.SelectMany(x => x.Values).ToList();
+                foreach (var hpk in hpks.Distinct())
                 {
-                    var hpkValue = entity.GetType().GetProperty(table.LookupHpks[hpk.Key].Name);
+                    var hpkValue = entity.GetType().GetProperty(hpk.Name);
                     if (hpkValue != null)
                     {
                         var hpkValueString = hpkValue.GetValue(entity, null)?.ToString() ?? "";
@@ -119,9 +121,10 @@ namespace dii.storage.Models
                         InitialState.Add(hpkValue.Name, hpkValueString);
                     }
                 }
-                foreach (var lid in table.LookupIds)
+                var ids = table.LookupIds.Values.SelectMany(x => x.Values).ToList();
+                foreach (var lid in ids.Distinct())
                 {
-                    var idValue = entity.GetType().GetProperty(table.LookupIds[lid.Key].Name);
+                    var idValue = entity.GetType().GetProperty(lid.Name);
                     if (idValue != null)
                     {
                         var idValueString = idValue.GetValue(entity, null)?.ToString() ?? "";
@@ -144,10 +147,11 @@ namespace dii.storage.Models
             if (table.HasLookup())
             {
                 ChangeTracker = new Dictionary<string, string>();
-                foreach (var hpk in table.LookupHpks)
+                var hpks = table.LookupHpks.Values.SelectMany(x => x.Values).ToList();
+                foreach (var hpk in hpks.Distinct())
                 {
-                    var hpkValue = this.GetType().GetProperty(table.LookupHpks[hpk.Key].Name);
-                    if (hpkValue != null && InitialState.ContainsKey(table.LookupHpks[hpk.Key].Name))
+                    var hpkValue = this.GetType().GetProperty(hpk.Name);
+                    if (hpkValue != null && InitialState.ContainsKey(hpk.Name))
                     {
                         var hpkValueString = hpkValue.GetValue(this, null)?.ToString() ?? "";
                         var initialHpkValueString = InitialState[hpkValue.Name] ?? "";
@@ -158,10 +162,12 @@ namespace dii.storage.Models
                         }
                     }
                 }
-                foreach (var lid in table.LookupIds)
+
+                var ids = table.LookupIds.Values.SelectMany(x => x.Values).ToList();
+                foreach (var lid in ids.Distinct())
                 {
-                    var idValue = this.GetType().GetProperty(table.LookupIds[lid.Key].Name);
-                    if (idValue != null && InitialState.ContainsKey(table.LookupHpks[lid.Key].Name))
+                    var idValue = this.GetType().GetProperty(lid.Name);
+                    if (idValue != null && InitialState.ContainsKey(lid.Name))
                     {
                         var idValueString = idValue.GetValue(this, null)?.ToString() ?? "";
                         var initialIdValueString = InitialState[idValue.Name] ?? "";

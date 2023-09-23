@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -81,40 +82,55 @@ namespace dii.storage.cosmos
             //Hydrate the source and lookup objects
             var method = _optimizer.GetType().GetMethod("UnpackageFromJson").MakeGenericMethod(_concreteType); //This passed in concrete type is for the source table
             var sourceObj = method.Invoke(_optimizer, new object[] { job.ToString() });
-            var dynamicObject = Activator.CreateInstance(_tableMetaData.ConcreteType); //this is the Lookup table type...the dynamically created (from the source) type
-
-            //Transfer data from source object to the target Dynamic object
-            var sourceProperties = sourceObj.GetType().GetProperties().ToDictionary(p => p.Name, p => p);
-            foreach (var targetProp in dynamicObject.GetType().GetProperties())
-            {
-                if (sourceProperties.ContainsKey(targetProp.Name))
-                {
-                    var sourceProp = sourceProperties[targetProp.Name];
-                    if (sourceProp.PropertyType == targetProp.PropertyType) // Ensure the property types match
-                    {
-                        var valueToSet = sourceProp.GetValue(sourceObj);
-                        //this makes Lookup container (item) string fields case insensitive
-                        //targetProp.SetValue(dynamicObject, (sourceProp.PropertyType == typeof(string)) ? ((string)valueToSet).ToLowerInvariant() : valueToSet);
-                        targetProp.SetValue(dynamicObject, valueToSet);
-                    }
-                }
-            }
-
-            //Set the Lookup Container on the (source) MetaTableData object
-            _tableMetaData.LookupContainer = _tableMetaData.LookupContainer ?? _context.Client.GetContainer(_tableMetaData.DbId, _tableMetaData.SourceTableNameForLookup);
-            if (_tableMetaData.LookupContainer == null)
-            {
-                throw new Exception($"Unable to find Lookup Container for {_tableMetaData.SourceTableNameForLookup}");
-            }
-
+            
             //Upsert the Lookup object
             var adapter = new DiiCosmosLookupAdapter(_sourceTblMetaData); //This is the source table TableMetaData
-            var result = await adapter.UpsertIfMoreRecentAsync(
-                dynamicObject, 
-                ((DiiCosmosEntity)sourceObj).ChangeTracker, 
-                new ItemRequestOptions { EnableContentResponseOnWrite=false });
-            
-            return result != null;
+            List<Task<object>> tasks = new List<Task<object>>();
+            List<object> results = new List<object>();
+            bool bok = true;
+            foreach (var group in _sourceTblMetaData.LookupIds)
+            {
+                //var dynamicObject = Activator.CreateInstance(_tableMetaData.ConcreteType); //this is the Lookup table type...the dynamically created (from the source) type
+                var dynamicObject = Activator.CreateInstance(_sourceTblMetaData.LookupTables[group.Key].LookupType); //this is the Lookup table type...the dynamically created (from the source) type
+
+                //Transfer data from source object to the target Dynamic object
+                var sourceProperties = sourceObj.GetType().GetProperties().ToDictionary(p => p.Name, p => p);
+                foreach (var targetProp in dynamicObject.GetType().GetProperties())
+                {
+                    if (sourceProperties.ContainsKey(targetProp.Name))
+                    {
+                        var sourceProp = sourceProperties[targetProp.Name];
+                        if (sourceProp.PropertyType == targetProp.PropertyType) // Ensure the property types match
+                        {
+                            var valueToSet = sourceProp.GetValue(sourceObj);
+                            //this makes Lookup container (item) string fields case insensitive
+                            //targetProp.SetValue(dynamicObject, (sourceProp.PropertyType == typeof(string)) ? ((string)valueToSet).ToLowerInvariant() : valueToSet);
+                            targetProp.SetValue(dynamicObject, valueToSet);
+                        }
+                    }
+                }
+
+                //var result = await adapter.UpsertIfMoreRecentAsync(
+                //    dynamicObject,
+                //    ((DiiCosmosEntity)sourceObj).ChangeTracker,
+                //    _sourceTblMetaData.LookupIds[group.Key],
+                //    _sourceTblMetaData.GetHPKs(group.Key),
+                //    group.Key,
+                //    new ItemRequestOptions { EnableContentResponseOnWrite = false });
+
+                tasks.Add(adapter.UpsertIfMoreRecentAsync(
+                                dynamicObject,
+                                ((DiiCosmosEntity)sourceObj).ChangeTracker,
+                                _sourceTblMetaData.LookupIds[group.Key],
+                                _sourceTblMetaData.GetHPKs(group.Key),
+                                group.Key,
+                                new ItemRequestOptions { EnableContentResponseOnWrite = false }));
+
+
+                //bok = bok && result != null;
+            }
+            var completedTasks = await Task.WhenAll(tasks);
+            return completedTasks.All(x => x != null) && completedTasks.Count() == _sourceTblMetaData.LookupIds.Count();
         }
     }
 }

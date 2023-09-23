@@ -21,7 +21,7 @@ namespace dii.storage.cosmos.examples.Models
         /// The Client Id that the <see cref="PersonOrder"/> record belongs to.
         /// </summary>
         [HierarchicalPartitionKey(order: 0)]
-        [LookupHpk(order: 0)]
+        [LookupHpk(order: 0, group: "*")]
         public string ClientId { get; set; }
 
         /// <inheritdoc/>
@@ -58,7 +58,7 @@ namespace dii.storage.cosmos.examples.Models
         /// The Person Id that the <see cref="PersonOrder"/> record belongs to.
         /// </summary>
         [Searchable("PersonId")]
-        [LookupHpk(order: 1)]
+        [LookupHpk(order: 1, group: "PId")]
         public string PersonId { get; set; }
 
         /// <inheritdoc/>
@@ -72,7 +72,7 @@ namespace dii.storage.cosmos.examples.Models
         /// For it to (also) be a Hierarchical Partition Key, it must be a string.
         /// </summary>
         [Searchable("OrderDateString")]
-        [LookupHpk(order: 2)]
+        [LookupHpk(order: 2, group: "PId")]
         public string OrderDateString
         {
             get
@@ -90,7 +90,7 @@ namespace dii.storage.cosmos.examples.Models
 
         /// <inheritdoc/>
         [Searchable("PaymentType")]
-        [LookupIdAttribute(order: 0)]
+        [LookupIdAttribute(order: 0, group: "PId")]
         public string PaymentType { get; set; }
 
         /// <inheritdoc/>
@@ -98,16 +98,16 @@ namespace dii.storage.cosmos.examples.Models
         /// The payment amount of the <see cref="PersonOrder"/>.
         /// </summary>
         [Searchable("PaymentAmount")]
-        [LookupIdAttribute(order: 1, idType: typeof(double))]
+        [LookupIdAttribute(order: 1, idType: typeof(double), group: "PId")]
         public double PaymentAmount { get; set; }
+
+        [Searchable("ReceiptNumber")]
+        [LookupIdAttribute(order: 0, group: "Rec")]
+        public string ReceiptNumber { get; set; }
 
         /// <inheritdoc/>
         [Searchable("Catalog")]
         public string Catalog { get; set; }
-
-        /// <inheritdoc/>
-        //[Searchable("LastUpdated")]
-        //public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
 
     }
 

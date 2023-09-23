@@ -18,11 +18,11 @@ namespace dii.storage
         protected Dictionary<int, PropertyInfo> partitionFields { get; set; } = new Dictionary<int, PropertyInfo>();
         protected Dictionary<int, PropertyInfo> hierarchicalPartitionFields { get; set; } = new Dictionary<int, PropertyInfo>();
 
-        protected Dictionary<int, PropertyInfo> LookupHpkFields { get; set; } = new Dictionary<int, PropertyInfo>();
+        protected Dictionary<string, Dictionary<int, PropertyInfo>> LookupHpkFields { get; set; } = new Dictionary<string, Dictionary<int, PropertyInfo>>();
 
         protected Dictionary<int, PropertyInfo> idFields { get; set; } = new Dictionary<int, PropertyInfo>();
 
-        protected Dictionary<int, PropertyInfo> LookupIdFields { get; set; } = new Dictionary<int, PropertyInfo>();
+        protected Dictionary<string, Dictionary<int, PropertyInfo>> LookupIdFields { get; set; } = new Dictionary<string, Dictionary<int, PropertyInfo>>();
 
         protected List<PropertyInfo> SearchableFields { get; set; } = new List<PropertyInfo>();
 
@@ -168,13 +168,36 @@ namespace dii.storage
             var LookupHpk = p.GetCustomAttribute<LookupHpkAttribute>();
             if (LookupHpk != null)
             {
-                //Two fields cannot occupy the same position in the partition key.
-                if (LookupHpkFields.ContainsKey(LookupHpk.Order))
+                Dictionary<int, PropertyInfo> hpkProps = null;
+
+                if (LookupHpkFields == null) LookupHpkFields = new Dictionary<string, Dictionary<int, PropertyInfo>>();
+
+                if (!string.IsNullOrEmpty(LookupHpk.Group))
                 {
-                    throw new DiiPartitionKeyDuplicateOrderException(LookupHpkFields[LookupHpk.Order].Name, p.Name, LookupHpk.Order);
+                    if (!LookupHpkFields.ContainsKey(LookupHpk.Group))
+                    {
+                        //new group
+                        hpkProps = new Dictionary<int, PropertyInfo>();
+                        LookupHpkFields.Add(LookupHpk.Group, hpkProps);
+                    }
+                    else
+                        hpkProps = LookupHpkFields[LookupHpk.Group];
+                }
+                if (LookupHpkFields.Count() == 0)
+                {
+                    hpkProps = new Dictionary<int, PropertyInfo>();
+                    LookupHpkFields.Add(Constants.LookupDefaultGroupSuffix, hpkProps);
                 }
 
-                LookupHpkFields.Add(LookupHpk.Order, p);
+                hpkProps = hpkProps ?? LookupHpkFields.Values.FirstOrDefault();
+
+                //Two fields cannot occupy the same position in the partition key.
+                if (hpkProps.ContainsKey(LookupHpk.Order))
+                {
+                    throw new DiiPartitionKeyDuplicateOrderException(hpkProps[LookupHpk.Order].Name, p.Name, LookupHpk.Order);
+                }
+
+                hpkProps.Add(LookupHpk.Order, p);
 
                 return true;
             }
@@ -186,13 +209,36 @@ namespace dii.storage
             var id = p.GetCustomAttribute<LookupIdAttribute>();
             if (id != null)
             {
-                if (LookupIdFields.ContainsKey(id.Order))
+                Dictionary<int, PropertyInfo> idProps = null;
+
+                if (LookupIdFields == null) LookupIdFields = new Dictionary<string, Dictionary<int, PropertyInfo>>();
+
+                if (!string.IsNullOrEmpty(id.Group))
                 {
-                    // Throw an exception when an invalid type is attempted.
-                    throw new DiiIdDuplicateOrderException(LookupIdFields[id.Order].Name, p.Name, id.Order);
+                    if (!LookupIdFields.ContainsKey(id.Group))
+                    {
+                        //new group
+                        idProps = new Dictionary<int, PropertyInfo>();
+                        LookupIdFields.Add(id.Group, idProps);
+                    }
+                    else
+                        idProps = LookupIdFields[id.Group];
+                }
+                if (LookupIdFields.Count() == 0)
+                {
+                    idProps = new Dictionary<int, PropertyInfo>();
+                    LookupIdFields.Add(Constants.LookupDefaultGroupSuffix, idProps);
                 }
 
-                LookupIdFields.Add(id.Order, p);
+                idProps = idProps ?? LookupIdFields.Values.FirstOrDefault();
+
+                if (idProps.ContainsKey(id.Order))
+                {
+                    // Throw an exception when an invalid type is attempted.
+                    throw new DiiIdDuplicateOrderException(idProps[id.Order].Name, p.Name, id.Order);
+                }
+
+                idProps.Add(id.Order, p);
 
                 return true;
             }

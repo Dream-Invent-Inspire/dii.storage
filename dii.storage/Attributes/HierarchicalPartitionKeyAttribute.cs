@@ -14,12 +14,11 @@ namespace dii.storage.Attributes
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="PartitionKeyAttribute"/> class with the
-        /// order, separator and partition key type values with which the instance should be initalized.
+        /// partition key type, order values with which the instance should be initalized.
         /// </summary>
         /// <param name="parititonKeyType">The underlying type of the partition key, if not a <see cref="string"/>.</param>
         /// <param name="order">The immutable order which the field or property should be used to form the composite partition key.</param>
-        /// <param name="separator">The immutable separator to be used when forming the composite partition key.</param>
-        public HierarchicalPartitionKeyAttribute(Type parititonKeyType = null, int order = 0, char separator = Constants.DefaultPartitionKeyDelimitor)
+        public HierarchicalPartitionKeyAttribute(Type parititonKeyType = null, int order = 0)
         {
             Order = order;
             PartitionKeyType = parititonKeyType ?? typeof(string);

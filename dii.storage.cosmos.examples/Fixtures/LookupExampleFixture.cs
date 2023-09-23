@@ -47,12 +47,6 @@ namespace dii.storage.cosmos.examples.Fixtures
             {
                 PersonOrderAdapter = new ExamplePersonOrderAdapter();
             }
-
-            //if (OrderLookupAdapter == null)
-            //{
-            //    var table = Optimizer.GetLookupTableMetaData<PersonOrder>();                
-            //    OrderLookupAdapter = new DiiCosmosLookupAdapter(table);
-            //}
         }
 
         protected virtual void Dispose(bool doNotCleanUpNative)

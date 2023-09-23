@@ -21,10 +21,11 @@ namespace dii.storage.Attributes
         /// <param name="parititonKeyType">The underlying type of the partition key, if not a <see cref="string"/>.</param>
         /// <param name="order">The immutable order which the field or property should be used to form the composite partition key.</param>
         /// <param name="separator">The immutable separator to be used when forming the composite partition key.</param>
-        public LookupHpkAttribute(Type parititonKeyType = null, int order = 0)
+        public LookupHpkAttribute(Type parititonKeyType = null, int order = 0, string group = null)
         {
             Order = order;
             PartitionKeyType = parititonKeyType ?? typeof(string);
+            Group = group;
         }
 
         /// <summary>
@@ -51,12 +52,12 @@ namespace dii.storage.Attributes
         public override CustomAttributeBuilder GetConstructorBuilder()
         {
             // Getting the right constructor
-            var ctor = typeof(HierarchicalPartitionKeyAttribute).GetConstructor(new[] { typeof(Type), typeof(int), typeof(char) });
+            var ctor = typeof(HierarchicalPartitionKeyAttribute).GetConstructor(new[] { typeof(Type), typeof(int) });
 
             // Creating the CustomAttributeBuilder with extracted values
             var attributeBuilder = new CustomAttributeBuilder(
                 ctor,
-                new object[] { this.PartitionKeyType, this.Order, '|' }
+                new object[] { this.PartitionKeyType, this.Order }
             );
             return attributeBuilder;
         }
