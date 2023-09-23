@@ -116,5 +116,9 @@ namespace dii.storage
         /// |
         /// </value>
         public const char DefaultIdDelimitor = '|';
+
+        public const string LookupTableSuffix = "Lookup";
+        public const string LookupDefaultGroupSuffix = "-1";
+        public const string LookupSharedHPK = "*";
     }
 }

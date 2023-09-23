@@ -12,7 +12,7 @@ using dii.storage.Models;
 
 namespace dii.storage.cosmos.examples.Adapters
 {
-    public class ExamplePersonOrderAdapter : DiiCosmosHierarchicalAdapter<PersonOrder> //, IExamplePersonSessionAdapter
+    public class ExamplePersonOrderAdapter : DiiCosmosHierarchicalAdapter<PersonOrder> 
     {
         /// <summary>
         /// Fetch a PersonOrder where the entity (PersonOrder) id = paymentId, and clientId and orderId are the HPK values
@@ -57,26 +57,6 @@ namespace dii.storage.cosmos.examples.Adapters
             queryDefinition.WithParameter("@clientId", clientId);
 
             return await base.GetPagedAsync(queryDefinition, continuationToken, reqops, cancellationToken);
-        }
-
-        public async Task<PagedList<PersonOrder>> GetManyByOrderDateAsync(string clientId, DateTime orderFromDate, DateTime orderToDate, string continuationToken = null, CancellationToken cancellationToken = default)
-        {
-            var reqops = new QueryRequestOptions { MaxItemCount = 4 };
-
-            var dayCnt = orderToDate.Subtract(orderFromDate);
-            List<string> days = new List<string>();
-            for(int i=0; i<dayCnt.Days; i++)
-            {
-                var date = orderFromDate.AddDays(i);
-                var dateStr = date.ToString("yyyy-MM-dd");
-                days.Add(dateStr);
-            }
-            var queryDefinition = new QueryDefinition($"SELECT * FROM c WHERE c.ClientId = @clientId AND c.OrderDateString in (\"{string.Join("\",\"", days)}\")");
-            queryDefinition.WithParameter("@clientId", clientId);
-
-            var adapter = new DiiCosmosLookupAdapter(this._table);
-            var retOrders = await adapter.LookupByQueryAsync(queryDefinition, continuationToken, reqops, cancellationToken);
-            return PagedList<PersonOrder>.CreateFromList(retOrders.Cast<PersonOrder>().ToList(), retOrders.ContinuationToken);
         }
 
         public async Task<PersonOrder> CreateAsync(PersonOrder order, CancellationToken cancellationToken = default)
@@ -182,7 +162,7 @@ namespace dii.storage.cosmos.examples.Adapters
             //Lookup adapter stuff
             var adapter = new DiiCosmosLookupAdapter(this._table);
 
-            var obj = await adapter.LookupAsync(polId, dic, cancellationToken: cancellationToken);
+            var obj = await adapter.LookupAsync(polId, dic, "PId", cancellationToken: cancellationToken);
             return obj as PersonOrder;
         }
 
@@ -198,9 +178,44 @@ namespace dii.storage.cosmos.examples.Adapters
             //Lookup adapter stuff
             var adapter = new DiiCosmosLookupAdapter(this._table);
 
-            var objs = await adapter.LookupByQueryAsync(query, null, null, cancellationToken);
+            var objs = await adapter.LookupByQueryAsync(query, "PId", null, null, cancellationToken);
             return objs?.Cast<PersonOrder>().ToList();
         }
+
+        public async Task<PagedList<PersonOrder>> GetManyByOrderDateAsync(string clientId, DateTime orderFromDate, DateTime orderToDate, string continuationToken = null, CancellationToken cancellationToken = default)
+        {
+            var reqops = new QueryRequestOptions { MaxItemCount = 4 };
+
+            var dayCnt = orderToDate.Subtract(orderFromDate);
+            List<string> days = new List<string>();
+            for (int i = 0; i < dayCnt.Days; i++)
+            {
+                var date = orderFromDate.AddDays(i);
+                var dateStr = date.ToString("yyyy-MM-dd");
+                days.Add(dateStr);
+            }
+            var queryDefinition = new QueryDefinition($"SELECT * FROM c WHERE c.ClientId = @clientId AND c.OrderDateString in (\"{string.Join("\",\"", days)}\")");
+            queryDefinition.WithParameter("@clientId", clientId);
+
+            var adapter = new DiiCosmosLookupAdapter(this._table);
+            var retOrders = await adapter.LookupByQueryAsync(queryDefinition, "PId", continuationToken, reqops, cancellationToken);
+            return PagedList<PersonOrder>.CreateFromList(retOrders.Cast<PersonOrder>().ToList(), retOrders.ContinuationToken);
+        }
+
+        public async Task<PersonOrder> GetByReceiptAsync(string receipt, string clientId, CancellationToken cancellationToken = default)
+        {
+            var dic = new Dictionary<string, string>
+            {
+                { "ClientId", clientId }
+            };
+
+            //Lookup adapter stuff
+            var adapter = new DiiCosmosLookupAdapter(this._table);
+
+            var obj = await adapter.LookupAsync(receipt, dic, "Rec", cancellationToken: cancellationToken);
+            return obj as PersonOrder;
+        }
+
     }
 
 }

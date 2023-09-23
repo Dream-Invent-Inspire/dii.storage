@@ -20,10 +20,11 @@ namespace dii.storage.Attributes
         /// <param name="idType">The underlying type of the partition key, if not a <see cref="string"/>.</param>
         /// <param name="order">The immutable order which the field or property should be used to form the composite partition key.</param>
         /// <param name="separator">The immutable separator to be used when forming the composite partition key.</param>
-        public LookupIdAttribute(Type idType = null, int order = 0)
+        public LookupIdAttribute(Type idType = null, int order = 0, string group = null)
         {
             Order = order;
             IdKeyType = idType ?? typeof(string);
+            Group = group;
         }
 
         /// <summary>
@@ -44,15 +45,6 @@ namespace dii.storage.Attributes
         /// <para>Defaults to <see cref="string"/></para>
         /// </summary>
         public Type IdKeyType { get; init; }
-
-        /// <summary>
-		/// Optional parameter used when more than one field or property is designated as
-		/// part of the id. The immutable separator to be used when forming the composite id.
-		/// <para>
-		/// Defaults to <inheritdoc cref="Constants.DefaultIdDelimitor" path="//value"/>
-		/// </para>
-		/// </summary>
-		public char Separator { get; init; }
 
 
         public string Group { get; init; }

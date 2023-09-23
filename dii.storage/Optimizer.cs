@@ -35,8 +35,6 @@ namespace dii.storage
 
 		private readonly ModuleBuilder _builder;
 
-        private readonly string LookupTableSuffix = "Lookup";
-
         private const string _dynamicAssemblyName = "dii.dynamic.storage";
 
 		private readonly string[] _reservedSearchableKeys = new string[3]
@@ -222,11 +220,11 @@ namespace dii.storage
 							//Handles Lookup containers
 							if (storageTypeSerializer.LookupHpkProperties != null && storageTypeSerializer.LookupHpkProperties.Any())
 							{
-								tableMetaData.LookupHpks = storageTypeSerializer.LookupHpkProperties.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
+								tableMetaData.LookupHpks = storageTypeSerializer.LookupHpkProperties; //.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
 							}
 							if (storageTypeSerializer.LookupIdProperties != null && storageTypeSerializer.LookupIdProperties.Any())
 							{
-								tableMetaData.LookupIds = storageTypeSerializer.LookupIdProperties.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
+								tableMetaData.LookupIds = storageTypeSerializer.LookupIdProperties; //.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
 							}
 							if (storageTypeSerializer.SearchableProperties != null && storageTypeSerializer.SearchableProperties.Any())
 							{
@@ -245,28 +243,44 @@ namespace dii.storage
 
 							if (tableMetaData.HasLookup()) //Note: We really only care if there are Lookup Ids, odds are in those cases there should also be HPKs
 							{
-								//Create the dynamic Lookup table and register it
-								string tblName = type.GetCustomAttribute<StorageNameAttribute>()?.Name ?? type.Name;
-								var lookupType = RegisterLookupType(
-                                    sourceTableMetaData: tableMetaData, // Source table metadata
-                                    lookupTableMetaData: new TableMetaData
+								foreach (var group in tableMetaData.LookupIds)
+								{
+                                    //Create the dynamic Lookup table and register it
+                                    var groupName = (group.Key != string.Empty) ? group.Key : "-";
+                                    string tblName = type.GetCustomAttribute<StorageNameAttribute>()?.Name ?? type.Name;
+
+                                    var lookupType = RegisterLookupType(
+										sourceTableMetaData: tableMetaData, // Source table metadata
+										lookupTableMetaData: new TableMetaData
+										{
+											DbId = dbid,
+											TimeToLiveInSeconds = type.GetCustomAttribute<EnableTimeToLiveAttribute>()?.TimeToLiveInSeconds,
+											TableName = $"{tblName}{Constants.LookupTableSuffix}{groupName}",
+											ClassName = $"{tableMetaData.ClassName}{Constants.LookupTableSuffix}{groupName}",
+											//this is used for the change feed wire up
+           //                                 SourceTableNameForLookup = tableMetaData.TableName, //this is THIS entity's table name (not the lookup table)
+											//SourceTableTypeForLookup = type, //this is THIS entity's type (not the lookup type) for the Lookup object to cross reference
+                                            SourceTableMetaData = tableMetaData,
+                                            IsLookupTable = true,
+											GroupName = groupName
+										},
+                                        lookupIds: group.Value,
+                                        lookupHpks: tableMetaData.GetHPKs(groupName)
+                                        );
+
+                                    tableMetaData.LookupTables ??= new Dictionary<string, LookupTableMetaData>();
+									tableMetaData.LookupTables.Add(groupName, new LookupTableMetaData
 									{
-										DbId = dbid,
-										TimeToLiveInSeconds = type.GetCustomAttribute<EnableTimeToLiveAttribute>()?.TimeToLiveInSeconds,
-										TableName = $"{tblName}{LookupTableSuffix}",
-										ClassName = $"{tableMetaData.ClassName}{LookupTableSuffix}",
-                                        //this is used for the change feed wire up
-                                        SourceTableNameForLookup = tableMetaData.TableName, //this is THIS entity's table name (not the lookup table)
-										SourceTableTypeForLookup = type, //this is THIS entity's type (not the lookup type) for the Lookup object to cross reference
-										IsLookupTable = true
+										LookupType = lookupType,
 									});
 
-								tableMetaData.LookupType = lookupType; //this is for the lookup object unpacking
+                                    //tableMetaData.LookupType.Add(group.Key, lookupType); //this is for the lookup object unpacking
 
-                                // As this is a source (of a Lookup) table, it must have a TTL (-1 = never expire)
-								// this is so when we need to delete a source item, we patch it with a short TTL so change feed can pick it up and delete the Lookup item(s)
-                                tableMetaData.TimeToLiveInSeconds = tableMetaData.TimeToLiveInSeconds ?? Constants.ReservedTTLDefault;
-							}
+									// As this is a source (of a Lookup) table, it must have a TTL (-1 = never expire)
+									// this is so when we need to delete a source item, we patch it with a short TTL so change feed can pick it up and delete the Lookup item(s)
+									tableMetaData.TimeToLiveInSeconds = tableMetaData.TimeToLiveInSeconds ?? Constants.ReservedTTLDefault; //Defaults to 2147483647 - this is the max value....over 68 years
+								}
+                            }
 						}
 					}
 				}
@@ -601,15 +615,15 @@ namespace dii.storage
 			return default(Type);
 		}
 
-		/// <summary>
-		/// Return corresponding Lookup Table
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <returns></returns>
-		public TableMetaData GetLookupTableMetaData<T>(string group = null)
-		{
-			return Tables.Where(x => x.IsLookupTable && x.SourceTableTypeForLookup == typeof(T)).FirstOrDefault();
-		}
+		///// <summary>
+		///// Return corresponding Lookup Table
+		///// </summary>
+		///// <typeparam name="T"></typeparam>
+		///// <returns></returns>
+		//public TableMetaData GetLookupTableMetaData<T>(string group = null)
+		//{
+		//	return Tables.Where(x => x.IsLookupTable && x.SourceTableTypeForLookup == typeof(T)).FirstOrDefault();
+		//}
 
 		#endregion Public Methods
 
@@ -664,23 +678,20 @@ namespace dii.storage
             return storageTypeSerializer;
         }
 
-        private Type RegisterLookupType(TableMetaData sourceTableMetaData, TableMetaData lookupTableMetaData)
+        private Type RegisterLookupType(TableMetaData sourceTableMetaData, TableMetaData lookupTableMetaData, Dictionary<int, PropertyInfo> lookupIds, Dictionary<int, PropertyInfo> lookupHpks)
         {
             var otherFields = new List<PropertyInfo>();
             otherFields.AddRange(sourceTableMetaData.HierarchicalPartitionKeys.Values);
             otherFields.AddRange(sourceTableMetaData.IdProperties.Values);
 
             //Generate the dynamic type for the Lookup entity
-            Type dynamicType = DynamicTypeCreator.CreateLookupType(sourceTableMetaData.LookupHpks, sourceTableMetaData.LookupIds, otherFields, lookupTableMetaData);
+            Type dynamicType = DynamicTypeCreator.CreateLookupType(lookupHpks, lookupIds, otherFields, lookupTableMetaData);
             var lookupTypeSerializer = RegisterType(dynamicType);
 
             //Add to the lookup table
             lookupTableMetaData.ConcreteType = dynamicType;
             lookupTableMetaData.StorageType = lookupTypeSerializer.StoredEntityType;
-            lookupTableMetaData.HierarchicalPartitionKeys = sourceTableMetaData.LookupHpks.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
-
-            //ToDo: not sure about this...does this need to be set on the lookup table?
-            lookupTableMetaData.LookupIds = sourceTableMetaData.LookupIds.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
+			lookupTableMetaData.HierarchicalPartitionKeys = lookupHpks;
 
             Tables.Add(lookupTableMetaData);
             TableMappings.Add(dynamicType, lookupTableMetaData);

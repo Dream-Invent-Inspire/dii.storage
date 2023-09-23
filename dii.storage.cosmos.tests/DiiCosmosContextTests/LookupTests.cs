@@ -49,8 +49,8 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
                     { 0, typeof(TestEntity).GetProperty("ClientId") },
                     { 1, typeof(TestEntity).GetProperty("PersonId") }
                 },
-                LookupHpks = lookupHpks,
-                LookupIds = lookupIds,
+                LookupHpks = new Dictionary<string, Dictionary<int, PropertyInfo>>() { { "1", lookupHpks } },
+                LookupIds = new Dictionary<string, Dictionary<int, PropertyInfo>>() { { "1", lookupIds } },
                 SearchableFields = searchableFields,
                 StorageType = typeof(TestEntity),
                 ConcreteType = typeof(TestEntity),
@@ -88,8 +88,8 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
                 IdProperties = new Dictionary<int, PropertyInfo>{
                     { 0, typeof(TestEntity).GetProperty("SessionId") }
                 },
-                LookupHpks = lookupHpks,
-                LookupIds = lookupIds,
+                LookupHpks = new Dictionary<string, Dictionary<int, PropertyInfo>>() { { "1", lookupHpks } },
+                LookupIds = new Dictionary<string, Dictionary<int, PropertyInfo>>() { { "1", lookupIds } },
                 SearchableFields = searchableFields,
                 StorageType = typeof(TestEntity),
                 ConcreteType = typeof(TestEntity),
@@ -128,8 +128,8 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
                     { 0, typeof(TestEntity).GetProperty("ClientId") },
                     { 1, typeof(TestEntity).GetProperty("PersonId") }
                 },
-                LookupHpks = lookupHpks,
-                LookupIds = lookupIds,
+                LookupHpks = new Dictionary<string, Dictionary<int, PropertyInfo>>() { { "1", lookupHpks } },
+                LookupIds = new Dictionary<string, Dictionary<int, PropertyInfo>>() { { "1", lookupIds } },
                 SearchableFields = searchableFields,
                 StorageType = typeof(TestEntity),
                 ConcreteType = typeof(TestEntity),
@@ -168,8 +168,8 @@ namespace dii.storage.cosmos.tests.DiiCosmosContextTests
                     { 0, typeof(TestEntity).GetProperty("ClientId") },
                     { 1, typeof(TestEntity).GetProperty("PersonId") }
                 },
-                LookupHpks = lookupHpks,
-                LookupIds = lookupIds,
+                LookupHpks = new Dictionary<string, Dictionary<int, PropertyInfo>>() { { "1", lookupHpks } },
+                LookupIds = new Dictionary<string, Dictionary<int, PropertyInfo>>() { { "1", lookupIds } },
                 SearchableFields = searchableFields,
                 StorageType = typeof(TestEntity),
                 ConcreteType = typeof(TestEntity),

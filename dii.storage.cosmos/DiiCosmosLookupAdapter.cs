@@ -25,10 +25,10 @@ namespace dii.storage.cosmos
     /// Given an alternate access pattern Hpk and Id set, or query,
     ///  this adapter will return the corresponding source item(s)
     /// </summary>
-    public class DiiCosmosLookupAdapter : DiiCosmosBaseAdapter //, IDiiCosmosLookupAdapter
+    public class DiiCosmosLookupAdapter : DiiCosmosBaseAdapter
     {
         protected readonly Container _sourceContainer;
-        protected readonly Container _lookupContainer;
+        //protected readonly Container _lookupContainer;
         protected readonly Optimizer _optimizer;
         protected readonly TableMetaData _tableMetaData;
         protected readonly DiiCosmosContext _context;
@@ -39,7 +39,7 @@ namespace dii.storage.cosmos
             _optimizer = Optimizer.Get();
             _tableMetaData = tableMetaData; // _optimizer.TableMappings[typeof(T)];
             _sourceContainer = _context.Client.GetContainer(_tableMetaData.DbId, _tableMetaData.TableName);
-            _lookupContainer = tableMetaData.LookupContainer ?? _context.Client.GetContainer(_tableMetaData.DbId, _tableMetaData.LookupType.ToString());
+            //_lookupContainer = tableMetaData.LookupContainer ?? _context.Client.GetContainer(_tableMetaData.DbId, _tableMetaData.LookupType.ToString());
         }
 
         /// <summary>
@@ -48,27 +48,35 @@ namespace dii.storage.cosmos
         /// </summary>
         /// <param name="id"></param>
         /// <param name="partitionKeys"></param>
+        /// <param name="group">Group (of source properties) this access pattern needs</param>
         /// <param name="requestOptions"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public async Task<object> LookupAsync(string id, Dictionary<string, string> partitionKeys, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        public async Task<object> LookupAsync(string id, Dictionary<string, string> partitionKeys, string group = null, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(id) || partitionKeys == default(Dictionary<string, string>))
             {
                 return null;
             }
 
-            if (_tableMetaData.LookupType == null)
+            if (_tableMetaData.LookupTables == null)
             {
                 throw new Exception("No Lookup dynamic type has been associated with the provided TableMetaData configuration.");
             }
 
+            var ltmd = GetLookupMetaData(group);
+            if (ltmd == null)
+            {
+                throw new Exception("Unable to determine Lookup table type and container.");
+            }
+
             // Build the full partition key path
-            var partitionKey = GetPK(_tableMetaData.LookupHpks, partitionKeys);
+            var lhpks = _tableMetaData.GetHPKs(group);
+            var partitionKey = GetPK(lhpks, partitionKeys);
             
             //Read from the lookup table
-            var lookupResponse = await ReadStreamAsync(this._lookupContainer, _tableMetaData.LookupType, id, partitionKey, requestOptions, cancellationToken);
+            var lookupResponse = await ReadStreamAsync(ltmd.LookupContainer, ltmd.LookupType, id, partitionKey, requestOptions, cancellationToken);
             if (lookupResponse != null)
             {
                 //Build the source object partition key
@@ -101,9 +109,9 @@ namespace dii.storage.cosmos
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public async Task<PagedList<object>> LookupByQueryAsync(QueryDefinition queryDefinition, string continuationToken, QueryRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        public async Task<PagedList<object>> LookupByQueryAsync(QueryDefinition queryDefinition, string group = null, string continuationToken = null, QueryRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
-            if (_tableMetaData.LookupType == null)
+            if (_tableMetaData.LookupTables == null)
             {
                 throw new Exception("No Lookup dynamic type has been associated with the provided TableMetaData configuration.");
             }
@@ -115,9 +123,15 @@ namespace dii.storage.cosmos
             string keycol2 = (_tableMetaData.HierarchicalPartitionKeys.Count > 1) ? _tableMetaData.HierarchicalPartitionKeys?.ElementAt(1).Value?.Name : null;
             string keycol3 = (_tableMetaData.HierarchicalPartitionKeys.Count > 2) ? _tableMetaData.HierarchicalPartitionKeys?.ElementAt(2).Value?.Name : null;
 
+            var ltmd = GetLookupMetaData(group);
+            if (ltmd == null)
+            {
+                throw new Exception("Unable to determine Lookup table type and container.");
+            }
+
             // Retrieve an iterator for the result set
             PagedList<object> objs = new PagedList<object>();
-            using FeedIterator<object> results = this._lookupContainer.GetItemQueryIterator<object>(queryDefinition, continuationToken, requestOptions);
+            using FeedIterator<object> results = ltmd.LookupContainer.GetItemQueryIterator<object>(queryDefinition, continuationToken, requestOptions);
             while (results.HasMoreResults)
             {
                 FeedResponse<object> resultsPage = await results.ReadNextAsync();
@@ -125,7 +139,7 @@ namespace dii.storage.cosmos
                 //Transfer the lookup results (data) to the query id and HPK buckets
                 foreach (var result in resultsPage)
                 {
-                    var lookupObj = this._optimizer.HydrateEntityByType(this._tableMetaData.LookupType, result.ToString());
+                    var lookupObj = this._optimizer.HydrateEntityByType(ltmd.LookupType, result.ToString());
 
                     _tableMetaData.HierarchicalPartitionKeys.TransferProperties(lookupObj, ref dicpk);
 
@@ -196,10 +210,15 @@ namespace dii.storage.cosmos
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException"></exception>
-        public async Task<object> UpsertIfMoreRecentAsync(object lookupType, Dictionary<string, string> sourceChanges, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        public async Task<object> UpsertIfMoreRecentAsync(object lookupType, 
+            Dictionary<string, string> sourceChanges, 
+            Dictionary<int, PropertyInfo> lookupIds, 
+            Dictionary<int, PropertyInfo> lookupHpks, 
+            string group = null, 
+            ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             //Validation
-            if (!_tableMetaData.LookupIds?.Any() ?? true)
+            if (!lookupIds?.Any() ?? true)
             {
                 throw new InvalidOperationException("At least 1 Id designation is required.");
             }
@@ -211,7 +230,7 @@ namespace dii.storage.cosmos
             var _ts = ((sourceProperties.ContainsKey(Constants.ReservedTimestampKey)) ? sourceProperties[Constants.ReservedTimestampKey] : null);
             if (_ts == null)
             {
-                throw new InvalidOperationException("The source object must contain the idempotant key: 'DiiTimestampUTC' (_ts)");
+                throw new InvalidOperationException($"The source object must contain the idempotant key: ({Constants.ReservedTimestampKey})");
             }
             var sourceTs = (long)_ts.GetValue(lookupType);
 
@@ -223,6 +242,12 @@ namespace dii.storage.cosmos
                 throw new InvalidOperationException("The source object must contain the optimistic concurrency key: 'DataVersion' (_etag)");
             }
             var sourceVersion = etag.GetValue(lookupType)?.ToString() ?? null;
+            
+            var ltmd = GetLookupMetaData(group);
+            if (ltmd == null)
+            {
+                throw new Exception("Unable to determine Lookup table type and container.");
+            }
 
             // At this point we know the (dynamic) lookupType object has the required properties
             // Now we have to Get the actual CosmosDB enity (if it exists)
@@ -245,8 +270,8 @@ namespace dii.storage.cosmos
                 //structure needs to have any/all changes to either the Lookup container's HPK or its Ids
 
                 //check ids
-                bool hasIdChanges = _tableMetaData.LookupIds.Values.Select(x => x.Name).Any(key => sourceChanges.ContainsKey(key));
-                bool hasHpkChanges = _tableMetaData.LookupHpks.Values.Select(x => x.Name).Any(key => sourceChanges.ContainsKey(key));
+                bool hasIdChanges = lookupIds.Values.Select(x => x.Name).Any(key => sourceChanges.ContainsKey(key));
+                bool hasHpkChanges = lookupHpks.Values.Select(x => x.Name).Any(key => sourceChanges.ContainsKey(key));
                 bool hasHasBeenDeleted = sourceChanges.ContainsKey(Constants.ReservedDeletedKey);
                 bool bDeleteFailed = false;
                 
@@ -254,7 +279,7 @@ namespace dii.storage.cosmos
                 {
                     //build the old id
                     string oldStrId = null;
-                    foreach (var id in _tableMetaData.LookupIds)
+                    foreach (var id in lookupIds)
                     {
                         string val = (sourceProperties.ContainsKey(id.Value.Name) && sourceChanges.ContainsKey(id.Value.Name)) ? sourceChanges[id.Value.Name] : //grab the old id value from changes
                                         (sourceProperties.ContainsKey(id.Value.Name) ? sourceProperties[id.Value.Name].GetValue(lookupType).ToString() : null); //otherwise, grab the current value
@@ -266,7 +291,7 @@ namespace dii.storage.cosmos
                         }
                     }
                     //build the old hpk
-                    foreach (var hpk in _tableMetaData.LookupHpks)
+                    foreach (var hpk in lookupHpks.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value))
                     {
                         string val = (sourceProperties.ContainsKey(hpk.Value.Name) && sourceChanges.ContainsKey(hpk.Value.Name)) ? sourceChanges[hpk.Value.Name] : //grab the old hpk value from changes
                                         (sourceProperties.ContainsKey(hpk.Value.Name) ? sourceProperties[hpk.Value.Name].GetValue(lookupType)?.ToString() : null); //otherwise, grab the current value
@@ -281,7 +306,7 @@ namespace dii.storage.cosmos
                     }
 
                     //delete the old object as it has been orphaned by the changes to the source entity
-                    var response = await this._lookupContainer.DeleteItemStreamAsync(oldStrId, partitionKey.Build(), requestOptions, cancellationToken).ConfigureAwait(false);
+                    var response = await ltmd.LookupContainer.DeleteItemStreamAsync(oldStrId, partitionKey.Build(), requestOptions, cancellationToken).ConfigureAwait(false);
                     if (!response.IsSuccessStatusCode)
                     {
                         //ToDo: Maybe just log this....?
@@ -304,7 +329,7 @@ namespace dii.storage.cosmos
 
             //construct the id
             object sid = string.Empty;
-            _tableMetaData.LookupIds.TransferProperties(lookupType, ref sid);
+            lookupIds.TransferProperties(lookupType, ref sid);
 
             string strId = sid.ToString();
             if (string.IsNullOrEmpty(strId))
@@ -313,7 +338,7 @@ namespace dii.storage.cosmos
             }
 
             object pkBuilder = new PartitionKeyBuilder();
-            _tableMetaData.LookupHpks.TransferProperties(lookupType, ref pkBuilder);
+            lookupHpks.TransferProperties(lookupType, ref pkBuilder);
 
             //Look up the entity
             object lookupResponse = null;
@@ -322,7 +347,7 @@ namespace dii.storage.cosmos
                 try
                 {
                     // Perform a point read
-                    lookupResponse = await ReadStreamAsync(this._lookupContainer, _tableMetaData.LookupType, strId.ToString(), (PartitionKeyBuilder)pkBuilder, requestOptions, cancellationToken);
+                    lookupResponse = await ReadStreamAsync(ltmd.LookupContainer, ltmd.LookupType, strId.ToString(), (PartitionKeyBuilder)pkBuilder, requestOptions, cancellationToken);
                 }
                 catch (CosmosException ex)
                 {
@@ -358,20 +383,22 @@ namespace dii.storage.cosmos
                 requestOptions = new ItemRequestOptions { IfMatchEtag = sourceVersion };
             }
 
-            var packmethod = _optimizer.GetType().GetMethod("ToEntity").MakeGenericMethod(_tableMetaData.LookupType);
+            var packmethod = _optimizer.GetType().GetMethod("ToEntity").MakeGenericMethod(ltmd.LookupType);
             var packedEntity = packmethod.Invoke(_optimizer, new object[] { lookupType });
 
-            var returnedEntity = await this._lookupContainer.UpsertItemAsync(packedEntity, ((PartitionKeyBuilder)pkBuilder).Build(), requestOptions, cancellationToken).ConfigureAwait(false);
+            var returnedEntity = await ltmd.LookupContainer.UpsertItemAsync(packedEntity, ((PartitionKeyBuilder)pkBuilder).Build(), requestOptions, cancellationToken).ConfigureAwait(false);
 
             //return the entity
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
             if (returnResult && returnedEntity?.Resource != null)
             {
-                return HydrateEntityAsync(_tableMetaData.LookupType, returnedEntity.Resource.ToString());
+                return HydrateEntityAsync(ltmd.LookupType, returnedEntity.Resource.ToString());
             }
             return lookupResponse ?? lookupType;
         }
 
+
+        #region privates
         private object HydrateEntityAsync(Type type, string json)
         {
             if (!string.IsNullOrWhiteSpace(json))
@@ -411,5 +438,16 @@ namespace dii.storage.cosmos
             }
             return partitionKey;
         }
+
+        private LookupTableMetaData GetLookupMetaData(string group = null)
+        {
+            var ltmd = (!string.IsNullOrEmpty(group) && _tableMetaData.LookupTables.ContainsKey(group)) ? _tableMetaData.LookupTables[group] : null;
+            if (ltmd == null)
+            {
+                if (_tableMetaData.LookupTables.Count == 1) ltmd = _tableMetaData.LookupTables.ElementAt(0).Value; //default to the one
+            }
+            return ltmd;
+        }
+        #endregion
     }
 }

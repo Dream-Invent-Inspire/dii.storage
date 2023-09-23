@@ -17,7 +17,6 @@ namespace dii.storage.cosmos.examples.Models
         /// <summary>
         /// The Client Id that the <see cref="Person"/> record belongs to.
         /// </summary>
-        //[PartitionKey(typeof(PartitionKey))]
         [HierarchicalPartitionKey(order: 0)]
         public string ClientId { get; set; }
 
@@ -62,23 +61,14 @@ namespace dii.storage.cosmos.examples.Models
         [Compress(0)]
         public string SessionData { get; set; }
 
-        ///// <inheritdoc/>
-        //[Searchable("_etag")]
-        //public string DataVersion { get; set; }
+        [Compress(1)]
+        public Dictionary<Domain, List<string>> Grants { get; set; }
 
-
-        //private Version _schemaVersion = new Version(1, 0);
-
-        //[IgnoreMember]
-        //public Version SchemaVersion
-        //{
-        //    get { return _schemaVersion; }
-        //    set { _schemaVersion = value; }
-        //}
-
-
-        /// <inheritdoc/>
-        //[IgnoreMember]
-        //public Version SchemaVersion => new(1, 0);
+    }
+    public enum Domain
+    {
+        Federation = -1,
+        Payments = 1,
+        Pharmacy = 2
     }
 }

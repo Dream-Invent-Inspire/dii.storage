@@ -31,22 +31,26 @@ namespace dii.storage.Utilities
             {
                 var lst = op.Key.Split('/') ?? new string[] { op.Key };
                 var path = lst[lst.Count() - 1];
-                foreach (var lid in table.LookupIds)
+
+                var ids = table.LookupIds.Values.SelectMany(x => x.Values).ToList();
+                foreach (var lid in ids)
                 {
-                    var sat = lid.Value.GetCustomAttribute<SearchableAttribute>();
-                    if (lid.Value.Name.Equals(path, StringComparison.InvariantCultureIgnoreCase) ||
+                    var sat = lid.GetCustomAttribute<SearchableAttribute>();
+                    if (lid.Name.Equals(path, StringComparison.InvariantCultureIgnoreCase) ||
                         (sat?.Abbreviation?.Equals(path, StringComparison.InvariantCultureIgnoreCase) ?? false))
                     {
-                        changes.Add(sat?.Abbreviation ?? lid.Value.Name, op.Value.ToString());
+                        changes.Add(sat?.Abbreviation ?? lid.Name, op.Value.ToString());
                     }
                 }
-                foreach (var lhpk in table.LookupHpks)
+
+                var hpks = table.LookupHpks.Values.SelectMany(x => x.Values).ToList();
+                foreach (var lhpk in hpks)
                 {
-                    var sat = lhpk.Value.GetCustomAttribute<SearchableAttribute>();
-                    if (lhpk.Value.Name.Equals(path, StringComparison.InvariantCultureIgnoreCase) ||
+                    var sat = lhpk.GetCustomAttribute<SearchableAttribute>();
+                    if (lhpk.Name.Equals(path, StringComparison.InvariantCultureIgnoreCase) ||
                         (sat?.Abbreviation?.Equals(path, StringComparison.InvariantCultureIgnoreCase) ?? false))
                     {
-                        changes.Add(sat?.Abbreviation ?? lhpk.Value.Name, op.Value.ToString());
+                        changes.Add(sat?.Abbreviation ?? lhpk.Name, op.Value.ToString());
                     }
                 }
                 //Look for isDeleted indicator

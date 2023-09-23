@@ -2,6 +2,7 @@
 using Microsoft.Azure.Cosmos;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 
 namespace dii.storage.Models
@@ -63,14 +64,14 @@ namespace dii.storage.Models
         /// </summary>
         /// <remarks>
         /// </remarks>
-        public Dictionary<int, PropertyInfo> LookupHpks { get; set; } = new Dictionary<int, PropertyInfo>();
+        public Dictionary<string, Dictionary<int, PropertyInfo>> LookupHpks { get; set; } = new Dictionary<string, Dictionary<int, PropertyInfo>>();
 
         /// <summary>
         /// The searchable path of the Lookup container id key.
         /// </summary>
         /// <remarks>
         /// </remarks>
-        public Dictionary<int, PropertyInfo> LookupIds { get; set; } = new Dictionary<int, PropertyInfo>();
+        public Dictionary<string, Dictionary<int, PropertyInfo>> LookupIds { get; set; } = new Dictionary<string, Dictionary<int, PropertyInfo>>();
 
         /// <summary>
         /// The searchable path of the search fields.
@@ -111,16 +112,52 @@ namespace dii.storage.Models
 
 		public bool Initialized { get; set; } = false;
         public bool IsLookupTable { get; internal set; }
-		public string SourceTableNameForLookup { get; internal set; }
-        public Type SourceTableTypeForLookup { get; internal set; }
+		
+		public TableMetaData SourceTableMetaData { get; internal set; }	
+		//public string SourceTableNameForLookup { get; internal set; }
+  //      public Type SourceTableTypeForLookup { get; internal set; }
 
-		public Container LookupContainer { get; set; } 
-		public Type LookupType { get; set;}
-		public int? DefaultPageSize { get; set; } = 10;
+        public int? DefaultPageSize { get; set; } = 10;
 
         public bool HasLookup()
+        {
+            return this.LookupIds?.Count > 0;
+        }
+
+		public string GroupName { get; set; }
+
+        public Dictionary<string, LookupTableMetaData> LookupTables { get; set; }
+
+
+		public Dictionary<int, PropertyInfo> GetHPKs(string group)
 		{
-			return this.LookupIds?.Count > 0;
-		}
+            Dictionary<int, PropertyInfo> lookuphpks = new Dictionary<int, PropertyInfo>();
+            if (string.IsNullOrEmpty(group))
+            {
+                if (this.LookupHpks.Count == 1)
+                    lookuphpks = this.LookupHpks.ElementAt(0).Value;
+            }
+            else
+            {
+                lookuphpks = (this.LookupHpks.ContainsKey(group)) ? this.LookupHpks[group] : new Dictionary<int, PropertyInfo>();
+            }
+            
+            Dictionary<int, PropertyInfo> lookupstarhpks = null;
+            if (this.LookupHpks.TryGetValue(Constants.LookupSharedHPK, out lookupstarhpks))
+            {
+                foreach (var kvp in lookupstarhpks) //Add shared hpks...will fill in gaps
+                {
+                    if (!lookuphpks.ContainsKey(kvp.Key)) lookuphpks.Add(kvp.Key, kvp.Value);
+                };
+            }
+            return lookuphpks;
+        }
+    }
+
+	public class LookupTableMetaData
+	{
+        public Container LookupContainer { get; set; }
+        public Type LookupType { get; set; }
+
     }
 }

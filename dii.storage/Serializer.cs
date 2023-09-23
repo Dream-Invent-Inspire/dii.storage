@@ -46,12 +46,12 @@ namespace dii.storage
             /// <summary>
             /// The <see cref="PropertyInfo"/> for all properties designated by the <see cref="LookupHpkAttribute"/>.
             /// </summary>
-            public Dictionary<int, PropertyInfo> LookupHpkProperties { get; set; }
+            public Dictionary<string, Dictionary<int, PropertyInfo>> LookupHpkProperties { get; set; }
 
             /// <summary>
             /// The <see cref="PropertyInfo"/> for all properties designated by the <see cref="LookupIdAttribute"/>.
             /// </summary>
-            public Dictionary<int, PropertyInfo> LookupIdProperties { get; set; }
+            public Dictionary<string, Dictionary<int, PropertyInfo>> LookupIdProperties { get; set; }
 
             /// <summary>
             /// The <see cref="PropertyInfo"/> for all properties designated by the <see cref="SearchableAttribute"/>.

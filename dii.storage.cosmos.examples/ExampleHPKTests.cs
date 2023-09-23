@@ -34,7 +34,8 @@ namespace dii.storage.cosmos.examples
                 SessionId = "sid1",
                 SessionStartDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
                 Catalog = "Pets",
-                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1)
+                SessionEndDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z").AddHours(1),
+                Grants = new Dictionary<Domain, List<string>>() { { Domain.Payments, new List<string>() { "ALL" } }, { Domain.Pharmacy, new List<string>() { "ALL" } } }
             };
             var createdPersonSession = session;
 

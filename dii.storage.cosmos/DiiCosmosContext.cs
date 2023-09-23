@@ -269,21 +269,28 @@ namespace dii.storage.cosmos
 
 					if (tableMetaData.IsLookupTable)
 					{
-						if (optimizer == null || string.IsNullOrEmpty(tableMetaData.SourceTableNameForLookup) || tableMetaData.SourceTableTypeForLookup == default(Type))
+                        var thisLookup = (tableMetaData.SourceTableMetaData.LookupTables.ContainsKey(tableMetaData.GroupName) ? tableMetaData.SourceTableMetaData.LookupTables[tableMetaData.GroupName] : null);
+                        if (thisLookup == null)
+                        {
+                            throw new DiiTableCreationFailedException(tableMetaData.TableName);
+                        }
+
+                        //if (optimizer == null || string.IsNullOrEmpty(tableMetaData.SourceTableNameForLookup) || tableMetaData.SourceTableTypeForLookup == default(Type))
+                        if (optimizer == null || tableMetaData.SourceTableMetaData == null || string.IsNullOrEmpty(tableMetaData?.SourceTableMetaData?.TableName) || tableMetaData?.SourceTableMetaData?.ConcreteType == default(Type))
                         {
                             throw new DiiTableCreationFailedException(tableMetaData.TableName);
                         }
 
                         //Wire up changefeed capture processing
-						if (!containers.ContainsKey(tableMetaData.TableName) || !containers.ContainsKey($"{tableMetaData.TableName}-lease") || !containers.ContainsKey(tableMetaData.SourceTableNameForLookup))
+						if (!containers.ContainsKey(tableMetaData.TableName) || !containers.ContainsKey($"{tableMetaData.TableName}-lease") || !containers.ContainsKey(tableMetaData.SourceTableMetaData?.TableName))
 						{
                             throw new DiiTableCreationFailedException(tableMetaData.TableName);
                         }
-                        
-						var curContainer = containers[tableMetaData.SourceTableNameForLookup];
-						tableMetaData.LookupContainer = containers[tableMetaData.TableName];
+
+						var curContainer = containers[tableMetaData.SourceTableMetaData.TableName];
+						thisLookup.LookupContainer = containers[tableMetaData.TableName];
 						var curLeaseContainer = containers[$"{tableMetaData.TableName}-lease"];
-						Type changeFeedType = tableMetaData.SourceTableTypeForLookup;
+						Type changeFeedType = tableMetaData.SourceTableMetaData.ConcreteType;
 
                         var srv = new DiiChangeFeedProcessor(changeFeedType, tableMetaData); //the type here is the concrete type, which we need to sync over to it's lookup table, tableMetaData is the lookup table metadata
 
