@@ -127,7 +127,7 @@ namespace dii.storage.cosmos.examples.Adapters
         public async Task<bool> PatchBulkAsync(IReadOnlyList<(string, Dictionary<string, string>)> idAndPks, CancellationToken cancellationToken = default)
         {
             var ops = idAndPks.Select(x => (x.Item1, x.Item2, new Dictionary<string, object> { { "/Catalog", "BrandX" } })).ToList();
-            var results = await base.PatchBulkAsync(ops, cancellationToken: cancellationToken);
+            var results = await base.PatchBulkAsync(ops, cancellationToken: cancellationToken).ConfigureAwait(false);
             return results?.Any() ?? false;
         }
 
@@ -162,7 +162,7 @@ namespace dii.storage.cosmos.examples.Adapters
             //Lookup adapter stuff
             var adapter = new DiiCosmosLookupAdapter(this._table);
 
-            var obj = await adapter.LookupAsync(polId, dic, "PId", cancellationToken: cancellationToken);
+            var obj = await adapter.LookupAsync(polId, dic, "PId", cancellationToken: cancellationToken).ConfigureAwait(false);
             return obj as PersonOrder;
         }
 
@@ -178,7 +178,7 @@ namespace dii.storage.cosmos.examples.Adapters
             //Lookup adapter stuff
             var adapter = new DiiCosmosLookupAdapter(this._table);
 
-            var objs = await adapter.LookupByQueryAsync(query, "PId", null, null, cancellationToken);
+            var objs = await adapter.LookupByQueryAsync(query, "PId", null, null, cancellationToken).ConfigureAwait(false);
             return objs?.Cast<PersonOrder>().ToList();
         }
 
@@ -198,7 +198,7 @@ namespace dii.storage.cosmos.examples.Adapters
             queryDefinition.WithParameter("@clientId", clientId);
 
             var adapter = new DiiCosmosLookupAdapter(this._table);
-            var retOrders = await adapter.LookupByQueryAsync(queryDefinition, "PId", continuationToken, reqops, cancellationToken);
+            var retOrders = await adapter.LookupByQueryAsync(queryDefinition, "PId", continuationToken, reqops, cancellationToken).ConfigureAwait(false);
             return PagedList<PersonOrder>.CreateFromList(retOrders.Cast<PersonOrder>().ToList(), retOrders.ContinuationToken);
         }
 
@@ -212,7 +212,7 @@ namespace dii.storage.cosmos.examples.Adapters
             //Lookup adapter stuff
             var adapter = new DiiCosmosLookupAdapter(this._table);
 
-            var obj = await adapter.LookupAsync(receipt, dic, "Rec", cancellationToken: cancellationToken);
+            var obj = await adapter.LookupAsync(receipt, dic, "Rec", cancellationToken: cancellationToken).ConfigureAwait(false);
             return obj as PersonOrder;
         }
 

@@ -152,7 +152,7 @@ namespace dii.storage.cosmos.examples.Adapters
         public async Task<bool> PatchBulkAsync(IReadOnlyList<(string, Dictionary<string, string>)> idAndPks, CancellationToken cancellationToken = default)
         {
             var ops = idAndPks.Select(x => (x.Item1, x.Item2, new Dictionary<string, object> { { "/duration", 1000 } })).ToList();
-            var results = await base.PatchBulkAsync(ops, cancellationToken: cancellationToken);
+            var results = await base.PatchBulkAsync(ops, cancellationToken: cancellationToken).ConfigureAwait(false);
             return results?.Any() ?? false;
         }
     }
