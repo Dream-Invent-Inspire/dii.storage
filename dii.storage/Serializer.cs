@@ -209,6 +209,25 @@ namespace dii.storage
 
 				}
 
+				if (this.LookupHpkProperties?.Any() ?? false)
+				{
+                    var hpks = LookupHpkProperties.Values.SelectMany(x => x.Values).ToList();
+                    foreach (var hpk in hpks.Distinct())
+                    {
+                        if (!StoredEntityMapping.ConcreteProperties.ContainsKey(hpk.Name))
+							StoredEntityMapping.ConcreteProperties.Add(hpk.Name, hpk);
+					}
+                }
+                if (this.LookupIdProperties?.Any() ?? false)
+                {
+                    var ids = LookupIdProperties.Values.SelectMany(x => x.Values).ToList();
+                    foreach (var id in ids.Distinct())
+                    {
+                        if (!StoredEntityMapping.ConcreteProperties.ContainsKey(id.Name))
+                            StoredEntityMapping.ConcreteProperties.Add(id.Name, id);
+                    }
+                }
+
                 foreach (var property in StoredEntityMapping.ConcreteProperties)
 				{
 					var val = property.Value.GetValue(unpackedObject);
