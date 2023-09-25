@@ -355,8 +355,8 @@ namespace dii.storage.cosmos.examples
             Assert.Equal(ops.Count, res2.Count);
 
             //Page thru
-            var res3 = await _fixture.PersonOrderAdapter.GetManyByClientIdAsync("SomeEnterprise");
-            var res4 = await _fixture.PersonOrderAdapter.GetManyByClientIdAsync("SomeEnterprise", res3.ContinuationToken);
+            var res3 = await _fixture.PersonOrderAdapter.GetManyByClientIdAsync("SomeEnterprise").ConfigureAwait(false);
+            var res4 = await _fixture.PersonOrderAdapter.GetManyByClientIdAsync("SomeEnterprise", res3.ContinuationToken).ConfigureAwait(false);
 
         }
 
@@ -370,7 +370,7 @@ namespace dii.storage.cosmos.examples
             }
 
             //bulk fetch
-            var res2 = await _fixture.PersonOrderAdapter.GetManyByClientIdAsync("SomeEnterprise");
+            var res2 = await _fixture.PersonOrderAdapter.GetManyByClientIdAsync("SomeEnterprise").ConfigureAwait(false);
             //Assert.Equal(_fixture.Orders.Count, res2.Count);
         }
 
@@ -388,12 +388,12 @@ namespace dii.storage.cosmos.examples
 
             var dtfrom = DateTime.Parse("2023-07-01");
             var dtto = DateTime.Parse("2023-08-03");
-            var res1 = await _fixture.PersonOrderAdapter.GetManyByOrderDateAsync("SomeEnterprise", dtfrom, dtto);
+            var res1 = await _fixture.PersonOrderAdapter.GetManyByOrderDateAsync("SomeEnterprise", dtfrom, dtto).ConfigureAwait(false);
             int go = 100;
             while (res1 == null && --go > 0)
             {
                 Task.Delay(100).Wait();
-                res1 = await _fixture.PersonOrderAdapter.GetManyByOrderDateAsync("SomeEnterprise", dtfrom, dtto);
+                res1 = await _fixture.PersonOrderAdapter.GetManyByOrderDateAsync("SomeEnterprise", dtfrom, dtto).ConfigureAwait(false);
             }
             //Assert.Equal(_fixture.Orders.Count, res2.Count);
         }

@@ -37,7 +37,7 @@ namespace dii.storage.cosmos
         }
 
 
-        public async Task<List<Tout>> ProcessConcurrently<Tin, Tout>(IEnumerable<Tin> operations,
+        public async Task<List<Tout>> ProcessConcurrentlyAsync<Tin, Tout>(IEnumerable<Tin> operations,
             Func<Tin, Task<Tout>> taskProducer,
             RequestOptions requestOptions = null,
             CancellationToken cancellationToken = default)

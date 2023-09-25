@@ -76,7 +76,7 @@ namespace dii.storage.cosmos
             var partitionKey = GetPK(lhpks, partitionKeys);
             
             //Read from the lookup table
-            var lookupResponse = await ReadStreamAsync(ltmd.LookupContainer, ltmd.LookupType, id, partitionKey, requestOptions, cancellationToken);
+            var lookupResponse = await ReadStreamAsync(ltmd.LookupContainer, ltmd.LookupType, id, partitionKey, requestOptions, cancellationToken).ConfigureAwait(false);
             if (lookupResponse != null)
             {
                 //Build the source object partition key
@@ -134,7 +134,7 @@ namespace dii.storage.cosmos
             using FeedIterator<object> results = ltmd.LookupContainer.GetItemQueryIterator<object>(queryDefinition, continuationToken, requestOptions);
             while (results.HasMoreResults)
             {
-                FeedResponse<object> resultsPage = await results.ReadNextAsync();
+                FeedResponse<object> resultsPage = await results.ReadNextAsync().ConfigureAwait(false);
 
                 //Transfer the lookup results (data) to the query id and HPK buckets
                 foreach (var result in resultsPage)
@@ -162,7 +162,7 @@ namespace dii.storage.cosmos
             using FeedIterator<object> sourceResults = this._sourceContainer.GetItemQueryIterator<object>(stringBuilder.ToString(), null, requestOptions);
             while (sourceResults.HasMoreResults)
             {
-                FeedResponse<object> sourceResultsPage = await sourceResults.ReadNextAsync();
+                FeedResponse<object> sourceResultsPage = await sourceResults.ReadNextAsync().ConfigureAwait(false);
                 foreach (object srcRes in sourceResultsPage)
                 {
                     // Process result
@@ -187,7 +187,8 @@ namespace dii.storage.cosmos
             // Read the same item but as a stream.
             using (ResponseMessage responseMessage = await container.ReadItemStreamAsync(
                 partitionKey: pkBuilder.Build(),
-                id: id))
+                id: id).ConfigureAwait(false)
+            )
             {
                 // Item stream operations do not throw exceptions for better performance
                 if (responseMessage.IsSuccessStatusCode && responseMessage?.Content != null)
@@ -347,7 +348,7 @@ namespace dii.storage.cosmos
                 try
                 {
                     // Perform a point read
-                    lookupResponse = await ReadStreamAsync(ltmd.LookupContainer, ltmd.LookupType, strId.ToString(), (PartitionKeyBuilder)pkBuilder, requestOptions, cancellationToken);
+                    lookupResponse = await ReadStreamAsync(ltmd.LookupContainer, ltmd.LookupType, strId.ToString(), (PartitionKeyBuilder)pkBuilder, requestOptions, cancellationToken).ConfigureAwait(false);
                 }
                 catch (CosmosException ex)
                 {

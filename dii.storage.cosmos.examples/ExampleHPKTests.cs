@@ -225,7 +225,7 @@ namespace dii.storage.cosmos.examples
             // Create the entity with our adapter.
             var createdPersonSession = await _fixture.PersonSessionAdapter.UpsertAsync(session).ConfigureAwait(false);
 
-            var bok = await _fixture.PersonSessionAdapter.DeleteEntityAsync(session);
+            var bok = await _fixture.PersonSessionAdapter.DeleteEntityAsync(session).ConfigureAwait(false);
 
             Assert.NotNull(bok);
             Assert.Equal(bok, true);
