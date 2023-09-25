@@ -29,7 +29,6 @@ namespace dii.storage.cosmos.examples.Models
         /// The Order Id that the <see cref="PersonOrder"/> record belongs to.
         /// </summary>
         [HierarchicalPartitionKey(order: 1)]
-        [Searchable("OrderId")]
         public string OrderId { get; set; }
 
         //[Id(0)]
@@ -50,14 +49,12 @@ namespace dii.storage.cosmos.examples.Models
         /// The payment Id of the <see cref="PersonOrder"/>.
         /// </summary>
         [Id(0)]
-        [Searchable("PaymentId")]
         public string PaymentId { get; set; }
 
         /// <inheritdoc/>
         /// <summary>
         /// The Person Id that the <see cref="PersonOrder"/> record belongs to.
         /// </summary>
-        [Searchable("PersonId")]
         [LookupHpk(order: 1, group: "PId")]
         public string PersonId { get; set; }
 
@@ -71,7 +68,6 @@ namespace dii.storage.cosmos.examples.Models
         /// <summary>
         /// For it to (also) be a Hierarchical Partition Key, it must be a string.
         /// </summary>
-        [Searchable("OrderDateString")]
         [LookupHpk(order: 2, group: "PId")]
         public string OrderDateString
         {
@@ -89,7 +85,6 @@ namespace dii.storage.cosmos.examples.Models
         }
 
         /// <inheritdoc/>
-        [Searchable("PaymentType")]
         [LookupIdAttribute(order: 0, group: "PId")]
         public string PaymentType { get; set; }
 
@@ -97,11 +92,9 @@ namespace dii.storage.cosmos.examples.Models
         /// <summary>
         /// The payment amount of the <see cref="PersonOrder"/>.
         /// </summary>
-        [Searchable("PaymentAmount")]
         [LookupIdAttribute(order: 1, idType: typeof(double), group: "PId")]
         public double PaymentAmount { get; set; }
 
-        [Searchable("ReceiptNumber")]
         [LookupIdAttribute(order: 0, group: "Rec")]
         public string ReceiptNumber { get; set; }
 

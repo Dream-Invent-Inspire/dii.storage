@@ -294,6 +294,23 @@ namespace dii.storage
                 };
             }
             _ = AddProperty(typeBuilder, Constants.ReservedIdKey, typeof(string));
+
+            if (this.LookupHpkFields?.Any() ?? false)
+            {
+                var hpks = LookupHpkFields.Values.SelectMany(x => x.Values).ToList();
+                foreach (var hpk in hpks.Distinct().Where(x => !this.workingPropertySet.ContainsKey(x.Name)).ToList())
+                {
+                    _ = AddProperty(typeBuilder, hpk.Name, hpk.PropertyType);
+                }
+            }
+            if (this.LookupIdFields?.Any() ?? false)
+            {
+                var ids = LookupIdFields.Values.SelectMany(x => x.Values).ToList();
+                foreach (var id in ids.Distinct().Where(x => !this.workingPropertySet.ContainsKey(x.Name)).ToList())
+                {
+                    _ = AddProperty(typeBuilder, id.Name, id.PropertyType);
+                }
+            }
         }
 
         protected override Serializer CustomizeSearchableSerializer(Dictionary<string, PropertyInfo> properties, Serializer serializer)

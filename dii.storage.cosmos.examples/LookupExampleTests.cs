@@ -183,7 +183,7 @@ namespace dii.storage.cosmos.examples
 
             //Fetch
             var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
-            int go = 50;
+            int go = 100;
             while (getres1 == null && --go > 0)
             {
                 Task.Delay(100).Wait();
@@ -197,7 +197,7 @@ namespace dii.storage.cosmos.examples
 
             //Fetch again
             var getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result2.PaymentType, result2.PaymentAmount.ToString(), result2.ClientId, result2.PersonId, result2.OrderDate).ConfigureAwait(false);
-            go = 50;
+            go = 100;
             while (getres2 == null && --go > 0)
             {
                 Task.Delay(100).Wait();
@@ -212,7 +212,7 @@ namespace dii.storage.cosmos.examples
 
             //Last fetch...will the "new" record be there? ...and the old record deleted?
             var result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
-            go = 50;
+            go = 100;
             while (result4 == null && --go > 0)
             {
                 Task.Delay(100).Wait();
@@ -262,7 +262,7 @@ namespace dii.storage.cosmos.examples
 
             //Fetch
             var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
-            int go = 60;
+            int go = 100;
             while (getres1 == null && --go > 0)
             {
                 Task.Delay(100).Wait();
@@ -389,7 +389,7 @@ namespace dii.storage.cosmos.examples
             var dtfrom = DateTime.Parse("2023-07-01");
             var dtto = DateTime.Parse("2023-08-03");
             var res1 = await _fixture.PersonOrderAdapter.GetManyByOrderDateAsync("SomeEnterprise", dtfrom, dtto);
-            int go = 50;
+            int go = 100;
             while (res1 == null && --go > 0)
             {
                 Task.Delay(100).Wait();
@@ -415,7 +415,7 @@ namespace dii.storage.cosmos.examples
 
             //Fetch
             var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
-            int go = 50;
+            int go = 100;
             while (getres1 == null && --go > 0)
             {
                 Task.Delay(100).Wait();

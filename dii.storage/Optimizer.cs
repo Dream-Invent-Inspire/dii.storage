@@ -226,11 +226,13 @@ namespace dii.storage
 							{
 								tableMetaData.LookupIds = storageTypeSerializer.LookupIdProperties; //.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
 							}
+
 							if (storageTypeSerializer.SearchableProperties != null && storageTypeSerializer.SearchableProperties.Any())
 							{
 								tableMetaData.SearchableFields = storageTypeSerializer.SearchableProperties;
 							}
-                            if (storageTypeSerializer.IdProperties != null && storageTypeSerializer.IdProperties.Any())
+                            
+							if (storageTypeSerializer.IdProperties != null && storageTypeSerializer.IdProperties.Any())
                             {
                                 tableMetaData.IdProperties = storageTypeSerializer.IdProperties
 									.Select((property, index) => new { Index = index, Property = property })
@@ -258,8 +260,6 @@ namespace dii.storage
 											TableName = $"{tblName}{Constants.LookupTableSuffix}{groupName}",
 											ClassName = $"{tableMetaData.ClassName}{Constants.LookupTableSuffix}{groupName}",
 											//this is used for the change feed wire up
-           //                                 SourceTableNameForLookup = tableMetaData.TableName, //this is THIS entity's table name (not the lookup table)
-											//SourceTableTypeForLookup = type, //this is THIS entity's type (not the lookup type) for the Lookup object to cross reference
                                             SourceTableMetaData = tableMetaData,
                                             IsLookupTable = true,
 											GroupName = groupName
@@ -273,8 +273,6 @@ namespace dii.storage
 									{
 										LookupType = lookupType,
 									});
-
-                                    //tableMetaData.LookupType.Add(group.Key, lookupType); //this is for the lookup object unpacking
 
 									// As this is a source (of a Lookup) table, it must have a TTL (-1 = never expire)
 									// this is so when we need to delete a source item, we patch it with a short TTL so change feed can pick it up and delete the Lookup item(s)
