@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>dii.storage</id>
-    <version>1.2.9</version>
+    <version>1.2.99</version>
     <title>dii.storage</title>
     <authors>Andrew Beers, Pat MacMannis and Derek Jeremias</authors>
     <owners></owners>
@@ -11,6 +11,11 @@
     <releaseNotes></releaseNotes>
 	<license type="file">LICENSE.txt</license>
 	<readme>README.md</readme>
+	<dependencies>
+		<dependency id="MessagePack" version="2.5.108" />
+		<dependency id="Microsoft.Azure.Cosmos" version="3.35.0" />
+		<dependency id="Newtonsoft.Json" version="13.0.3" />
+	</dependencies>
   </metadata>
   <files>
     <file src="bin\Release\net6.0\dii.storage.dll" target="lib\net6.0" />

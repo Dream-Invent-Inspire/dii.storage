@@ -14,7 +14,6 @@ namespace dii.storage.cosmos.examples.Models
     [StorageName("Example-PersonOrder")]
     public class PersonOrder : DiiCosmosEntity//, IDiiLookupEntity
     {
-        
 
         /// <inheritdoc/>
         /// <summary>

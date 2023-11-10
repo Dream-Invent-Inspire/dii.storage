@@ -221,7 +221,7 @@ namespace dii.storage.cosmos
                 MaxItemCount = MAX_BATCH_SIZE
             });
 
-            diiEntities = await GetPagedInternalAsync(results, null, cancellationToken).ConfigureAwait(false);
+            diiEntities = await GetPagedInternalAsync(results, MAX_BATCH_SIZE, null, cancellationToken).ConfigureAwait(false);
             return diiEntities;
         }
 
@@ -321,7 +321,7 @@ namespace dii.storage.cosmos
 
             var iterator = _container.GetItemQueryStreamIterator(queryDefinition, continuationToken, requestOptions);
 
-            return await GetPagedInternalAsync(iterator, continuationToken, cancellationToken).ConfigureAwait(false);
+            return await GetPagedInternalAsync(iterator, (int)(requestOptions.MaxItemCount ?? _table.DefaultPageSize), continuationToken, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -339,19 +339,28 @@ namespace dii.storage.cosmos
         /// </remarks>
         protected virtual async Task<PagedList<T>> GetPagedAsync(string queryText = null, string continuationToken = null, QueryRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
+            requestOptions ??= new QueryRequestOptions
+            {
+                MaxItemCount = _table.DefaultPageSize
+            };
+
             var iterator = _container.GetItemQueryStreamIterator(queryText, continuationToken, requestOptions);
 
-            return await GetPagedInternalAsync(iterator, continuationToken, cancellationToken).ConfigureAwait(false);
+            return await GetPagedInternalAsync(iterator, (int)(requestOptions.MaxItemCount ?? _table.DefaultPageSize), continuationToken, cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task<PagedList<T>> GetPagedInternalAsync(FeedIterator iterator, string continuationToken = null, CancellationToken cancellationToken = default)
+        private async Task<PagedList<T>> GetPagedInternalAsync(FeedIterator iterator, int pageSize, string continuationToken = null, CancellationToken cancellationToken = default)
         {
             var results = new PagedList<T>();
 
             while (iterator.HasMoreResults)
             {
                 var responseMessage = await iterator.ReadNextAsync(cancellationToken).ConfigureAwait(false);
+                
+                if (responseMessage?.Content == null) return results;
 
+                results.ContinuationToken = responseMessage.ContinuationToken;
+                bool dobreak = false;
                 using (var reader = new StreamReader(responseMessage.Content))
                 {
                     var json = reader.ReadToEnd();
@@ -361,11 +370,17 @@ namespace dii.storage.cosmos
                     {
                         var doc = element.ToString();
                         if (!string.IsNullOrEmpty(doc))
+                        {
                             results.Add(await HydrateEntityAsync(doc).ConfigureAwait(false));
+                            if (results.Count() == pageSize)
+                            {
+                                dobreak = true;
+                                break;
+                            }
+                        }
                     }
                 }
-
-                results.ContinuationToken = responseMessage.ContinuationToken;
+                if (dobreak) break;
             }
 
             return results;
@@ -586,7 +601,7 @@ namespace dii.storage.cosmos
                         MaxItemCount = MAX_BATCH_SIZE
                     });
 
-                    var currentVersions = await GetPagedInternalAsync(results, null, cancellationToken).ConfigureAwait(false);
+                    var currentVersions = await GetPagedInternalAsync(results, MAX_BATCH_SIZE, null, cancellationToken).ConfigureAwait(false);
                     prevs = currentVersions?.ToDictionary(x => GetId(x), x => x) ?? new Dictionary<string, T>();
                 }
             }

@@ -355,6 +355,7 @@ namespace dii.storage
 
 					for (var i = 0; i < IdProperties.Count; i++)
                     {
+						if (id.Count() <= i) continue;
 						object o = Convert.ChangeType(id[i], IdProperties[i].PropertyType);
                         IdProperties[i].SetValue(unpackedObject, o);
 					}

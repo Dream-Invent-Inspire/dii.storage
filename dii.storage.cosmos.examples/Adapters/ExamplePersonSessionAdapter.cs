@@ -40,6 +40,15 @@ namespace dii.storage.cosmos.examples.Adapters
             return await base.GetPagedAsync(queryDefinition);
         }
 
+        public async Task<PagedList<PersonSession>> GetManyAsync(string clientId, string continuationToken = null)
+        {
+            var queryDefinition = new QueryDefinition($"SELECT * FROM c WHERE c.ClientId = @clientId");
+
+            queryDefinition.WithParameter("@clientId", clientId);
+
+            return await base.GetPagedAsync(queryDefinition, continuationToken);
+        }
+
 
         public async Task<PagedList<PersonSession>> SearchByRunDurationAsync(string clientId, string personId, long duration)
         {

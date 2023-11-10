@@ -21,16 +21,23 @@ namespace dii.storage.cosmos
         protected readonly TableMetaData _sourceTblMetaData;
         protected readonly Container _container;
         protected readonly Optimizer _optimizer;
-        protected readonly DiiCosmosContext _context;
+        //protected readonly DiiCosmosContext _context;
 
         public DiiChangeFeedProcessor(Type concreteType, TableMetaData tableMetaData)
         {
-            _context = DiiCosmosContext.Get();
+            //_context = DiiCosmosContext.Get();
             _concreteType = concreteType;
             _tableMetaData = tableMetaData; //This is the Lookup TableMetaData (which was dynamically constructed from the source table)
             _optimizer = Optimizer.Get();
             _sourceTblMetaData = _optimizer.TableMappings[concreteType];
         }
+
+        /// <summary>
+        /// Handles lookup table synchronization
+        /// </summary>
+        /// <param name="changes"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         public async Task HandleCosmosChangesAsync(IReadOnlyCollection<JObject> changes, CancellationToken cancellationToken)
         {
             var retries = new List<JObject>();
@@ -85,12 +92,12 @@ namespace dii.storage.cosmos
             
             //Upsert the Lookup object
             var adapter = new DiiCosmosLookupAdapter(_sourceTblMetaData); //This is the source table TableMetaData
+            
             List<Task<object>> tasks = new List<Task<object>>();
             List<object> results = new List<object>();
-            bool bok = true;
+
             foreach (var group in _sourceTblMetaData.LookupIds)
             {
-                //var dynamicObject = Activator.CreateInstance(_tableMetaData.ConcreteType); //this is the Lookup table type...the dynamically created (from the source) type
                 var dynamicObject = Activator.CreateInstance(_sourceTblMetaData.LookupTables[group.Key].LookupType); //this is the Lookup table type...the dynamically created (from the source) type
 
                 //Transfer data from source object to the target Dynamic object
@@ -103,20 +110,10 @@ namespace dii.storage.cosmos
                         if (sourceProp.PropertyType == targetProp.PropertyType) // Ensure the property types match
                         {
                             var valueToSet = sourceProp.GetValue(sourceObj);
-                            //this makes Lookup container (item) string fields case insensitive
-                            //targetProp.SetValue(dynamicObject, (sourceProp.PropertyType == typeof(string)) ? ((string)valueToSet).ToLowerInvariant() : valueToSet);
                             targetProp.SetValue(dynamicObject, valueToSet);
                         }
                     }
                 }
-
-                //var result = await adapter.UpsertIfMoreRecentAsync(
-                //    dynamicObject,
-                //    ((DiiCosmosEntity)sourceObj).ChangeTracker,
-                //    _sourceTblMetaData.LookupIds[group.Key],
-                //    _sourceTblMetaData.GetHPKs(group.Key),
-                //    group.Key,
-                //    new ItemRequestOptions { EnableContentResponseOnWrite = false });
 
                 tasks.Add(adapter.UpsertIfMoreRecentAsync(
                                 dynamicObject,
@@ -126,8 +123,6 @@ namespace dii.storage.cosmos
                                 group.Key,
                                 new ItemRequestOptions { EnableContentResponseOnWrite = false }));
 
-
-                //bok = bok && result != null;
             }
             var completedTasks = await Task.WhenAll(tasks);
             return completedTasks.All(x => x != null) && completedTasks.Count() == _sourceTblMetaData.LookupIds.Count();

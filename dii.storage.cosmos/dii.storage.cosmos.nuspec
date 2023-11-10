@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>dii.storage.cosmos</id>
-    <version>1.2.9</version>
+    <version>1.2.99</version>
     <title>dii.storage.cosmos</title>
     <authors>Andrew Beers, Pat MacMannis and Derek Jeremias</authors>
     <owners></owners>
