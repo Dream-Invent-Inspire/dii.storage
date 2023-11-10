@@ -56,6 +56,6 @@ namespace dii.storage.Models
         public int MaxRUPerSecond { get; set; } = 4000;
         public bool AutoAdjustMaxRUPerSecond { get; set; } = true;
         public bool AutoScaling { get; set; } = true;
-        public string TypeCollectionMame { get; set; }
+        public string TypeCollectionName { get; set; }
     }
 }

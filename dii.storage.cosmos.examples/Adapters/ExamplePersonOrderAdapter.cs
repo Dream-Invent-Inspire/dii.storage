@@ -216,6 +216,23 @@ namespace dii.storage.cosmos.examples.Adapters
             return obj as PersonOrder;
         }
 
+        public async Task<bool> DeleteByReceiptAsync(string receipt, string clientId, CancellationToken cancellationToken = default)
+        {
+            var dic = new Dictionary<string, string>
+            {
+                { "ClientId", clientId }
+            };
+
+            //Lookup adapter stuff
+            var adapter = new DiiCosmosLookupAdapter(this._table);
+
+            var fun = new Func<object, Task<bool>>(async (x) =>
+            {
+                return await base.DeleteEntityAsync(x as PersonOrder, cancellationToken: cancellationToken).ConfigureAwait(false);
+            });
+            return await adapter.DeleteByLookupAsync(receipt, dic, fun, "Rec", cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
     }
 
 }

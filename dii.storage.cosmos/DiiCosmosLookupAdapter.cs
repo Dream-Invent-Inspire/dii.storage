@@ -283,7 +283,7 @@ namespace dii.storage.cosmos
                     foreach (var id in lookupIds)
                     {
                         string val = (sourceProperties.ContainsKey(id.Value.Name) && sourceChanges.ContainsKey(id.Value.Name)) ? sourceChanges[id.Value.Name] : //grab the old id value from changes
-                                        (sourceProperties.ContainsKey(id.Value.Name) ? sourceProperties[id.Value.Name].GetValue(lookupType).ToString() : null); //otherwise, grab the current value
+                                        (sourceProperties.ContainsKey(id.Value.Name) ? sourceProperties[id.Value.Name].GetValue(lookupType)?.ToString() : null); //otherwise, grab the current value
                         if (!string.IsNullOrEmpty(val))
                         {
                             if (oldStrId != null) oldStrId += $"{Constants.DefaultIdDelimitor}";
@@ -398,7 +398,21 @@ namespace dii.storage.cosmos
             return lookupResponse ?? lookupType;
         }
 
-
+        
+        public async Task<bool> DeleteByLookupAsync(string id, 
+            Dictionary<string, string> partitionKeys, 
+            Func<object, Task<bool>> deleter,
+            string group = null, 
+            ItemRequestOptions requestOptions = null, 
+            CancellationToken cancellationToken = default)
+        {
+            var obj = await LookupAsync(id, partitionKeys, group, requestOptions, cancellationToken).ConfigureAwait(false);
+            if (obj != null)
+            {
+                return await deleter(obj).ConfigureAwait(false);
+            }
+            return false;
+        }
         #region privates
         private object HydrateEntityAsync(Type type, string json)
         {

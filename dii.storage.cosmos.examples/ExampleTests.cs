@@ -254,8 +254,8 @@ namespace dii.storage.cosmos.examples
 		{
             try
             {
-                Optimizer.Clear();
-                DiiCosmosContext.Reset();
+                //Optimizer.Clear();
+                //DiiCosmosContext.Reset();
                 //var context = DiiCosmosContext.Get();
 
                 //if (context.Dbs != null)

@@ -97,7 +97,7 @@ namespace dii.storage.tests.OptimizerTests
         }
 
         [Theory, TestPriorityOrder(102), ClassData(typeof(ConfigureTypesInvalidPartitionKeyOrderExceptionData))]
-        public void ConfigureTypes_AddTypeWithInvalidPartitionKeyOrder(Type type, string propertyName, string duplicatePropertyName, int order)
+        public void ConfigureTypes_AddTypeWithInvalidPartitionKeyOrder(string db, Type type, string propertyName, string duplicatePropertyName, int order)
         {
             var optimizer = Optimizer.Get();
 

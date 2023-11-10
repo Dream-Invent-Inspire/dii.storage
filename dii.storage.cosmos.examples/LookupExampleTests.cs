@@ -180,13 +180,14 @@ namespace dii.storage.cosmos.examples
 
             //Create/update
             PersonOrder result1 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
+            await Task.Delay(100);
 
             //Fetch
             var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
             int go = 100;
             while (getres1 == null && --go > 0)
             {
-                Task.Delay(100).Wait();
+                await Task.Delay(100);
                 getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
             }
             Assert.NotNull(getres1);
@@ -200,7 +201,7 @@ namespace dii.storage.cosmos.examples
             go = 100;
             while (getres2 == null && --go > 0)
             {
-                Task.Delay(100).Wait();
+                await Task.Delay(100);
                 getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result2.PaymentType, result2.PaymentAmount.ToString(), result2.ClientId, result2.PersonId, result2.OrderDate).ConfigureAwait(false);
             }
             if (go > 0) Task.Delay(1000).Wait();
@@ -215,7 +216,7 @@ namespace dii.storage.cosmos.examples
             go = 100;
             while (result4 == null && --go > 0)
             {
-                Task.Delay(100).Wait();
+                await Task.Delay(100);
                 result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
             }
             Assert.NotNull(result4);
@@ -265,7 +266,7 @@ namespace dii.storage.cosmos.examples
             int go = 100;
             while (getres1 == null && --go > 0)
             {
-                Task.Delay(100).Wait();
+                await Task.Delay(100);
                 getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
             }
             Assert.NotNull(getres1);
@@ -279,7 +280,7 @@ namespace dii.storage.cosmos.examples
             go = 60;
             while (getres2 == null && --go > 0)
             {
-                Task.Delay(100).Wait();
+                await Task.Delay(100);
                 getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result2.PaymentType, result2.PaymentAmount.ToString(), result2.ClientId, result2.PersonId, result2.OrderDate).ConfigureAwait(false);
             }
             Assert.NotNull(getres2);
@@ -293,7 +294,7 @@ namespace dii.storage.cosmos.examples
             go = 60;
             while (result4 == null && --go > 0)
             {
-                Task.Delay(100).Wait();
+                await Task.Delay(100);
                 result4 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(result3.PaymentType, result3.PaymentAmount.ToString(), result3.ClientId, result3.PersonId, result3.OrderDate).ConfigureAwait(false);
             }
             Assert.NotNull(result4);
@@ -317,13 +318,14 @@ namespace dii.storage.cosmos.examples
 
             //Create/update
             PersonOrder result1 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
+            await Task.Delay(100);
 
             //Fetch
             var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
             int go = 50;
             while (getres1 == null && --go > 0)
             {
-                Task.Delay(100).Wait();
+                await Task.Delay(100);
                 getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
             }
             Assert.NotNull(getres1);
@@ -334,7 +336,7 @@ namespace dii.storage.cosmos.examples
             go = 50;
             while (getres2 != null && --go > 0)
             {
-                Task.Delay(100).Wait();
+                await Task.Delay(100);
                 getres2 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
             }
             Assert.Null(getres2);
@@ -367,6 +369,7 @@ namespace dii.storage.cosmos.examples
             foreach (var order in _fixture.Orders)
             {
                 await _fixture.PersonOrderAdapter.UpsertAsync(order).ConfigureAwait(false);
+                await Task.Delay(100);
             }
 
             //bulk fetch
@@ -381,6 +384,7 @@ namespace dii.storage.cosmos.examples
             foreach (var order in _fixture.Orders)
             {
                 await _fixture.PersonOrderAdapter.UpsertAsync(order).ConfigureAwait(false);
+                await Task.Delay(100);
             }
 
             //bulk fetch
@@ -392,7 +396,7 @@ namespace dii.storage.cosmos.examples
             int go = 100;
             while (res1 == null && --go > 0)
             {
-                Task.Delay(100).Wait();
+                await Task.Delay(100);
                 res1 = await _fixture.PersonOrderAdapter.GetManyByOrderDateAsync("SomeEnterprise", dtfrom, dtto).ConfigureAwait(false);
             }
             //Assert.Equal(_fixture.Orders.Count, res2.Count);
@@ -411,19 +415,17 @@ namespace dii.storage.cosmos.examples
             //Replace
             o1.PaymentType = "Examplle10-CC";
             var res1 = await _fixture.PersonOrderAdapter.ReplaceAsync(o1).ConfigureAwait(false);
-
+            await Task.Delay(100);
 
             //Fetch
             var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
             int go = 100;
             while (getres1 == null && --go > 0)
             {
-                Task.Delay(100).Wait();
+                await Task.Delay(100);
                 getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
             }
             Assert.NotNull(getres1);
-
-            //Assert.Equal(_fixture.Orders.Count, res2.Count);
         }
 
         [Fact, TestPriorityOrder(110)]
@@ -443,20 +445,18 @@ namespace dii.storage.cosmos.examples
 
             //Replace
             var res1 = await _fixture.PersonOrderAdapter.ReplaceBulkAsync(tmporders).ConfigureAwait(false);
-
+            await Task.Delay(100);
 
             //Fetch
             var o1 = tmporders[tmporders.Count - 1];
             var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
-            int go = 50;
+            int go = 200;
             while (getres1 == null && --go > 0)
             {
-                Task.Delay(1000).Wait();
+                await Task.Delay(100);
                 getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
             }
             Assert.NotNull(getres1);
-
-            //Assert.Equal(_fixture.Orders.Count, res2.Count);
         }
 
         [Fact, TestPriorityOrder(120)]
@@ -475,14 +475,14 @@ namespace dii.storage.cosmos.examples
             };
 
             var res1 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
-
+            await Task.Delay(100);
 
             //Fetch
             var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
             int go = 50;
             while (getres1 == null && --go > 0)
             {
-                Task.Delay(100).Wait();
+                await Task.Delay(100);
                 getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
             }
             Assert.NotNull(getres1);
@@ -491,12 +491,63 @@ namespace dii.storage.cosmos.examples
             go = 500;
             while (getres2 == null && --go > 0)
             {
-                Task.Delay(100).Wait();
+                await Task.Delay(100);
                 getres2 = await _fixture.PersonOrderAdapter.GetByReceiptAsync(o1.ReceiptNumber, o1.ClientId).ConfigureAwait(false);
             }
             Assert.NotNull(getres2);
 
             //Assert.Equal(_fixture.Orders.Count, res2.Count);
+        }
+
+        [Fact, TestPriorityOrder(120)]
+        public async Task RunHPKExample14()
+        {
+            var o1 = new PersonOrder
+            {
+                PaymentAmount = 1200,
+                PaymentType = "Credit",
+                ClientId = "SomeEnterprise",
+                OrderId = "orderid12",
+                PaymentId = "pmtid12",
+                PersonId = "person12",
+                OrderDate = DateTimeOffset.Parse("2022-08-22T21:14:07.3066349Z"),
+                ReceiptNumber = "R12"
+            };
+
+            var res1 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
+            await Task.Delay(100);
+
+            //Fetch
+            var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            int go = 50;
+            while (getres1 == null && --go > 0)
+            {
+                await Task.Delay(100);
+                getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            }
+            Assert.NotNull(getres1);
+
+            var getres2 = await _fixture.PersonOrderAdapter.GetByReceiptAsync(o1.ReceiptNumber, o1.ClientId).ConfigureAwait(false);
+            go = 50;
+            while (getres2 == null && --go > 0)
+            {
+                await Task.Delay(100);
+                getres2 = await _fixture.PersonOrderAdapter.GetByReceiptAsync(o1.ReceiptNumber, o1.ClientId).ConfigureAwait(false);
+            }
+            Assert.NotNull(getres2);
+
+            //now delete
+            var bok = await _fixture.PersonOrderAdapter.DeleteByReceiptAsync(getres2.ReceiptNumber, getres2.ClientId).ConfigureAwait(false);
+            Assert.True(bok);
+
+            getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            go = 50;
+            while (getres1 != null && --go > 0)
+            {
+                await Task.Delay(100);
+                getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            }
+            Assert.Null(getres1);
         }
 
         #region Teardown
@@ -505,8 +556,8 @@ namespace dii.storage.cosmos.examples
         {
             try
             {
-                Optimizer.Clear();
-                DiiCosmosContext.Reset();
+                //Optimizer.Clear();
+                //DiiCosmosContext.Reset();
             }
             catch (Exception ex)
             {

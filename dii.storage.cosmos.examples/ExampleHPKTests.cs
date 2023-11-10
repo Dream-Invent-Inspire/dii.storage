@@ -319,13 +319,29 @@ namespace dii.storage.cosmos.examples
         [Fact, TestPriorityOrder(100)]
         public async Task RunHPKExample100()
         {
-            foreach (var s in _fixture.sessions)
+            var sessions = new List<PersonSession>();
+            for (int i = 0; i < 10; i++)
             {
-                await _fixture.PersonSessionAdapter.UpsertAsync(s).ConfigureAwait(false);
+                foreach (var s in _fixture.sessions)
+                {
+                    s.PersonId += i.ToString();
+                    var ps = await _fixture.PersonSessionAdapter.UpsertAsync(s).ConfigureAwait(false);
+                    sessions.Add(ps);
+                }
             }
 
+            var pagedsessions = new List<PersonSession>();
+            var storedsessions = await _fixture.PersonSessionAdapter.GetManyAsync("SomeEnterprise").ConfigureAwait(false);
+            while (storedsessions.ContinuationToken != null) 
+            {
+                pagedsessions.AddRange(storedsessions);
+                storedsessions = await _fixture.PersonSessionAdapter.GetManyAsync("SomeEnterprise", storedsessions.ContinuationToken).ConfigureAwait(false);
+            }
+            Assert.NotNull(pagedsessions);
+            Assert.Equal(pagedsessions.Select(x => x.PersonId).ToList().Distinct().Count(), pagedsessions.Select(x => x.PersonId).ToList().Distinct().Count());
+
             //verify bulk delete
-            var bok = await _fixture.PersonSessionAdapter.DeleteBulkAsync(_fixture.sessions.AsReadOnly()).ConfigureAwait(false);
+            var bok = await _fixture.PersonSessionAdapter.DeleteBulkAsync(sessions.AsReadOnly()).ConfigureAwait(false);
 
             Assert.NotNull(bok);
             Assert.Equal(bok, true);
@@ -338,17 +354,8 @@ namespace dii.storage.cosmos.examples
         {
             try
             {
-                Optimizer.Clear();
-                DiiCosmosContext.Reset();
-                //var context = DiiCosmosContext.Get();
-
-                //if (context.Dbs != null)
-                //{
-                //    foreach (var db in context.Dbs)
-                //    {
-                //        _ = await db.DeleteAsync().ConfigureAwait(false);
-                //    }
-                //}
+                //Optimizer.Clear();
+                //DiiCosmosContext.Reset();
             }
             catch (Exception ex)
             {

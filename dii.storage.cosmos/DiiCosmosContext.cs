@@ -121,16 +121,14 @@ namespace dii.storage.cosmos
 									: ThroughputProperties.CreateManualThroughput(dbcfg.MaxRUPerSecond);
 
 						var response = await Client.CreateDatabaseIfNotExistsAsync(dbcfg.DatabaseId, throughputProperties).ConfigureAwait(false);
-						if (Dbs == null)
-						{
-							Dbs = new List<Database>();
-						}
-						Dbs.Add(response.Database);
-						if (DbProperties == null)
-						{
-							DbProperties = new Dictionary<string, DatabaseProperties>();
-						}
-						DbProperties.Add(dbcfg.DatabaseId, response.Resource);
+
+                        Dbs ??= new List<Database>();
+                        if (!Dbs.Any(x => x.Id.Equals(dbcfg.DatabaseId, StringComparison.InvariantCultureIgnoreCase)))
+                            Dbs.Add(response.Database);
+
+                        DbProperties ??= new Dictionary<string, DatabaseProperties>();
+                        if (!DbProperties.ContainsKey(dbcfg.DatabaseId))
+							DbProperties.Add(dbcfg.DatabaseId, response.Resource);
 
 						// Skip throughput check if DB was just created.
 						DatabaseCreatedThisContext = response.StatusCode == HttpStatusCode.Created;
