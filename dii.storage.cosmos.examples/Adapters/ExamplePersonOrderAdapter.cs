@@ -151,7 +151,7 @@ namespace dii.storage.cosmos.examples.Adapters
         /// <returns></returns>
         public async Task<PersonOrder> GetByPersonIdAsync(string paymentType, string paymentAmount, string clientId, string personId, DateTimeOffset orderDate, CancellationToken cancellationToken = default)
         {
-            string polId = $"{paymentType}{Constants.DefaultIdDelimitor}{paymentAmount}";
+            string polId = $"{paymentType}{dii.storage.Constants.DefaultIdDelimitor}{paymentAmount}";
             var dic = new Dictionary<string, string>
             {
                 { "ClientId", clientId },

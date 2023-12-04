@@ -38,9 +38,6 @@ namespace dii.storage.cosmos
         where T : DiiCosmosEntity, new()
     {
 
-        public const int MAX_BATCH_SIZE = 1000;
-        public const long DELETE_TTL = 10;
-
         #region protected Fields
         protected readonly Container _container;
         protected readonly Optimizer _optimizer;
@@ -197,31 +194,36 @@ namespace dii.storage.cosmos
         /// This is meant to perform better latency-wise than a query with IN statements to fetch
         /// a large number of independent entities.
         /// </remarks>
-        protected virtual async Task<List<T>> GetManyAsync(IReadOnlyList<(string, Dictionary<string, string>)> idAndPks, ReadManyRequestOptions readManyRequestOptions = null, CancellationToken cancellationToken = default)
+        protected virtual async Task<PagedList<T>> GetManyAsync(IReadOnlyList<(string, Dictionary<string, string>)> idAndPks, string continuationToken = null, QueryRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
-            var diiEntities = default(List<T>);
+            var diiEntities = default(PagedList<T>);
 
             if (idAndPks == default)
             {
                 return diiEntities;
             }
-            if (idAndPks.Count > MAX_BATCH_SIZE)
+            //if (idAndPks.Count > Constants.MAX_BATCH_SIZE)
+            //{
+            //    throw new ArgumentException($"Cannot read more than {Constants.MAX_BATCH_SIZE} entities at a time.");
+            //}
+
+            requestOptions ??= new QueryRequestOptions
             {
-                throw new ArgumentException($"Cannot read more than {MAX_BATCH_SIZE} entities at a time.");
-            }
+                MaxItemCount = _table.DefaultPageSize ?? Constants.MAX_BATCH_SIZE
+            };
 
             //build query
             var stringBuilder = GetByIdListPrep(idAndPks);
 
             //run query
-            diiEntities = new List<T>();
+            diiEntities = new PagedList<T>();
 
-            using FeedIterator results = _container.GetItemQueryStreamIterator(stringBuilder.ToString(), requestOptions: new QueryRequestOptions()
-            {
-                MaxItemCount = MAX_BATCH_SIZE
-            });
+            using FeedIterator results = _container.GetItemQueryStreamIterator(
+                        stringBuilder.ToString(),
+                        continuationToken,
+                        requestOptions: requestOptions);
 
-            diiEntities = await GetPagedInternalAsync(results, MAX_BATCH_SIZE, null, cancellationToken).ConfigureAwait(false);
+            diiEntities = await GetPagedInternalAsync(results, (int)requestOptions.MaxItemCount, continuationToken, cancellationToken).ConfigureAwait(false);
             return diiEntities;
         }
 
@@ -316,7 +318,7 @@ namespace dii.storage.cosmos
         {
             requestOptions ??= new QueryRequestOptions
             {
-                MaxItemCount = _table.DefaultPageSize
+                MaxItemCount = _table.DefaultPageSize ?? Constants.MAX_BATCH_SIZE
             };
 
             var iterator = _container.GetItemQueryStreamIterator(queryDefinition, continuationToken, requestOptions);
@@ -337,11 +339,11 @@ namespace dii.storage.cosmos
         /// <remarks>
         /// Only supports single partition queries.
         /// </remarks>
-        protected virtual async Task<PagedList<T>> GetPagedAsync(string queryText = null, string continuationToken = null, QueryRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        protected virtual async Task<PagedList<T>> GetPagedAsync(string queryText, string continuationToken = null, QueryRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             requestOptions ??= new QueryRequestOptions
             {
-                MaxItemCount = _table.DefaultPageSize
+                MaxItemCount = _table.DefaultPageSize ?? Constants.MAX_BATCH_SIZE
             };
 
             var iterator = _container.GetItemQueryStreamIterator(queryText, continuationToken, requestOptions);
@@ -437,9 +439,9 @@ namespace dii.storage.cosmos
                 return unpackedEntities;
             }
 
-            if (diiEntities.Count() > MAX_BATCH_SIZE)
+            if (diiEntities.Count() > Constants.MAX_BATCH_SIZE)
             {
-                throw new ArgumentException($"The number of entities to create exceeds the maximum Create batch size of {MAX_BATCH_SIZE}.");
+                throw new ArgumentException($"The number of entities to create exceeds the maximum Create batch size of {Constants.MAX_BATCH_SIZE}.");
             }
 
             var packedEntities = diiEntities.Select(x => _optimizer.ToEntity(x));
@@ -544,9 +546,9 @@ namespace dii.storage.cosmos
             {
                 return unpackedEntities;
             }
-            if (diiEntities.Count() > MAX_BATCH_SIZE)
+            if (diiEntities.Count() > Constants.MAX_BATCH_SIZE)
             {
-                throw new ArgumentException($"The number of entities to replace exceeds the maximum Replace batch size of {MAX_BATCH_SIZE}.");
+                throw new ArgumentException($"The number of entities to replace exceeds the maximum Replace batch size of {Constants.MAX_BATCH_SIZE}.");
             }
 
             //if this container has a lookup, then we may have to fetch current version first
@@ -598,10 +600,10 @@ namespace dii.storage.cosmos
                     var stringBuilder = GetByEntityListPrep(fetchList.ToList());
                     using FeedIterator results = _container.GetItemQueryStreamIterator(stringBuilder.ToString(), requestOptions: new QueryRequestOptions()
                     {
-                        MaxItemCount = MAX_BATCH_SIZE
+                        MaxItemCount = Constants.MAX_BATCH_SIZE
                     });
 
-                    var currentVersions = await GetPagedInternalAsync(results, MAX_BATCH_SIZE, null, cancellationToken).ConfigureAwait(false);
+                    var currentVersions = await GetPagedInternalAsync(results, Constants.MAX_BATCH_SIZE, null, cancellationToken).ConfigureAwait(false);
                     prevs = currentVersions?.ToDictionary(x => GetId(x), x => x) ?? new Dictionary<string, T>();
                 }
             }
@@ -769,9 +771,9 @@ namespace dii.storage.cosmos
             {
                 return unpackedEntities;
             }
-            if (diiEntities.Count() > MAX_BATCH_SIZE)
+            if (diiEntities.Count() > Constants.MAX_BATCH_SIZE)
             {
-                throw new ArgumentException($"The number of entities to upsert exceeds the maximum batch size of {MAX_BATCH_SIZE}.");
+                throw new ArgumentException($"The number of entities to upsert exceeds the maximum batch size of {Constants.MAX_BATCH_SIZE}.");
             }
 
             //if this container has a lookup, then we may have to fetch current version first
@@ -848,7 +850,7 @@ namespace dii.storage.cosmos
             var ops = patchOperations.Select(x => PatchOperation.Set(x.Key, x.Value)).ToList(); //convert from Dictionary<string, object> to List<PatchOperation>
             if (!string.IsNullOrEmpty(changes))
             {
-                ops.Add(PatchOperation.Set($"/{Constants.ReservedChangeTrackerKey}", changes));
+                ops.Add(PatchOperation.Set($"/{dii.storage.Constants.ReservedChangeTrackerKey}", changes));
             }
 
             var returnedEntity = await _container.PatchItemAsync<object>(id, partitionKey.Build(), (IReadOnlyList<PatchOperation>)ops, requestOptions, cancellationToken).ConfigureAwait(false);
@@ -888,9 +890,9 @@ namespace dii.storage.cosmos
             {
                 return default(List<T>);
             }
-            if (patchOperations.Count() > MAX_BATCH_SIZE)
+            if (patchOperations.Count() > Constants.MAX_BATCH_SIZE)
             {
-                throw new ArgumentException($"The number of entities to patch exceeds the maximum batch size of {MAX_BATCH_SIZE}.");
+                throw new ArgumentException($"The number of entities to patch exceeds the maximum batch size of {Constants.MAX_BATCH_SIZE}.");
             }
 
             var ops = patchOperations.Select<(string id, Dictionary<string, string> partitionKeys, Dictionary<string, object> listOfPatchOperations), 
@@ -945,7 +947,7 @@ namespace dii.storage.cosmos
                 {
                     EnableContentResponseOnWrite = false
                 };
-                _ = await PatchInternalAsync(id, partitionKey, GetDeletePatch(DELETE_TTL), patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
+                _ = await PatchInternalAsync(id, partitionKey, GetDeletePatch(Constants.DELETE_TTL), patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
                 return true;
             }
             else
@@ -976,7 +978,7 @@ namespace dii.storage.cosmos
                 {
                     EnableContentResponseOnWrite = false
                 };
-                _ = await PatchAsync(id, partitionKeys, GetDeletePatch(DELETE_TTL), patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
+                _ = await PatchAsync(id, partitionKeys, GetDeletePatch(Constants.DELETE_TTL), patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
                 return true;
             }
             else
@@ -1026,9 +1028,9 @@ namespace dii.storage.cosmos
             {
                 return true;
             }
-            if (diiEntities.Count > MAX_BATCH_SIZE)
+            if (diiEntities.Count > Constants.MAX_BATCH_SIZE)
             {
-                throw new ArgumentException($"The number of entities to delete exceeds the maximum batch size of {MAX_BATCH_SIZE}.");
+                throw new ArgumentException($"The number of entities to delete exceeds the maximum batch size of {Constants.MAX_BATCH_SIZE}.");
             }
 
             if (this._table.HasLookup())
@@ -1040,7 +1042,7 @@ namespace dii.storage.cosmos
                 };
                 
                 var ops = diiEntities.Select<T, (string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations)>
-                    ((x) => new (GetId(x), GetPK(x), GetDeletePatch(DELETE_TTL)))
+                    ((x) => new (GetId(x), GetPK(x), GetDeletePatch(Constants.DELETE_TTL)))
                     .ToList();
                 
                 _ = await PatchBulkInternalAsync(ops, patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
@@ -1078,9 +1080,9 @@ namespace dii.storage.cosmos
             {
                 return true;
             }
-            if (idAndPks.Count > MAX_BATCH_SIZE)
+            if (idAndPks.Count > Constants.MAX_BATCH_SIZE)
             {
-                throw new ArgumentException($"The number of entities to delete exceeds the maximum batch size of {MAX_BATCH_SIZE}.");
+                throw new ArgumentException($"The number of entities to delete exceeds the maximum batch size of {Constants.MAX_BATCH_SIZE}.");
             }
 
             if (this._table.HasLookup())
@@ -1092,7 +1094,7 @@ namespace dii.storage.cosmos
                 };
                 
                 var ops = idAndPks.Select<(string id, Dictionary<string, string> partitionKeys), (string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations)>
-                    ((x) => new (x.id, GetPKBuilder(x.partitionKeys), GetDeletePatch(DELETE_TTL)))
+                    ((x) => new (x.id, GetPKBuilder(x.partitionKeys), GetDeletePatch(Constants.DELETE_TTL)))
                     .ToList();
                 
                 _ = await PatchBulkInternalAsync(ops, patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
@@ -1117,9 +1119,9 @@ namespace dii.storage.cosmos
             {
                 return true;
             }
-            if (idAndPks.Count > MAX_BATCH_SIZE)
+            if (idAndPks.Count > Constants.MAX_BATCH_SIZE)
             {
-                throw new ArgumentException($"The number of entities to delete exceeds the maximum batch size of {MAX_BATCH_SIZE}.");
+                throw new ArgumentException($"The number of entities to delete exceeds the maximum batch size of {Constants.MAX_BATCH_SIZE}.");
             }
 
             var itemResponses = await base.ProcessConcurrentlyAsync<(string id, PartitionKeyBuilder partitionKey), ResponseMessage>(idAndPks,
@@ -1202,8 +1204,8 @@ namespace dii.storage.cosmos
         {
             return new Dictionary<string, object> 
             { 
-                { $"/{Constants.ReservedTTLKey}", duration },
-                { $"/{Constants.ReservedDeletedKey}", true }
+                { $"/{dii.storage.Constants.ReservedTTLKey}", duration },
+                { $"/{dii.storage.Constants.ReservedDeletedKey}", true }
             };
         }
 

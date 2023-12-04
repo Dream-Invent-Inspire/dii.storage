@@ -381,11 +381,11 @@ namespace dii.storage.cosmos.examples
         public async Task RunHPKExample8()
         {
             // Create orders
-            foreach (var order in _fixture.Orders)
-            {
-                await _fixture.PersonOrderAdapter.UpsertAsync(order).ConfigureAwait(false);
-                await Task.Delay(100);
-            }
+            //foreach (var order in _fixture.Orders)
+            //{
+            //    await _fixture.PersonOrderAdapter.UpsertAsync(order).ConfigureAwait(false);
+            //    await Task.Delay(100);
+            //}
 
             //bulk fetch
             Task.Delay(100).Wait();
