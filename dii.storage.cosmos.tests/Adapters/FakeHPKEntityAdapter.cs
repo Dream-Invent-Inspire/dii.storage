@@ -18,9 +18,9 @@ namespace dii.storage.cosmos.tests.Adapters
             return base.GetAsync(id, partitionKeys, requestOptions, cancellationToken);
         }
 
-        Task<List<FakeHPKEntity>> IFakeHierarchicalAdapter<FakeHPKEntity>.GetManyAsync(IReadOnlyList<(string id, Dictionary<string, string> partitionKeys)> idAndPks, ReadManyRequestOptions readManyRequestOptions, CancellationToken cancellationToken)
+        Task<PagedList<FakeHPKEntity>> IFakeHierarchicalAdapter<FakeHPKEntity>.GetManyAsync(IReadOnlyList<(string id, Dictionary<string, string> partitionKeys)> idAndPks, QueryRequestOptions readManyRequestOptions, CancellationToken cancellationToken)
         {
-            return base.GetManyAsync(idAndPks, readManyRequestOptions, cancellationToken);
+            return base.GetManyAsync(idAndPks, null, readManyRequestOptions, cancellationToken);
         }
 
         Task<PagedList<FakeHPKEntity>> IFakeHierarchicalAdapter<FakeHPKEntity>.GetPagedAsync(QueryDefinition queryDefinition, string continuationToken, QueryRequestOptions requestOptions)

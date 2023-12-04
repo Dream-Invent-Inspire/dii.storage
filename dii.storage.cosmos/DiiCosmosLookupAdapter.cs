@@ -109,12 +109,22 @@ namespace dii.storage.cosmos
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public async Task<PagedList<object>> LookupByQueryAsync(QueryDefinition queryDefinition, string group = null, string continuationToken = null, QueryRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        public async Task<PagedList<object>> LookupByQueryAsync(
+            QueryDefinition queryDefinition, 
+            string group = null, 
+            string continuationToken = null, 
+            QueryRequestOptions requestOptions = null, 
+            CancellationToken cancellationToken = default)
         {
             if (_tableMetaData.LookupTables == null)
             {
                 throw new Exception("No Lookup dynamic type has been associated with the provided TableMetaData configuration.");
             }
+
+            requestOptions ??= new QueryRequestOptions
+            {
+                MaxItemCount = _tableMetaData.DefaultPageSize ?? Constants.MAX_BATCH_SIZE
+            };
 
             //For the source object lookup
             List<object> ids = new List<object>();
@@ -132,10 +142,14 @@ namespace dii.storage.cosmos
             // Retrieve an iterator for the result set
             PagedList<object> objs = new PagedList<object>();
             using FeedIterator<object> results = ltmd.LookupContainer.GetItemQueryIterator<object>(queryDefinition, continuationToken, requestOptions);
+
+            string returnContinuationToken = null;
+            bool dobreak = false;
             while (results.HasMoreResults)
             {
                 FeedResponse<object> resultsPage = await results.ReadNextAsync().ConfigureAwait(false);
 
+                returnContinuationToken = resultsPage.ContinuationToken;
                 //Transfer the lookup results (data) to the query id and HPK buckets
                 foreach (var result in resultsPage)
                 {
@@ -146,7 +160,10 @@ namespace dii.storage.cosmos
                     object eids = string.Empty;
                     _tableMetaData.IdProperties.TransferProperties(lookupObj, ref eids);
                     ids.Add(eids);
+                    dobreak = (ids.Count() == requestOptions.MaxItemCount);
+                    if (dobreak) break;
                 }
+                if (dobreak) break;
             }
             if (ids.Count() == 0)
             {
@@ -159,6 +176,7 @@ namespace dii.storage.cosmos
                 (keycol3, ((!string.IsNullOrEmpty(keycol3)) ? ((Dictionary<int, List<string>>)dicpk).ElementAt(2).Value : null)));
 
             //run query
+            PagedList<object> returnset = new PagedList<object>() { ContinuationToken = returnContinuationToken };
             using FeedIterator<object> sourceResults = this._sourceContainer.GetItemQueryIterator<object>(stringBuilder.ToString(), null, requestOptions);
             while (sourceResults.HasMoreResults)
             {
@@ -166,10 +184,10 @@ namespace dii.storage.cosmos
                 foreach (object srcRes in sourceResultsPage)
                 {
                     // Process result
-                    objs.Add(HydrateEntityAsync(this._tableMetaData.ConcreteType, srcRes.ToString()));
+                    returnset.Add(HydrateEntityAsync(this._tableMetaData.ConcreteType, srcRes.ToString()));
                 }
             }
-            return objs;
+            return returnset;
         }
 
         /// <summary>
@@ -228,16 +246,16 @@ namespace dii.storage.cosmos
             var sourceProperties = lookupType.GetType().GetProperties().ToDictionary(p => p.Name, p => p);
 
             //Verify the idempotant key
-            var _ts = ((sourceProperties.ContainsKey(Constants.ReservedTimestampKey)) ? sourceProperties[Constants.ReservedTimestampKey] : null);
+            var _ts = ((sourceProperties.ContainsKey(dii.storage.Constants.ReservedTimestampKey)) ? sourceProperties[dii.storage.Constants.ReservedTimestampKey] : null);
             if (_ts == null)
             {
-                throw new InvalidOperationException($"The source object must contain the idempotant key: ({Constants.ReservedTimestampKey})");
+                throw new InvalidOperationException($"The source object must contain the idempotant key: ({dii.storage.Constants.ReservedTimestampKey})");
             }
             var sourceTs = (long)_ts.GetValue(lookupType);
 
             //Verify the optimisitc concurrency key
             var etag = (sourceProperties.ContainsKey("DataVersion")) ? sourceProperties["DataVersion"] : null;
-            etag = etag ?? ((sourceProperties.ContainsKey(Constants.ReservedDataVersionKey)) ? sourceProperties[Constants.ReservedDataVersionKey] : null);
+            etag = etag ?? ((sourceProperties.ContainsKey(dii.storage.Constants.ReservedDataVersionKey)) ? sourceProperties[dii.storage.Constants.ReservedDataVersionKey] : null);
             if (etag == null)
             {
                 throw new InvalidOperationException("The source object must contain the optimistic concurrency key: 'DataVersion' (_etag)");
@@ -273,7 +291,7 @@ namespace dii.storage.cosmos
                 //check ids
                 bool hasIdChanges = lookupIds.Values.Select(x => x.Name).Any(key => sourceChanges.ContainsKey(key));
                 bool hasHpkChanges = lookupHpks.Values.Select(x => x.Name).Any(key => sourceChanges.ContainsKey(key));
-                bool hasHasBeenDeleted = sourceChanges.ContainsKey(Constants.ReservedDeletedKey);
+                bool hasHasBeenDeleted = sourceChanges.ContainsKey(dii.storage.Constants.ReservedDeletedKey);
                 bool bDeleteFailed = false;
                 
                 if (hasIdChanges || hasHpkChanges || hasHasBeenDeleted) //any of these changes will cause the lookup object to be orphaned
@@ -286,7 +304,7 @@ namespace dii.storage.cosmos
                                         (sourceProperties.ContainsKey(id.Value.Name) ? sourceProperties[id.Value.Name].GetValue(lookupType)?.ToString() : null); //otherwise, grab the current value
                         if (!string.IsNullOrEmpty(val))
                         {
-                            if (oldStrId != null) oldStrId += $"{Constants.DefaultIdDelimitor}";
+                            if (oldStrId != null) oldStrId += $"{dii.storage.Constants.DefaultIdDelimitor}";
 
                             oldStrId += $"{val}";
                         }
@@ -363,7 +381,7 @@ namespace dii.storage.cosmos
                 var fetchedObjProperties = lookupResponse.GetType().GetProperties().ToDictionary(p => p.Name, p => p);
                 if (sourceProperties?.Any() ?? false)
                 {
-                    var ts = ((sourceProperties.ContainsKey(Constants.ReservedTimestampKey)) ? sourceProperties[Constants.ReservedTimestampKey] : null);
+                    var ts = ((sourceProperties.ContainsKey(dii.storage.Constants.ReservedTimestampKey)) ? sourceProperties[dii.storage.Constants.ReservedTimestampKey] : null);
                     if (ts != null)
                     {
                         //compare fetched timestamp to provided timestamp

@@ -26,7 +26,7 @@ namespace dii.storage.cosmos.examples.Adapters
 
         public async Task<List<PersonSession>> GetManyBySessionIdsAsync(IReadOnlyList<(string, Dictionary<string, string>)> idAndPks)
         {
-            var results = await base.GetManyAsync(idAndPks).ConfigureAwait(false);
+            var results = await base.GetManyAsync(idAndPks, null, new QueryRequestOptions { MaxItemCount=5 }).ConfigureAwait(false);
             return results.ToList();
         }
 
