@@ -681,6 +681,7 @@ namespace dii.storage
             var otherFields = new List<PropertyInfo>();
             otherFields.AddRange(sourceTableMetaData.HierarchicalPartitionKeys.Values);
             otherFields.AddRange(sourceTableMetaData.IdProperties.Values);
+            otherFields.AddRange(sourceTableMetaData.SearchableFields);
 
             //Generate the dynamic type for the Lookup entity
             Type dynamicType = DynamicTypeCreator.CreateLookupType(lookupHpks, lookupIds, otherFields, lookupTableMetaData);
