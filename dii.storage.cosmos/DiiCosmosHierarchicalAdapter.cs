@@ -448,7 +448,6 @@ namespace dii.storage.cosmos
 
             var itemResponses = await base.ProcessConcurrentlyAsync<object, ItemResponse<object>>(packedEntities,
                 ((object x) => { return _container.CreateItemAsync(x, null, requestOptions, cancellationToken); }),
-                requestOptions,
                 cancellationToken).ConfigureAwait(false);
 
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
@@ -569,7 +568,6 @@ namespace dii.storage.cosmos
                     entity.SetChangeTracker(_table);
                     return _container.ReplaceItemAsync(_optimizer.ToEntity(entity), GetId(entity), GetPK(entity).Build(), requestOptions, cancellationToken); 
                 }),
-                requestOptions,
                 cancellationToken).ConfigureAwait(false);
 
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
@@ -782,7 +780,7 @@ namespace dii.storage.cosmos
             var itemResponses = await base.ProcessConcurrentlyAsync<T, ItemResponse<object>>(diiEntities,
                 ((T entity) => 
                 {
-                    requestOptions ??= (!string.IsNullOrEmpty(entity.DataVersion)) ? new ItemRequestOptions { IfMatchEtag = entity.DataVersion } : null;
+                    var requestOptionsLocal = requestOptions ?? ((!string.IsNullOrEmpty(entity.DataVersion)) ? new ItemRequestOptions { IfMatchEtag = entity.DataVersion } : null);
 
                     //If there is a previous version, set the initial state
                     //This could happen if this container has a lookup
@@ -797,9 +795,8 @@ namespace dii.storage.cosmos
                     // Build the full partition key path
                     var keyBuilder = GetPK(entity);
 
-                    return _container.UpsertItemAsync(packedEntity, keyBuilder.Build(), requestOptions, cancellationToken);
+                    return _container.UpsertItemAsync(packedEntity, keyBuilder.Build(), requestOptionsLocal, cancellationToken);
                 }),
-                requestOptions,
                 cancellationToken).ConfigureAwait(false);
 
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
@@ -908,7 +905,6 @@ namespace dii.storage.cosmos
             var itemResponses = await base.ProcessConcurrentlyAsync<(string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations), T>(patchOperations,
                 (((string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations) x) => 
                     { return PatchInternalAsync(x.id, x.partitionKey, x.listOfPatchOperations, requestOptions, cancellationToken); }),
-                requestOptions,
                 cancellationToken).ConfigureAwait(false);
 
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
@@ -1126,7 +1122,6 @@ namespace dii.storage.cosmos
 
             var itemResponses = await base.ProcessConcurrentlyAsync<(string id, PartitionKeyBuilder partitionKey), ResponseMessage>(idAndPks,
                 (((string id, PartitionKeyBuilder partitionKey) x) => { return _container.DeleteItemStreamAsync(x.id, x.partitionKey.Build(), requestOptions, cancellationToken); }),
-                requestOptions,
                 cancellationToken).ConfigureAwait(false);
 
             response = itemResponses.All(x => x.IsSuccessStatusCode);
