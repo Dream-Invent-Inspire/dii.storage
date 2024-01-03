@@ -23,5 +23,18 @@ namespace dii.storage.cosmos.Models
 		/// Cost of operation in RU/sec.
 		/// </summary>
 		public double RequestCharge { get; set; }
+
+
+		public static PagedList<T> CreateFromList(List<T> list, string continuationToken, double? requestCharge = null)
+		{
+            var newlst = new PagedList<T>
+			{
+                ContinuationToken = continuationToken,
+                RequestCharge = requestCharge ?? 0,
+                Capacity = list.Capacity
+            };
+            newlst.AddRange(list);
+			return newlst;
+        }
 	}
 }

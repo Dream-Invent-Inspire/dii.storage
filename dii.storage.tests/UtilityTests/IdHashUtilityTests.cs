@@ -12,12 +12,7 @@ namespace dii.storage.tests.UtilityTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class IdHashUtilityTests
     {
-        //[Fact, TestPriorityOrder(100)]
-        //public void IdHashUtilityTests_Prep()
-        //{
-        //}
-
-        [Theory, TestPriorityOrder(101), ClassData(typeof(ValidateIdHashData))]
+        [Theory, TestPriorityOrder(100), ClassData(typeof(ValidateIdHashData))]
         public void IdHashUtilityTests_ValidateIdHash(string idHash, bool expectedOutcome)
         {
             var result = IdHashUtility.ValidateIdHash(idHash);
@@ -32,7 +27,7 @@ namespace dii.storage.tests.UtilityTests
             }
         }
 
-        [Fact, TestPriorityOrder(102)]
+        [Fact, TestPriorityOrder(101)]
         public void IdHashUtilityTests_NewId()
         {
             var id = IdHashUtility.NewId();
@@ -40,7 +35,7 @@ namespace dii.storage.tests.UtilityTests
             Assert.NotNull(id);
         }
 
-        [Theory, TestPriorityOrder(103), ClassData(typeof(ToIdHashData))]
+        [Theory, TestPriorityOrder(102), ClassData(typeof(ToIdHashData))]
         public void IdHashUtilityTests_ToIdHash(object value)
         {
             string id;
@@ -71,7 +66,7 @@ namespace dii.storage.tests.UtilityTests
             Assert.Equal("gBNEpi.Y2Qg", id);
         }
 
-        [Theory, TestPriorityOrder(104), ClassData(typeof(ToIdHashData))]
+        [Theory, TestPriorityOrder(103), ClassData(typeof(ToIdHashData))]
         public void IdHashUtilityTests_AsIdHash(object value)
         {
             string id;
@@ -101,12 +96,5 @@ namespace dii.storage.tests.UtilityTests
 
             Assert.Equal("gBNEpi.Y2Qg", id);
         }
-
-        #region Teardown
-        //[Fact, TestPriorityOrder(int.MaxValue)]
-        //public void Teardown()
-        //{
-        //}
-        #endregion
     }
 }

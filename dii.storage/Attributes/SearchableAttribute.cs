@@ -1,5 +1,6 @@
 ﻿using dii.storage.Exceptions;
 using System;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 
 namespace dii.storage.Attributes
@@ -9,7 +10,7 @@ namespace dii.storage.Attributes
     /// data store.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-	public class SearchableAttribute : Attribute
+	public class SearchableAttribute : DiiBaseAttribute
 	{
 		/// <summary>
 		/// Initializes a new instance of the <see cref="SearchableAttribute"/> class with the
@@ -40,5 +41,20 @@ namespace dii.storage.Attributes
 		/// </para>
 		/// </summary>
 		public string Abbreviation { get; init; }
-	}
+
+        public string Group { get; init; }
+
+        public override CustomAttributeBuilder GetConstructorBuilder()
+        {
+            // Getting the right constructor
+            var ctor = typeof(SearchableAttribute).GetConstructor(new[] { typeof(string), typeof(string) });
+
+            // Creating the CustomAttributeBuilder with extracted values
+            var attributeBuilder = new CustomAttributeBuilder(
+                ctor,
+                new object[] { this.Abbreviation, "" }
+            );
+            return attributeBuilder;
+        }
+    }
 }

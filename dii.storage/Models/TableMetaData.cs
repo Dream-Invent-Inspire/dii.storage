@@ -1,6 +1,9 @@
 ﻿using dii.storage.Attributes;
+using Microsoft.Azure.Cosmos;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 
 namespace dii.storage.Models
 {
@@ -39,10 +42,49 @@ namespace dii.storage.Models
 		/// </remarks>
 		public string PartitionKeyPath { get; init; } = $"/{Constants.ReservedPartitionKeyKey}";
 
-		/// <summary>
-		/// The dynamically created type created by the <see cref="Optimizer"/>.
+        /// <summary>
+        /// The searchable path of the partition key.
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        public Dictionary<int, PropertyInfo> HierarchicalPartitionKeys { get; set; } = new Dictionary<int, PropertyInfo>();
+
+        /// <summary>
+		/// Properties composing the CosmosDB Id
 		/// </summary>
-		public Type StorageType { get; set; }
+		public Dictionary<int, PropertyInfo> IdProperties { get; set; } = new Dictionary<int, PropertyInfo>();
+
+        /// <summary>
+		/// Separator used when multiple Id properties
+		/// </summary>
+		public string IdSeparator { get; set; }
+
+        /// <summary>
+        /// The searchable path of the Lookup container partition key.
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        public Dictionary<string, Dictionary<int, PropertyInfo>> LookupHpks { get; set; } = new Dictionary<string, Dictionary<int, PropertyInfo>>();
+
+        /// <summary>
+        /// The searchable path of the Lookup container id key.
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        public Dictionary<string, Dictionary<int, PropertyInfo>> LookupIds { get; set; } = new Dictionary<string, Dictionary<int, PropertyInfo>>();
+
+        /// <summary>
+        /// The searchable path of the search fields.
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        public List<PropertyInfo> SearchableFields { get; set; } = new List<PropertyInfo>();
+
+
+        /// <summary>
+        /// The dynamically created type created by the <see cref="Optimizer"/>.
+        /// </summary>
+        public Type StorageType { get; set; }
 
 		/// <summary>
 		/// The concrete type. This is the user-defined object that is passed into the <see cref="Optimizer"/>
@@ -61,5 +103,61 @@ namespace dii.storage.Models
 		/// </para>
 		/// </remarks>
         public int? TimeToLiveInSeconds { get; set; }
+
+		/// <summary>
+		/// The database for this table.
+		/// 
+		public string DbId { get; set; }
+
+
+		public bool Initialized { get; set; } = false;
+        public bool IsLookupTable { get; internal set; }
+		
+		public TableMetaData SourceTableMetaData { get; internal set; }	
+		//public string SourceTableNameForLookup { get; internal set; }
+  //      public Type SourceTableTypeForLookup { get; internal set; }
+
+        public int? DefaultPageSize { get; set; } = 10;
+
+        public bool HasLookup()
+        {
+            return this.LookupIds?.Count > 0;
+        }
+
+		public string GroupName { get; set; }
+
+        public Dictionary<string, LookupTableMetaData> LookupTables { get; set; }
+
+
+		public Dictionary<int, PropertyInfo> GetHPKs(string group)
+		{
+            Dictionary<int, PropertyInfo> lookuphpks = new Dictionary<int, PropertyInfo>();
+            if (string.IsNullOrEmpty(group))
+            {
+                if (this.LookupHpks.Count == 1)
+                    lookuphpks = this.LookupHpks.ElementAt(0).Value;
+            }
+            else
+            {
+                lookuphpks = (this.LookupHpks.ContainsKey(group)) ? this.LookupHpks[group] : new Dictionary<int, PropertyInfo>();
+            }
+            
+            Dictionary<int, PropertyInfo> lookupstarhpks = null;
+            if (this.LookupHpks.TryGetValue(Constants.LookupSharedHPK, out lookupstarhpks))
+            {
+                foreach (var kvp in lookupstarhpks) //Add shared hpks...will fill in gaps
+                {
+                    if (!lookuphpks.ContainsKey(kvp.Key)) lookuphpks.Add(kvp.Key, kvp.Value);
+                };
+            }
+            return lookuphpks;
+        }
+    }
+
+	public class LookupTableMetaData
+	{
+        public Container LookupContainer { get; set; }
+        public Type LookupType { get; set; }
+
     }
 }

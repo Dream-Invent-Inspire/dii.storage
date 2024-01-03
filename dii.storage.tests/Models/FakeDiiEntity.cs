@@ -7,13 +7,23 @@ namespace dii.storage.tests.Models
 {
     public abstract class FakeDiiEntity : IDiiEntity
 	{
-		/// <inheritdoc/>
-		//[Searchable(Constants.ReservedSchemaVersionKey)]
-		[IgnoreMember]
-		public Version SchemaVersion => new(1, 0);
+        /// <inheritdoc/>
+        //[Searchable(Constants.ReservedSchemaVersionKey)]
+        //[IgnoreMember]
+        //public Version SchemaVersion => new(1, 0);
 
-		/// <inheritdoc/>
-		[Searchable("_etag")]
+        private Version _schemaVersion = new Version(1, 0);
+
+        [IgnoreMember]
+        public Version SchemaVersion
+        {
+            get { return _schemaVersion; }
+            set { _schemaVersion = value; }
+        }
+
+
+        /// <inheritdoc/>
+        [Searchable("_etag")]
 		public string DataVersion { get; set; }
 	}
 }

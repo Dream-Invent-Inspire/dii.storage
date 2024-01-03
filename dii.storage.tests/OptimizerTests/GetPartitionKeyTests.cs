@@ -12,16 +12,15 @@ namespace dii.storage.tests.OptimizerTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class GetPartitionKeyTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void GetPartitionKey_Prep()
+        public GetPartitionKeyTests()
         {
-            _ = Optimizer.Init(typeof(FakeEntity));
+            _ = Optimizer.Init("FakeDb", typeof(FakeEntity)); //, typeof(InvalidSearchableKeyEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
         #region GetPartitionKey As Type
-        [Fact, TestPriorityOrder(101)]
+        [Fact, TestPriorityOrder(100)]
         public void GetPartitionKey_AsType_Success()
         {
             var optimizer = Optimizer.Get();
@@ -37,7 +36,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(new Guid(fakeEntity.FakeEntityId), entity);
         }
 
-        [Fact, TestPriorityOrder(102)]
+        [Fact, TestPriorityOrder(101)]
         public void GetPartitionKey_AsType_TypeNotFound()
         {
             var optimizer = Optimizer.Get();
@@ -53,7 +52,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(default, unpackedEntity);
         }
 
-        [Fact, TestPriorityOrder(103)]
+        [Fact, TestPriorityOrder(102)]
         public void GetPartitionKey_AsType_Null()
         {
             var optimizer = Optimizer.Get();
