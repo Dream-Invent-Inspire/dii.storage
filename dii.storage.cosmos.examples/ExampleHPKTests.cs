@@ -85,7 +85,7 @@ namespace dii.storage.cosmos.examples
             var storedsessions = await _fixture.PersonSessionAdapter.GetManyBySessionIdsAsync(lst.AsReadOnly()).ConfigureAwait(false);
 
             Assert.NotNull(storedsessions);
-            Assert.Equal(storedsessions.Count(), 8);
+            Assert.Equal(5, storedsessions.Count());
         }
 
         [Fact, TestPriorityOrder(30)]

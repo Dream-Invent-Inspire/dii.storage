@@ -174,6 +174,40 @@ namespace dii.storage
             ProcessExtended(p);
             ProcessSearchable(p);
             ProcessCompressed(p);
+            ProcessLookUpHpk(p);
+            ProcessLookupId(p);
+        }
+
+        protected void ProcessLookUpHpk(PropertyInfo p)
+        {
+            var lookupHpkAttribute = p.GetCustomAttribute<LookupHpkAttribute>();
+            if (lookupHpkAttribute == null)
+            {
+                //Short circuit if the property is not mapped with
+                //lookup hpk.
+                return;
+            }
+
+            if (!jsonMap.ConcreteProperties.ContainsKey(p.Name))
+            {
+                jsonMap.ConcreteProperties.Add(p.Name, p);
+            }
+        }
+
+        protected void ProcessLookupId(PropertyInfo p)
+        {
+            var lookupIdAttribute = p.GetCustomAttribute<LookupIdAttribute>();
+            if (lookupIdAttribute == null)
+            {
+                //Short circuit if the property is not mapped with
+                //lookup id.
+                return;
+            }
+
+            if (!jsonMap.ConcreteProperties.ContainsKey(p.Name))
+            {
+                jsonMap.ConcreteProperties.Add(p.Name, p);
+            }
         }
 
         protected Serializer AppendStandardFields()
