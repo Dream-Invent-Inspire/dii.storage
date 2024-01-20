@@ -78,15 +78,24 @@ namespace dii.storage
         protected bool ProcessHierarchicalPartitionKey(PropertyInfo p)
         {
             var hierarchicalPartitionKey = p.GetCustomAttribute<HierarchicalPartitionKeyAttribute>();
-            if (hierarchicalPartitionKey != null)
+            if (hierarchicalPartitionKey != null && hierarchicalPartitionFields != null)
             {
+                //If the property is used in multiple lookup hpks, the order may not be right for this array
+                int nxtkey = (hierarchicalPartitionFields.Count == 0) ?
+                    hierarchicalPartitionKey.Order :
+                    hierarchicalPartitionFields.Keys.ElementAt(hierarchicalPartitionFields.Count - 1) + 1;
+                
+                if (nxtkey != hierarchicalPartitionKey.Order)
+                {
+                }
+
                 //Two fields cannot occupy the same position in the partition key.
                 if (hierarchicalPartitionFields.ContainsKey(hierarchicalPartitionKey.Order))
                 {
                     throw new DiiPartitionKeyDuplicateOrderException(hierarchicalPartitionFields[hierarchicalPartitionKey.Order].Name, p.Name, hierarchicalPartitionKey.Order);
                 }
-
-                hierarchicalPartitionFields.Add(hierarchicalPartitionKey.Order, p);
+                
+                hierarchicalPartitionFields.Add(nxtkey, p);
 
                 return true;
             }
@@ -165,40 +174,42 @@ namespace dii.storage
 
         protected bool ProcessLookupHpk(PropertyInfo p)
         {
-            var LookupHpk = p.GetCustomAttribute<LookupHpkAttribute>();
-            if (LookupHpk != null)
+            var LookupHpks = p.GetCustomAttributes<LookupHpkAttribute>();
+            if (LookupHpks != null && LookupHpks.Any())
             {
-                Dictionary<int, PropertyInfo> hpkProps = null;
-
                 if (LookupHpkFields == null) LookupHpkFields = new Dictionary<string, Dictionary<int, PropertyInfo>>();
 
-                if (!string.IsNullOrEmpty(LookupHpk.Group))
+                foreach (var attr in LookupHpks)
                 {
-                    if (!LookupHpkFields.ContainsKey(LookupHpk.Group))
+                    Dictionary<int, PropertyInfo> hpkProps = null;
+
+                    if (!string.IsNullOrEmpty(attr.Group))
                     {
-                        //new group
-                        hpkProps = new Dictionary<int, PropertyInfo>();
-                        LookupHpkFields.Add(LookupHpk.Group, hpkProps);
+                        if (!LookupHpkFields.ContainsKey(attr.Group))
+                        {
+                            //new group
+                            hpkProps = new Dictionary<int, PropertyInfo>();
+                            LookupHpkFields.Add(attr.Group, hpkProps);
+                        }
+                        else
+                            hpkProps = LookupHpkFields[attr.Group];
                     }
-                    else
-                        hpkProps = LookupHpkFields[LookupHpk.Group];
+                    if (LookupHpkFields.Count() == 0)
+                    {
+                        hpkProps = new Dictionary<int, PropertyInfo>();
+                        LookupHpkFields.Add(Constants.LookupDefaultGroupSuffix, hpkProps);
+                    }
+
+                    hpkProps = hpkProps ?? LookupHpkFields.Values.FirstOrDefault();
+
+                    //Two fields cannot occupy the same position in the partition key.
+                    if (hpkProps.ContainsKey(attr.Order))
+                    {
+                        throw new DiiPartitionKeyDuplicateOrderException(hpkProps[attr.Order].Name, p.Name, attr.Order);
+                    }
+
+                    hpkProps.Add(attr.Order, p);
                 }
-                if (LookupHpkFields.Count() == 0)
-                {
-                    hpkProps = new Dictionary<int, PropertyInfo>();
-                    LookupHpkFields.Add(Constants.LookupDefaultGroupSuffix, hpkProps);
-                }
-
-                hpkProps = hpkProps ?? LookupHpkFields.Values.FirstOrDefault();
-
-                //Two fields cannot occupy the same position in the partition key.
-                if (hpkProps.ContainsKey(LookupHpk.Order))
-                {
-                    throw new DiiPartitionKeyDuplicateOrderException(hpkProps[LookupHpk.Order].Name, p.Name, LookupHpk.Order);
-                }
-
-                hpkProps.Add(LookupHpk.Order, p);
-
                 return true;
             }
             return false;

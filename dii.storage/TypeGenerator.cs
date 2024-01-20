@@ -180,17 +180,20 @@ namespace dii.storage
 
         protected void ProcessLookUpHpk(PropertyInfo p)
         {
-            var lookupHpkAttribute = p.GetCustomAttribute<LookupHpkAttribute>();
-            if (lookupHpkAttribute == null)
+            var LookupHpks = p.GetCustomAttributes<LookupHpkAttribute>();
+            if (LookupHpks == null)
             {
                 //Short circuit if the property is not mapped with
                 //lookup hpk.
                 return;
             }
 
-            if (!jsonMap.ConcreteProperties.ContainsKey(p.Name))
+            foreach (var attr in LookupHpks)
             {
-                jsonMap.ConcreteProperties.Add(p.Name, p);
+                if (!jsonMap.ConcreteProperties.ContainsKey(p.Name))
+                {
+                    jsonMap.ConcreteProperties.Add(p.Name, p);
+                }
             }
         }
 

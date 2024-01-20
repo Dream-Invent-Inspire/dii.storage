@@ -367,6 +367,12 @@ namespace dii.storage.cosmos
                 {
                     // Perform a point read
                     lookupResponse = await ReadStreamAsync(ltmd.LookupContainer, ltmd.LookupType, strId.ToString(), (PartitionKeyBuilder)pkBuilder, requestOptions, cancellationToken).ConfigureAwait(false);
+                    int go = 10;
+                    while (lookupResponse == null && --go > 0)
+                    {
+                        await Task.Delay(10);
+                        lookupResponse = await ReadStreamAsync(ltmd.LookupContainer, ltmd.LookupType, strId.ToString(), (PartitionKeyBuilder)pkBuilder, requestOptions, cancellationToken).ConfigureAwait(false);
+                    }
                 }
                 catch (CosmosException ex)
                 {
@@ -387,7 +393,7 @@ namespace dii.storage.cosmos
                         //compare fetched timestamp to provided timestamp
                         //Upsert if provided is more recent
                         var curts = (long)ts.GetValue(lookupResponse);
-                        if (curts > 0 && sourceTs > curts)
+                        if (curts > 0 && sourceTs < curts)
                         {
                             //Nothing to do, the provided object's timestamp is older than currently stored value
                             return lookupResponse;
@@ -448,6 +454,8 @@ namespace dii.storage.cosmos
 
         private PartitionKeyBuilder GetPK(Dictionary<int, PropertyInfo> hpks, Dictionary<string, string> partitionKeys)
         {
+            if (hpks == null || partitionKeys == null) return null;
+
             var partitionKey = new PartitionKeyBuilder();
             if (!_tableMetaData.LookupHpks?.Any() ?? true) return partitionKey;
 

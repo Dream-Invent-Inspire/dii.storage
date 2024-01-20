@@ -68,6 +68,7 @@ namespace dii.storage.cosmos.examples.Models
         /// For it to (also) be a Hierarchical Partition Key, it must be a string.
         /// </summary>
         [LookupHpk(order: 2, group: "PId")]
+        [LookupHpk(order: 1, group: "xDt")]
         public string OrderDateString
         {
             get
@@ -97,9 +98,15 @@ namespace dii.storage.cosmos.examples.Models
         [LookupIdAttribute(order: 0, group: "Rec")]
         public string ReceiptNumber { get; set; }
 
+        [LookupIdAttribute(order: 0, group: "xDt")]
+        public string MasterItemId { get; set; }
+
         /// <inheritdoc/>
         [Searchable("Catalog")]
         public string Catalog { get; set; }
+
+        [Searchable("CheckNumber")]
+        public string CheckNumber { get; set; }
 
     }
 

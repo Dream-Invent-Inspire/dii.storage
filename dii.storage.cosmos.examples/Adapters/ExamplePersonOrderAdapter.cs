@@ -184,7 +184,7 @@ namespace dii.storage.cosmos.examples.Adapters
 
         public async Task<PagedList<PersonOrder>> GetManyByOrderDateAsync(string clientId, DateTime orderFromDate, DateTime orderToDate, string continuationToken = null, CancellationToken cancellationToken = default)
         {
-            var reqops = new QueryRequestOptions { MaxItemCount = 4 };
+            QueryRequestOptions reqops = null; // new QueryRequestOptions { MaxItemCount = 4 };
 
             var dayCnt = orderToDate.Subtract(orderFromDate);
             List<string> days = new List<string>();
@@ -233,6 +233,38 @@ namespace dii.storage.cosmos.examples.Adapters
             return await adapter.DeleteByLookupAsync(receipt, dic, fun, "Rec", cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
+
+        public async Task<PagedList<PersonOrder>> GetByOrderDateAndItemAsync(string clientId, DateTime orderFromDate, DateTime orderToDate, string itemId, string continuationToken = null, CancellationToken cancellationToken = default)
+        {
+            var reqops = new QueryRequestOptions { MaxItemCount = 4 };
+
+            var dayCnt = orderToDate.Subtract(orderFromDate);
+            List<string> days = new List<string>();
+            for (int i = 0; i < dayCnt.Days; i++)
+            {
+                var date = orderFromDate.AddDays(i);
+                var dateStr = date.ToString("yyyy-MM-dd");
+                days.Add(dateStr);
+            }
+            var queryDefinition = new QueryDefinition($"SELECT * FROM c WHERE c.ClientId = @clientId AND c.OrderDateString in (\"{string.Join("\",\"", days)}\") AND c.MasterItemId = @itemId");
+            queryDefinition.WithParameter("@clientId", clientId);
+            queryDefinition.WithParameter("@itemId", itemId);
+
+            var adapter = new DiiCosmosLookupAdapter(this._table);
+            var retOrders = await adapter.LookupByQueryAsync(queryDefinition, "PId", continuationToken, reqops, cancellationToken).ConfigureAwait(false);
+            return PagedList<PersonOrder>.CreateFromList(retOrders.Cast<PersonOrder>().ToList(), retOrders.ContinuationToken);
+        }
+
+        public async Task<PersonOrder> GetOrderByCheckNumber(string clientId, string checkNumber, CancellationToken cancellationToken = default)
+        {
+            var queryDefinition = new QueryDefinition($"SELECT * FROM c WHERE c.ClientId = @clientId AND c.CheckNumber = @checkNumber");
+            queryDefinition.WithParameter("@clientId", clientId);
+            queryDefinition.WithParameter("@checkNumber", checkNumber);
+
+            var adapter = new DiiCosmosLookupAdapter(this._table);
+            var retOrder = await adapter.LookupByQueryAsync(queryDefinition, "Rec", null, null, cancellationToken).ConfigureAwait(false);
+            return (retOrder?.Any() ?? false) ? retOrder.First() as PersonOrder : null;
+        }
     }
 
 }
