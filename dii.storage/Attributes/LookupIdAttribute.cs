@@ -10,7 +10,7 @@ namespace dii.storage.Attributes
     /// <summary>
     /// Denotes the partition key that the Lookup entity belongs to.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = true)]
     public class LookupIdAttribute : DiiBaseAttribute
     {
         /// <summary>

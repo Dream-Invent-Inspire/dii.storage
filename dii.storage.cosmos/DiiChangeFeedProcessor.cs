@@ -46,7 +46,7 @@ namespace dii.storage.cosmos
                 try
                 {
                     //Process the job
-                    if (!await ProcessJobAsync(job))
+                    if (!await ProcessJobAsync(job).ConfigureAwait(false))
                     {
                         //retry
                         retries.Add(job);
@@ -74,7 +74,7 @@ namespace dii.storage.cosmos
                 try
                 {
                     //TODO: add exponential retry here
-                    await ProcessJobAsync(retry);
+                    await ProcessJobAsync(retry).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 { 
@@ -98,6 +98,8 @@ namespace dii.storage.cosmos
 
             foreach (var group in _sourceTblMetaData.LookupIds)
             {
+                //if (group.Key != "Rec") continue;
+
                 var dynamicObject = Activator.CreateInstance(_sourceTblMetaData.LookupTables[group.Key].LookupType); //this is the Lookup table type...the dynamically created (from the source) type
 
                 //Transfer data from source object to the target Dynamic object

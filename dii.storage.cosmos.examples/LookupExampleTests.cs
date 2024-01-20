@@ -47,6 +47,8 @@ namespace dii.storage.cosmos.examples
                 PersonId = "8411f20f-be3e-416a-a3e7-dcd5a3c1f28b",
                 OrderDate = DateTime.Parse("2023-07-02T21:14:37.3066349Z"),
                 ReceiptNumber = "Rec1",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem100"
             });
 
             orders.Add(new PersonOrder
@@ -59,6 +61,8 @@ namespace dii.storage.cosmos.examples
                 PersonId = "8411f20f-be3e-416a-a3e7-dcd5a3c1f28b",
                 OrderDate = DateTime.Parse("2023-07-20T21:14:37.3066349Z"),
                 ReceiptNumber = "Rec2",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem200"
             });
 
             orders.Add(new PersonOrder
@@ -71,6 +75,8 @@ namespace dii.storage.cosmos.examples
                 PersonId = "8411f20f-be3e-416a-a3e7-dcd5a3c1f28c",
                 OrderDate = DateTime.Parse("2023-07-23T21:14:37.3066349Z"),
                 ReceiptNumber = "Rec3",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem300"
             });
 
             orders.Add(new PersonOrder
@@ -83,6 +89,8 @@ namespace dii.storage.cosmos.examples
                 PersonId = "8411f20f-be3e-416a-a3e7-dcd5a3c1f28d",
                 OrderDate = DateTime.Parse("2023-07-24T21:14:37.3066349Z"),
                 ReceiptNumber = "Rec4",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem400"
             });
 
             orders.Add(new PersonOrder
@@ -95,6 +103,8 @@ namespace dii.storage.cosmos.examples
                 PersonId = "8411f20f-be3e-416a-a3e7-dcd5a3c1f28e",
                 OrderDate = DateTime.Parse("2023-07-25T21:14:37.3066349Z"),
                 ReceiptNumber = "Rec5",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem500"
             });
 
             orders.Add(new PersonOrder
@@ -107,6 +117,8 @@ namespace dii.storage.cosmos.examples
                 PersonId = "8411f20f-be3e-416a-a3e7-dcd5a3c1f28e",
                 OrderDate = DateTime.Parse("2023-07-12T21:14:37.3066349Z"),
                 ReceiptNumber = "Rec6",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem600"
             });
 
             orders.Add(new PersonOrder
@@ -119,6 +131,8 @@ namespace dii.storage.cosmos.examples
                 PersonId = "8411f20f-be3e-416a-a3e7-dcd5a3c1f28f",
                 OrderDate = DateTime.Parse("2023-07-26T21:14:37.3066349Z"),
                 ReceiptNumber = "Rec7",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem700"
             });
 
             orders.Add(new PersonOrder
@@ -131,6 +145,8 @@ namespace dii.storage.cosmos.examples
                 PersonId = "8411f20f-be3e-416a-a3e7-dcd5a3c1f29a",
                 OrderDate = DateTime.Parse("2023-07-27T21:14:37.3066349Z"),
                 ReceiptNumber = "Rec8",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem800"
             });
 
             orders.Add(new PersonOrder
@@ -143,6 +159,8 @@ namespace dii.storage.cosmos.examples
                 PersonId = "8411f20f-be3e-416a-a3e7-dcd5a3c1f29b",
                 OrderDate = DateTime.Parse("2023-07-28T21:14:37.3066349Z"),
                 ReceiptNumber = "Rec9",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem900"
             });
 
             orders.Add(new PersonOrder
@@ -155,6 +173,8 @@ namespace dii.storage.cosmos.examples
                 PersonId = "8411f20f-be3e-416a-a3e7-dcd5a3c1f29c",
                 OrderDate = DateTime.Parse("2023-07-29T22:14:37.3066349Z"),
                 ReceiptNumber = "Rec10",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem1000"
             });
             #endregion
 
@@ -175,7 +195,9 @@ namespace dii.storage.cosmos.examples
                 PaymentId = "pmtid222",
                 PersonId = "person222",
                 OrderDate = DateTimeOffset.Parse("2023-08-22T21:14:07.3066349Z"),
-                ReceiptNumber = "R123"
+                ReceiptNumber = "R123",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem10"
             };
 
             //Create/update
@@ -236,7 +258,9 @@ namespace dii.storage.cosmos.examples
                 PaymentId = "pmtid3",
                 PersonId = "person3",
                 OrderDate = DateTimeOffset.Parse("2023-08-03T21:14:07.3066349Z"),
-                ReceiptNumber = "Rec3"
+                ReceiptNumber = "Rec3",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem101"
             };
 
             var result = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
@@ -255,7 +279,9 @@ namespace dii.storage.cosmos.examples
                 PaymentId = "pmtid4",
                 PersonId = "person4",
                 OrderDate = DateTimeOffset.Parse("2023-08-04T21:14:07.3066349Z"),
-                ReceiptNumber = "Rec4"
+                ReceiptNumber = "Rec4",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem102"
             };
 
             //Create/update
@@ -313,7 +339,9 @@ namespace dii.storage.cosmos.examples
                 PaymentId = "pmtid5",
                 PersonId = "person6",
                 OrderDate = DateTimeOffset.Parse("2023-08-05T21:14:07.3066349Z"),
-                ReceiptNumber = "Rec5"
+                ReceiptNumber = "Rec5",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem103"
             };
 
             //Create/update
@@ -405,6 +433,41 @@ namespace dii.storage.cosmos.examples
         [Fact, TestPriorityOrder(90)]
         public async Task RunHPKExample9()
         {
+            var o1 = new PersonOrder
+            {
+                PaymentAmount = 1200,
+                PaymentType = "Credit",
+                ClientId = "SomeEnterprise",
+                OrderId = "orderid12",
+                PaymentId = "pmtid12",
+                PersonId = "person12",
+                OrderDate = DateTime.UtcNow,
+                ReceiptNumber = "R12",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem115"
+            };
+
+            var res1 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
+            await Task.Delay(100);
+
+            //Fetch
+            var getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            int go = 50;
+            while (getres1 == null && --go > 0)
+            {
+                await Task.Delay(100);
+                getres1 = await _fixture.PersonOrderAdapter.GetByPersonIdAsync(o1.PaymentType, o1.PaymentAmount.ToString(), o1.ClientId, o1.PersonId, o1.OrderDate).ConfigureAwait(false);
+            }
+            Assert.NotNull(getres1);
+
+            var getres2 = await _fixture.PersonOrderAdapter.GetByOrderDateAndItemAsync(o1.ClientId, o1.OrderDate.DateTime.AddDays(-1), o1.OrderDate.DateTime, o1.MasterItemId).ConfigureAwait(false);
+            go = 50;
+            while (getres2 == null && --go > 0)
+            {
+                await Task.Delay(100);
+                getres2 = await _fixture.PersonOrderAdapter.GetByOrderDateAndItemAsync(o1.ClientId, o1.OrderDate.DateTime.AddDays(-1), o1.OrderDate.DateTime, o1.MasterItemId).ConfigureAwait(false);
+            }
+            Assert.NotNull(getres2);
         }
 
         [Fact, TestPriorityOrder(100)]
@@ -440,7 +503,9 @@ namespace dii.storage.cosmos.examples
                 PaymentId = x.PaymentId,
                 PaymentType = "Examplle11-CC", // x.PaymentType,
                 PersonId = x.PersonId,
-                ReceiptNumber = $"{x.PaymentId}-Rec"
+                ReceiptNumber = $"{x.PaymentId}-Rec",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem104"
             }).ToList();
 
             //Replace
@@ -471,7 +536,9 @@ namespace dii.storage.cosmos.examples
                 PaymentId = "pmtid12",
                 PersonId = "person12",
                 OrderDate = DateTimeOffset.Parse("2022-08-22T21:14:07.3066349Z"),
-                ReceiptNumber = "R12"
+                ReceiptNumber = "R12",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem106"
             };
 
             var res1 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
@@ -511,7 +578,9 @@ namespace dii.storage.cosmos.examples
                 PaymentId = "pmtid12",
                 PersonId = "person12",
                 OrderDate = DateTimeOffset.Parse("2022-08-22T21:14:07.3066349Z"),
-                ReceiptNumber = "R12"
+                ReceiptNumber = "R12",
+                Catalog = "Catalog1",
+                MasterItemId = "MasterItem106"
             };
 
             var res1 = await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
@@ -550,18 +619,84 @@ namespace dii.storage.cosmos.examples
             Assert.Null(getres1);
         }
 
+        [Fact, TestPriorityOrder(120)]
+        public async Task RunHPKExample15()
+        {
+            string chkNum = "888";
+            var o1 = _fixture.Orders[0];
+            o1.CheckNumber = "101";
+
+            //await _fixture.PersonOrderAdapter.UpsertAsync(o1).ConfigureAwait(false);
+            //await Task.Delay(5000);
+
+            //Fetch
+            var getres1 = await _fixture.PersonOrderAdapter.FetchAsync(o1.PaymentId, o1.ClientId, o1.OrderId).ConfigureAwait(false);
+            if (getres1 != null)
+            {
+                getres1.CheckNumber = chkNum;
+                await _fixture.PersonOrderAdapter.UpsertAsync(getres1).ConfigureAwait(false);
+                await Task.Delay(10000);
+            }
+            else
+            {
+                //???
+            }
+
+            var getres2 = await _fixture.PersonOrderAdapter.GetOrderByCheckNumber(o1.ClientId, chkNum).ConfigureAwait(false);
+            int go = 100;
+            while (getres2 == null && --go > 0)
+            {
+                await Task.Delay(100);
+                getres2 = await _fixture.PersonOrderAdapter.GetOrderByCheckNumber(o1.ClientId, chkNum).ConfigureAwait(false);
+            }
+            Assert.NotNull(getres2);
+        }
+
+
         #region Teardown
         [Fact, TestPriorityOrder(int.MaxValue)]
         public async Task Teardown()
         {
-            try
+            // Delete the card from cosmos.
+            var ids = _fixture.Orders
+                .Select(x => (x.PaymentId, new Dictionary<string, string> { { "ClientId", x.ClientId }, { "OrderId", x.OrderId } }))
+                .ToList();
+
+            //Add 1 offs
+            ids.Add(("pmtid222", new Dictionary<string, string> { { "ClientId", "SomeEnterprise" }, { "OrderId", "orderid222" } }));
+            ids.Add(("pmtid3", new Dictionary<string, string> { { "ClientId", "SomeEnterprise" }, { "OrderId", "orderid3" } }));
+            ids.Add(("pmtid4", new Dictionary<string, string> { { "ClientId", "SomeEnterprise" }, { "OrderId", "orderid4" } }));
+            ids.Add(("pmtid5", new Dictionary<string, string> { { "ClientId", "SomeEnterprise" }, { "OrderId", "orderid5" } }));
+            ids.Add(("pmtid12", new Dictionary<string, string> { { "ClientId", "SomeEnterprise" }, { "OrderId", "orderid12" } }));
+
+            var res = await _fixture.PersonOrderAdapter.GetManyByOrderIdsAsync(ids).ConfigureAwait(false);
+
+            _ = await _fixture.PersonOrderAdapter.DeleteBulkAsync(res).ConfigureAwait(false);
+
+            int x = 0;
+            bool runagain = true;
+            do
             {
-                //Optimizer.Clear();
-                //DiiCosmosContext.Reset();
-            }
-            catch (Exception ex)
-            {
-            }
+                await Task.Delay(2000);
+
+                // Confirm records are gone.
+                //res = await _fixture.PersonOrderAdapter.GetManyByOrderIdsAsync(ids).ConfigureAwait(false);
+                res = await _fixture.PersonOrderAdapter
+                        .GetManyByOrderDateAsync("SomeEnterprise", 
+                            res.Min(x => x.OrderDate).DateTime,
+                            res.Max(x => x.OrderDate).DateTime)
+                        .ConfigureAwait(false);
+                runagain = res.Count > 0;
+                if (runagain)
+                {
+                    ids = res.Select(x => (x.PaymentId, new Dictionary<string, string> { { "ClientId", x.ClientId }, { "OrderId", x.OrderId } })).ToList();
+                }
+            } while (runagain && x++ < 50);
+
+            await Task.Delay(5000);
+
+            Assert.False(runagain);
+
         }
         #endregion
     }

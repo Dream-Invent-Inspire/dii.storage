@@ -42,10 +42,10 @@ namespace dii.storage.Utilities
             {
                 for (int i = 0; i < lookupHpks.Count; i++)
                 {
-                    var hpkAttribute = lookupHpks[i].GetCustomAttribute<LookupHpkAttribute>();
-                    if (hpkAttribute != null)
+                    var hpkAttributes = lookupHpks[i].GetCustomAttributes<LookupHpkAttribute>();
+                    if (hpkAttributes != null && hpkAttributes.Count() > 0)
                     {
-                        AddProperty(typeBuilder, lookupHpks[i].Name, lookupHpks[i].PropertyType, hpkAttribute.GetConstructorBuilder());
+                        AddProperty(typeBuilder, lookupHpks[i].Name, lookupHpks[i].PropertyType, hpkAttributes.First().GetConstructorBuilder());
                         props.Add(lookupHpks[i]);
                     }
                 }

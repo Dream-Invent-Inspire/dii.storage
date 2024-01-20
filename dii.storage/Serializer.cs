@@ -329,6 +329,8 @@ namespace dii.storage
                     // These are real properties so make sure they're there
                     for (var i = 0; i < HierarchicalPartitionKeyProperties.Count; i++)
                     {
+						if (HierarchicalPartitionKeyProperties[i] == null) continue;
+
 						var hpk = packedObject.GetType().GetProperty(HierarchicalPartitionKeyProperties[i].Name);
                         if (hpk != null)
                         {
