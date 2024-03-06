@@ -49,8 +49,18 @@ namespace dii.storage.cosmos.examples.Models
 		[Searchable("_etag")]
 		public string DataVersion { get; set; }
 
-		/// <inheritdoc/>
-		[IgnoreMember]
-		public Version SchemaVersion => new(1, 0);
-	}
+        private Version _schemaVersion = new Version(1, 0);
+
+        [IgnoreMember]
+        public Version SchemaVersion
+        {
+            get { return _schemaVersion; }
+            set { _schemaVersion = value; }
+        }
+
+
+        /// <inheritdoc/>
+        //[IgnoreMember]
+        //public Version SchemaVersion => new(1, 0);
+    }
 }

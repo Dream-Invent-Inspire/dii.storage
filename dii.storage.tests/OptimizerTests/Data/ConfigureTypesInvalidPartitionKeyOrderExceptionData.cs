@@ -4,11 +4,11 @@ using Xunit;
 
 namespace dii.storage.tests.OptimizerTests.Data
 {
-    public class ConfigureTypesInvalidPartitionKeyOrderExceptionData : TheoryData<Type, string, string, int>
+    public class ConfigureTypesInvalidPartitionKeyOrderExceptionData : TheoryData<string, Type, string, string, int>
     {
         public ConfigureTypesInvalidPartitionKeyOrderExceptionData()
         {
-            Add(typeof(OrderInvalidPartitionKeyEntity), nameof(OrderInvalidPartitionKeyEntity.PK1), nameof(OrderInvalidPartitionKeyEntity.PK2), 0);
+            Add("DB1", typeof(OrderInvalidPartitionKeyEntity), nameof(OrderInvalidPartitionKeyEntity.PK1), nameof(OrderInvalidPartitionKeyEntity.PK2), 0);
         }
     }
 }

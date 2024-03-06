@@ -7,7 +7,7 @@ namespace dii.storage.Attributes
     /// </summary>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
 	public class PartitionKeyAttribute : Attribute
-	{
+    {
 		/// <summary>
 		/// Initializes a new instance of the <see cref="PartitionKeyAttribute"/> class with the
 		/// order, separator and partition key type values with which the instance should be initalized.

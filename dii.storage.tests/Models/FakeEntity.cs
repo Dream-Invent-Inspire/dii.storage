@@ -99,10 +99,16 @@ namespace dii.storage.tests.Models
 		[Searchable("enum")]
 		public FakeEnum SearchableEnumValue { get; set; }
 
-		/// <summary>
-		/// An object to be packed and compressed.
-		/// </summary>
-		[Compress(0)]
+        /// <summary>
+        /// A value to test complex recursive nesting.
+        /// </summary>
+        [Searchable("complex")]
+        public FakeSearchableEntity ComplexSearchable { get; set; }
+
+        /// <summary>
+        /// An object to be packed and compressed.
+        /// </summary>
+        [Compress(0)]
 		public FakeMessagePackEntity CompressedPackedEntity { get; set; }
 
 		/// <summary>
@@ -146,11 +152,5 @@ namespace dii.storage.tests.Models
 		/// </summary>
 		[Compress(7)]
 		public FakeEnum CompressedEnumValue { get; set; }
-
-		/// <summary>
-		/// A value to test complex recursive nesting.
-		/// </summary>
-		[Searchable("complex")]
-		public FakeSearchableEntity ComplexSearchable { get; set; }
 	}
 }

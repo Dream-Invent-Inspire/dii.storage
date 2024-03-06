@@ -8,10 +8,10 @@
     <PackageLicenseFile>COPYING.LESSER.txt</PackageLicenseFile>
     <RepositoryUrl>https://github.com/Dream-Invent-Inspire/dii.storage</RepositoryUrl>
     <PackageTags>DiiStorage;Cosmos;CosmosDB;MessagePack;Storage;Compression</PackageTags>
-    <Authors>Andrew Beers &amp; Pat MacMannis</Authors>
+    <Authors>Andrew Beers, Pat MacMannis &amp; Derek Jeremias</Authors>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageId>dii.storage.cosmos</PackageId>
-    <Version>1.2.4</Version>
+    <Version>1.2.9991</Version>
     <AssemblyName>dii.storage.cosmos</AssemblyName>
     <RootNamespace>dii.storage.cosmos</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -20,7 +20,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.32.2" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.35.0" />
   </ItemGroup>
 
   <ItemGroup>

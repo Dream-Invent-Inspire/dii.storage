@@ -1,5 +1,6 @@
 ﻿using dii.storage.Attributes;
 using System;
+using System.Collections.Generic;
 
 namespace dii.storage.tests.Models
 {
@@ -37,6 +38,9 @@ namespace dii.storage.tests.Models
 		/// </summary>
 		[Searchable("complex")]
 		public FakeSearchableEntity ComplexSearchable { get; set; }
+
+		[Searchable("collection_complex")]
+		public List<FakeSearchableEntity> CollectionComplexSearchable { get; set; }
 
 	}
 }

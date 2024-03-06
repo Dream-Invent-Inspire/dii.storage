@@ -1,22 +1,19 @@
 ﻿using dii.storage.Attributes;
+using dii.storage.Models;
 using dii.storage.Models.Interfaces;
 using MessagePack;
+using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace dii.storage.cosmos.Models
 {
     /// <summary>
     /// The abstract implementation to ensure clean interaction with <see cref="Optimizer"/>.
     /// </summary>
-    public abstract class DiiCosmosEntity : IDiiEntity
-	{
-		/// <inheritdoc/>
-		//[Searchable(Constants.ReservedSchemaVersionKey)]
-		[IgnoreMember]
-		public Version SchemaVersion => new(1, 0);
-
-		/// <inheritdoc/>
-		[Searchable("_etag")]
-		public string DataVersion { get; set; }
+    public class DiiCosmosEntity : DiiBasicEntity
+    {
     }
 }

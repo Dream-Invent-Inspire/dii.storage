@@ -3,6 +3,7 @@ using dii.storage.Exceptions;
 using dii.storage.Models;
 using dii.storage.Models.Interfaces;
 using Microsoft.Azure.Cosmos;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +20,8 @@ namespace dii.storage.cosmos
 		#region Private Fields
 		private static DiiCosmosContext _instance;
 		private static readonly object _instanceLock = new object();
+
+		private List<ChangeFeedProcessor> _changeFeedProcessors = new List<ChangeFeedProcessor>();
 		#endregion Private Fields
 
 		#region Public Fields
@@ -29,10 +32,11 @@ namespace dii.storage.cosmos
 		#region Public Properties
 
 		/// <inheritdoc cref="Database" />
-		public Database Db { get; private set; }
+		public List<Database> Dbs { get; private set; }
 
 		/// <inheritdoc cref="DatabaseProperties" />
-		public DatabaseProperties DbProperties { get; private set; }
+		public Dictionary<string, DatabaseProperties> DbProperties { get; private set; }
+
 		#endregion Public Properties
 
 		#region Constructors
@@ -41,7 +45,7 @@ namespace dii.storage.cosmos
 		/// </summary>
 		/// <param name="config">The <see cref="INoSqlDatabaseConfig"/> to be used when this context is initialized.</param>
 		/// <param name="cosmosClientOptions">Optional settings to be used when this context is initialized.</param>
-		private DiiCosmosContext(INoSqlDatabaseConfig config, CosmosClientOptions cosmosClientOptions = null)
+		private DiiCosmosContext(INoSqlContextConfig config, CosmosClientOptions cosmosClientOptions = null)
 		{
 			Config = config;
 			Client = new CosmosClient(Config.Uri, Config.Key, cosmosClientOptions);
@@ -57,7 +61,7 @@ namespace dii.storage.cosmos
 		/// <returns>
 		/// The instance of the <see cref="DiiCosmosContext"/>.
 		/// </returns>
-		public static DiiCosmosContext Init(INoSqlDatabaseConfig config, CosmosClientOptions cosmosClientOptions = null)
+		public static DiiCosmosContext Init(INoSqlContextConfig config, CosmosClientOptions cosmosClientOptions = null)
 		{
 			if (_instance == null)
 			{
@@ -92,6 +96,11 @@ namespace dii.storage.cosmos
 			return _instance;
 		}
 
+		public static void Reset()
+		{
+            _instance = null;
+        }
+
 		/// <summary>
 		/// Checks if the database exists. When <see cref="INoSqlDatabaseConfig.AutoCreate"/> is <see langword="true"/>,
 		/// creates the database when it does not exist.
@@ -101,63 +110,75 @@ namespace dii.storage.cosmos
 		/// </returns>
 		public override async Task<bool> DoesDatabaseExistAsync()
 		{
-			if (Config.AutoCreate)
+			if (Config != null)
 			{
-				var throughputProperties = Config.AutoScaling ?
-							ThroughputProperties.CreateAutoscaleThroughput(Config.MaxRUPerSecond)
-							: ThroughputProperties.CreateManualThroughput(Config.MaxRUPerSecond);
-
-				var response = await Client.CreateDatabaseIfNotExistsAsync(Config.DatabaseId, throughputProperties).ConfigureAwait(false);
-
-				Db = response.Database;
-				DbProperties = response.Resource;
-
-				// Skip throughput check if DB was just created.
-				DatabaseCreatedThisContext = response.StatusCode == HttpStatusCode.Created;
-
-				if (DatabaseCreatedThisContext)
+				foreach (var dbcfg in Config.CosmosStorageDBs)
 				{
-					DbThroughput = Config.MaxRUPerSecond;
-				}
-				else
-                {
-					if (Config.AutoAdjustMaxRUPerSecond)
-                    {
-						var checkCurrentThroughputProperties = await Db.ReadThroughputAsync().ConfigureAwait(false);
+					if (dbcfg.AutoCreate)
+					{
+						var throughputProperties = dbcfg.AutoScaling ?
+									ThroughputProperties.CreateAutoscaleThroughput(dbcfg.MaxRUPerSecond)
+									: ThroughputProperties.CreateManualThroughput(dbcfg.MaxRUPerSecond);
 
-						if (checkCurrentThroughputProperties.HasValue && checkCurrentThroughputProperties.Value != Config.MaxRUPerSecond)
+						var response = await Client.CreateDatabaseIfNotExistsAsync(dbcfg.DatabaseId, throughputProperties).ConfigureAwait(false);
+
+                        Dbs ??= new List<Database>();
+                        if (!Dbs.Any(x => x.Id.Equals(dbcfg.DatabaseId, StringComparison.InvariantCultureIgnoreCase)))
+                            Dbs.Add(response.Database);
+
+                        DbProperties ??= new Dictionary<string, DatabaseProperties>();
+                        if (!DbProperties.ContainsKey(dbcfg.DatabaseId))
+							DbProperties.Add(dbcfg.DatabaseId, response.Resource);
+
+						// Skip throughput check if DB was just created.
+						DatabaseCreatedThisContext = response.StatusCode == HttpStatusCode.Created;
+
+						if (DatabaseCreatedThisContext)
 						{
-							// Attempt to modify the Max RU/sec.
-							_ = await Db.ReplaceThroughputAsync(throughputProperties).ConfigureAwait(false);
+							DbThroughput = dbcfg.MaxRUPerSecond;
+						}
+						else
+						{
+							if (dbcfg.AutoAdjustMaxRUPerSecond)
+							{
+								var checkCurrentThroughputProperties = await response.Database.ReadThroughputAsync().ConfigureAwait(false);
 
-							// Future: Potentially allow changing of the AutoScaling configuration.
-							// https://stackoverflow.com/a/63679119
+								if (checkCurrentThroughputProperties.HasValue && checkCurrentThroughputProperties.Value != dbcfg.MaxRUPerSecond)
+								{
+									// Attempt to modify the Max RU/sec.
+									_ = await response.Database.ReplaceThroughputAsync(throughputProperties).ConfigureAwait(false);
+
+									// Future: Potentially allow changing of the AutoScaling configuration.
+									// https://stackoverflow.com/a/63679119
+								}
+							}
 						}
 					}
-                }
+
+					if (Dbs == null)
+					{
+						Dbs = new List<Database>();
+						var db = Client.GetDatabase(dbcfg.DatabaseId);
+						Dbs.Add(db);
+
+						var dbTask = db.ReadAsync();
+						var throughputTask = db.ReadThroughputAsync();
+
+						await Task.WhenAll(dbTask, throughputTask).ConfigureAwait(false);
+
+						var dbResponse = dbTask.Result;
+						DbThroughput = throughputTask.Result ?? -1;
+						DbProperties.Add(dbcfg.DatabaseId, dbResponse.Resource);
+
+						// Database already existed.
+						if (!DatabaseCreatedThisContext && !DbThroughput.HasValue)
+						{
+							DbThroughput = await db.ReadThroughputAsync().ConfigureAwait(false) ?? -1;
+						}
+					}
+				}
 			}
-
-			if (Db == null)
-			{
-				Db = Client.GetDatabase(Config.DatabaseId);
-
-				var dbTask = Db.ReadAsync();
-				var throughputTask = Db.ReadThroughputAsync();
-
-				await Task.WhenAll(dbTask, throughputTask).ConfigureAwait(false);
-
-				var dbResponse = dbTask.Result;
-				DbThroughput = throughputTask.Result ?? -1;
-				DbProperties = dbResponse.Resource;
-			}
-
-			// Database already existed.
-			if (!DatabaseCreatedThisContext && !DbThroughput.HasValue)
-			{
-				DbThroughput = await Db.ReadThroughputAsync().ConfigureAwait(false) ?? -1;
-			}
-
-			return true;
+            return true;
 		}
 
 		/// <summary>
@@ -173,31 +194,64 @@ namespace dii.storage.cosmos
 		/// <exception cref="DiiTableCreationFailedException">
 		/// One or more tables failed to create.
 		/// </exception>
-		public override async Task InitTablesAsync(ICollection<TableMetaData> tableMetaDatas)
+		public override async Task InitTablesAsync(string dbid, ICollection<TableMetaData> tableMetaDatas, bool autoCreate, Optimizer optimizer = null)
 		{
 			if (tableMetaDatas == null || !tableMetaDatas.Where(x => x != null).Any())
             {
 				throw new ArgumentNullException(nameof(tableMetaDatas));
 			}
 
-			if (Db == null)
+			if (Dbs == null)
 			{
-				throw new DiiNotInitializedException(nameof(Db));
+				throw new DiiNotInitializedException(nameof(Dbs));
 			}
-
-			if (Config.AutoCreate)
+			string computeId = Guid.NewGuid().ToString();//should be unique per compute instance
+			if (autoCreate)
 			{
 				var tasks = new List<Task<ContainerResponse>>();
 
 				foreach (var tableMetaData in tableMetaDatas)
 				{
+					if (tableMetaData.Initialized) continue;
                     var containerProperties = new ContainerProperties(tableMetaData.TableName, tableMetaData.PartitionKeyPath)
                     {
                         DefaultTimeToLive = tableMetaData.TimeToLiveInSeconds
                     };
 
-                    tasks.Add(Db.CreateContainerIfNotExistsAsync(containerProperties));
-				}
+					//if hierarchical partition keys are defined, use them instead
+                    if (tableMetaData.HierarchicalPartitionKeys?.Any() ?? false)
+					{
+						// List of partition keys, in hierarchical order. You can have up to three levels of keys.
+						containerProperties = new ContainerProperties(
+							id: tableMetaData.TableName,
+							partitionKeyPaths: tableMetaData.HierarchicalPartitionKeys.OrderBy(x => x.Key).Select(x => $"/{x.Value.Name}").ToList()
+                        )
+                        {
+                            DefaultTimeToLive = tableMetaData.TimeToLiveInSeconds
+                        };					
+					}
+					var db = Dbs.FirstOrDefault(x => x.Id == dbid);
+					if (db == null)
+					{
+                        throw new DiiNotInitializedException(nameof(Dbs));
+                    }
+					tasks.Add(db.CreateContainerIfNotExistsAsync(containerProperties));
+					if (tableMetaData.IsLookupTable)
+					{
+						if (optimizer == null)
+						{
+							throw new ArgumentNullException(nameof(optimizer));
+						}
+
+                        //make sure lease table exists
+						var leaseContainerId = $"{tableMetaData.TableName}-lease";
+                        var leaseContainerProperties = new ContainerProperties(leaseContainerId, "/id")
+                        {
+                            //DefaultTimeToLive = tableMetaData.TimeToLiveInSeconds
+                        };
+                        tasks.Add(db.CreateContainerIfNotExistsAsync(leaseContainerProperties));
+                    }
+                }
 
 				await Task.WhenAll(tasks).ConfigureAwait(false);
 
@@ -205,15 +259,65 @@ namespace dii.storage.cosmos
 
 				foreach (var tableMetaData in tableMetaDatas)
 				{
-					if (!containers.ContainsKey(tableMetaData.TableName))
+                    if (tableMetaData.Initialized) continue;
+                    if (!containers.ContainsKey(tableMetaData.TableName))
 					{
 						throw new DiiTableCreationFailedException(tableMetaData.TableName);
 					}
-				}
+
+					if (tableMetaData.IsLookupTable)
+					{
+                        var thisLookup = (tableMetaData.SourceTableMetaData.LookupTables.ContainsKey(tableMetaData.GroupName) ? tableMetaData.SourceTableMetaData.LookupTables[tableMetaData.GroupName] : null);
+                        if (thisLookup == null)
+                        {
+                            throw new DiiTableCreationFailedException(tableMetaData.TableName);
+                        }
+
+                        //if (optimizer == null || string.IsNullOrEmpty(tableMetaData.SourceTableNameForLookup) || tableMetaData.SourceTableTypeForLookup == default(Type))
+                        if (optimizer == null || tableMetaData.SourceTableMetaData == null || string.IsNullOrEmpty(tableMetaData?.SourceTableMetaData?.TableName) || tableMetaData?.SourceTableMetaData?.ConcreteType == default(Type))
+                        {
+                            throw new DiiTableCreationFailedException(tableMetaData.TableName);
+                        }
+
+                        //Wire up changefeed capture processing
+						if (!containers.ContainsKey(tableMetaData.TableName) || !containers.ContainsKey($"{tableMetaData.TableName}-lease") || !containers.ContainsKey(tableMetaData.SourceTableMetaData?.TableName))
+						{
+                            throw new DiiTableCreationFailedException(tableMetaData.TableName);
+                        }
+
+						var curContainer = containers[tableMetaData.SourceTableMetaData.TableName];
+						thisLookup.LookupContainer = containers[tableMetaData.TableName];
+						var curLeaseContainer = containers[$"{tableMetaData.TableName}-lease"];
+						Type changeFeedType = tableMetaData.SourceTableMetaData.ConcreteType;
+
+                        var srv = new DiiChangeFeedProcessor(changeFeedType, tableMetaData); //the type here is the concrete type, which we need to sync over to it's lookup table, tableMetaData is the lookup table metadata
+
+                        var changeFeedProcessor = curContainer.GetChangeFeedProcessorBuilder<JObject>($"{tableMetaData.TableName}DiiChangeFeedProcessor", srv.HandleCosmosChangesAsync)
+                         .WithInstanceName(computeId)
+                         .WithLeaseContainer(curLeaseContainer)
+                         .Build();
+						
+						_changeFeedProcessors.Add(changeFeedProcessor);
+                        await changeFeedProcessor.StartAsync();
+						//ToDo: Wire up observation of change feed processor health
+                    }
+                    tableMetaData.Initialized = true;
+                }
 			}
 
-			TableMappings = tableMetaDatas.ToDictionary(x => x.ConcreteType, x => x);
-		}
+            var curmaps = tableMetaDatas.ToDictionary(x => x.ConcreteType, x => x);
+            if (TableMappings == null)
+            {
+                TableMappings = new Dictionary<Type, TableMetaData>();
+            }
+            foreach (var tbl in curmaps)
+            {
+                if (!TableMappings.ContainsKey(tbl.Key))
+                {
+                    TableMappings.Add(tbl.Key, tbl.Value);
+                }
+            }
+        }
 		#endregion Public Methods
 	}
 }

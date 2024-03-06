@@ -14,16 +14,15 @@ namespace dii.storage.tests.OptimizerTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class ConfigureTypesTests
     {
-        [Fact, TestPriorityOrder(100)]
-        public void ConfigureTypes_Prep()
+        public ConfigureTypesTests()
         {
-            _ = Optimizer.Init(typeof(FakeEntity));
+            _ = Optimizer.Init("FakeDb", typeof(FakeEntity));
 
             TestHelpers.AssertOptimizerIsInitialized();
         }
 
-        [Theory, TestPriorityOrder(101), ClassData(typeof(ConfigureTypesNoOpData))]
-        public void ConfigureTypes_NoOp(Type[] type)
+        [Theory, TestPriorityOrder(92), ClassData(typeof(ConfigureTypesInvalidPartitionKeyOrderExceptionData))]
+        public void ConfigureTypes_AddTypeWithInvalidHierarchicalPartitionKeyOrder(string dbid, Type type, string propertyName, string duplicatePropertyName, int order)
         {
             var optimizer = Optimizer.Get();
 
@@ -32,56 +31,7 @@ namespace dii.storage.tests.OptimizerTests
             var tablesInitialized = optimizer.Tables;
             var tableMappingsInitialized = optimizer.TableMappings;
 
-            optimizer.ConfigureTypes(type);
-
-            Assert.Single(optimizer.Tables);
-            Assert.Equal(tablesInitialized.Count, optimizer.Tables.Count);
-            Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
-            Assert.Equal(tablesInitialized[0].ClassName, optimizer.Tables[0].ClassName);
-
-            Assert.Single(optimizer.TableMappings);
-            Assert.Equal(tableMappingsInitialized.Count, optimizer.TableMappings.Count);
-            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].TableName, optimizer.TableMappings[typeof(FakeEntity)].TableName);
-            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
-        }
-
-        [Theory, TestPriorityOrder(102), ClassData(typeof(ConfigureTypesInvalidSearchableKeyExceptionData))]
-        public void ConfigureTypes_AddTypeWithInvalidSearchableKey(Type type, string key, string propertyName, string typeName)
-        {
-            var optimizer = Optimizer.Get();
-
-            Assert.Single(optimizer.Tables);
-
-            var tablesInitialized = optimizer.Tables;
-            var tableMappingsInitialized = optimizer.TableMappings;
-
-            var exception = Assert.Throws<DiiReservedSearchableKeyException>(() => { optimizer.ConfigureTypes(type); });
-
-            Assert.NotNull(exception);
-            Assert.Equal(new DiiReservedSearchableKeyException(key, propertyName, typeName).Message, exception.Message);
-
-            Assert.Single(optimizer.Tables);
-            Assert.Equal(tablesInitialized.Count, optimizer.Tables.Count);
-            Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
-            Assert.Equal(tablesInitialized[0].ClassName, optimizer.Tables[0].ClassName);
-
-            Assert.Single(optimizer.TableMappings);
-            Assert.Equal(tableMappingsInitialized.Count, optimizer.TableMappings.Count);
-            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].TableName, optimizer.TableMappings[typeof(FakeEntity)].TableName);
-            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
-        }
-
-        [Theory, TestPriorityOrder(103), ClassData(typeof(ConfigureTypesInvalidPartitionKeyOrderExceptionData))]
-        public void ConfigureTypes_AddTypeWithInvalidPartitionKeyOrder(Type type, string propertyName, string duplicatePropertyName, int order)
-        {
-            var optimizer = Optimizer.Get();
-
-            Assert.Single(optimizer.Tables);
-
-            var tablesInitialized = optimizer.Tables;
-            var tableMappingsInitialized = optimizer.TableMappings;
-
-            var exception = Assert.Throws<DiiPartitionKeyDuplicateOrderException>(() => { optimizer.ConfigureTypes(type); });
+            var exception = Assert.Throws<DiiPartitionKeyDuplicateOrderException>(() => { optimizer.ConfigureTypes("FakeDb", type); });
 
             Assert.NotNull(exception);
             Assert.Equal(new DiiPartitionKeyDuplicateOrderException(propertyName, duplicatePropertyName, order).Message, exception.Message);
@@ -97,7 +47,82 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
         }
 
-        [Theory, TestPriorityOrder(104), ClassData(typeof(ConfigureTypesInvalidIdOrderExceptionData))]
+        [Theory, TestPriorityOrder(100), ClassData(typeof(ConfigureTypesNoOpData))]
+        public void ConfigureTypes_NoOp(Type[] type)
+        {
+            var optimizer = Optimizer.Get();
+
+            Assert.Single(optimizer.Tables);
+
+            var tablesInitialized = optimizer.Tables;
+            var tableMappingsInitialized = optimizer.TableMappings;
+
+            optimizer.ConfigureTypes("FakeDb", type);
+
+            Assert.Single(optimizer.Tables);
+            Assert.Equal(tablesInitialized.Count, optimizer.Tables.Count);
+            Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
+            Assert.Equal(tablesInitialized[0].ClassName, optimizer.Tables[0].ClassName);
+
+            Assert.Single(optimizer.TableMappings);
+            Assert.Equal(tableMappingsInitialized.Count, optimizer.TableMappings.Count);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].TableName, optimizer.TableMappings[typeof(FakeEntity)].TableName);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
+        }
+
+        [Theory, TestPriorityOrder(101), ClassData(typeof(ConfigureTypesInvalidSearchableKeyExceptionData))]
+        public void ConfigureTypes_AddTypeWithInvalidSearchableKey(Type type, string key, string propertyName, string typeName)
+        {
+            var optimizer = Optimizer.Get();
+
+            Assert.Single(optimizer.Tables);
+
+            var tablesInitialized = optimizer.Tables;
+            var tableMappingsInitialized = optimizer.TableMappings;
+
+            var exception = Assert.Throws<DiiReservedSearchableKeyException>(() => { optimizer.ConfigureTypes("FakeDb", type); });
+
+            Assert.NotNull(exception);
+            Assert.Equal(new DiiReservedSearchableKeyException(key, propertyName, typeName).Message, exception.Message);
+
+            Assert.Single(optimizer.Tables);
+            Assert.Equal(tablesInitialized.Count, optimizer.Tables.Count);
+            Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
+            Assert.Equal(tablesInitialized[0].ClassName, optimizer.Tables[0].ClassName);
+
+            Assert.Single(optimizer.TableMappings);
+            Assert.Equal(tableMappingsInitialized.Count, optimizer.TableMappings.Count);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].TableName, optimizer.TableMappings[typeof(FakeEntity)].TableName);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
+        }
+
+        [Theory, TestPriorityOrder(102), ClassData(typeof(ConfigureTypesInvalidPartitionKeyOrderExceptionData))]
+        public void ConfigureTypes_AddTypeWithInvalidPartitionKeyOrder(string db, Type type, string propertyName, string duplicatePropertyName, int order)
+        {
+            var optimizer = Optimizer.Get();
+
+            Assert.Single(optimizer.Tables);
+
+            var tablesInitialized = optimizer.Tables;
+            var tableMappingsInitialized = optimizer.TableMappings;
+
+            var exception = Assert.Throws<DiiPartitionKeyDuplicateOrderException>(() => { optimizer.ConfigureTypes("FakeDb", type); });
+
+            Assert.NotNull(exception);
+            Assert.Equal(new DiiPartitionKeyDuplicateOrderException(propertyName, duplicatePropertyName, order).Message, exception.Message);
+
+            Assert.Single(optimizer.Tables);
+            Assert.Equal(tablesInitialized.Count, optimizer.Tables.Count);
+            Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
+            Assert.Equal(tablesInitialized[0].ClassName, optimizer.Tables[0].ClassName);
+
+            Assert.Single(optimizer.TableMappings);
+            Assert.Equal(tableMappingsInitialized.Count, optimizer.TableMappings.Count);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].TableName, optimizer.TableMappings[typeof(FakeEntity)].TableName);
+            Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
+        }
+
+        [Theory, TestPriorityOrder(103), ClassData(typeof(ConfigureTypesInvalidIdOrderExceptionData))]
         public void ConfigureTypes_AddTypeWithInvalidIdOrder(Type type, string propertyName, string duplicatePropertyName, int order)
         {
             var optimizer = Optimizer.Get();
@@ -107,7 +132,7 @@ namespace dii.storage.tests.OptimizerTests
             var tablesInitialized = optimizer.Tables;
             var tableMappingsInitialized = optimizer.TableMappings;
 
-            var exception = Assert.Throws<DiiIdDuplicateOrderException>(() => { optimizer.ConfigureTypes(type); });
+            var exception = Assert.Throws<DiiIdDuplicateOrderException>(() => { optimizer.ConfigureTypes("FakeDb", type); });
 
             Assert.NotNull(exception);
             Assert.Equal(new DiiIdDuplicateOrderException(propertyName, duplicatePropertyName, order).Message, exception.Message);
@@ -123,7 +148,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(tableMappingsInitialized[typeof(FakeEntity)].ClassName, optimizer.TableMappings[typeof(FakeEntity)].ClassName);
         }
 
-        [Fact, TestPriorityOrder(105)]
+        [Fact, TestPriorityOrder(104)]
         public void ConfigureTypes_AddNewType()
         {
             var optimizer = Optimizer.Get();
@@ -133,7 +158,7 @@ namespace dii.storage.tests.OptimizerTests
             var tablesInitialized = optimizer.Tables;
             var tableMappingsInitialized = optimizer.TableMappings;
 
-            optimizer.ConfigureTypes(typeof(FakeEntityTwo));
+            optimizer.ConfigureTypes("FakeDb", typeof(FakeEntityTwo));
 
             Assert.Equal(2, optimizer.Tables.Count);
             Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);
@@ -149,7 +174,7 @@ namespace dii.storage.tests.OptimizerTests
             Assert.Equal(nameof(FakeEntityTwo), optimizer.TableMappings[typeof(FakeEntityTwo)].ClassName);
         }
 
-        [Fact, TestPriorityOrder(106)]
+        [Fact, TestPriorityOrder(105)]
         public void ConfigureTypes_AddNewTypeWithSameIdAndPKProperty()
         {
             var optimizer = Optimizer.Get();
@@ -159,7 +184,7 @@ namespace dii.storage.tests.OptimizerTests
             var tablesInitialized = optimizer.Tables;
             var tableMappingsInitialized = optimizer.TableMappings;
 
-            optimizer.ConfigureTypes(typeof(FakeEntityFive));
+            optimizer.ConfigureTypes("FakeDb", typeof(FakeEntityFive));
 
             Assert.Equal(3, optimizer.Tables.Count);
             Assert.Equal(tablesInitialized[0].TableName, optimizer.Tables[0].TableName);

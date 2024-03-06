@@ -1,36 +1,25 @@
-﻿using dii.storage.Models.Interfaces;
+﻿using dii.storage.Models;
+using dii.storage.Models.Interfaces;
+using Microsoft.Azure.Cosmos;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace dii.storage.cosmos.Models
 {
-    /// <summary>
-    /// The configuration necessary to create and connect to a CosmosDB database.
-    /// </summary>
-    public class CosmosDatabaseConfig : INoSqlDatabaseConfig
-	{
-		/// <inheritdoc/>
-		public string Uri { get; set; }
+    /// <inheritdoc/>
+    public class CosmosAccountConfig : BaseCosmosAccountConfig
+    {
+    }
 
-		/// <inheritdoc/>
-		public string Key { get; set; }
+    /// <inheritdoc/>
+    public class CosmosContextConfig : BaseCosmosContextConfig
+    {
+    }
 
-		/// <inheritdoc/>
-		public string DatabaseId { get; set; }
+    /// <inheritdoc/>
+    public class CosmosDatabaseConfig : BaseCosmosDatabaseConfig
+    {
+    }
 
-		/// <inheritdoc/>
-		public bool AutoCreate { get; set; }
-
-		/// <inheritdoc/>
-		public int MaxRUPerSecond { get; set; }
-
-		/// <inheritdoc/>
-		public bool AutoAdjustMaxRUPerSecond { get; set; }
-
-		/// <inheritdoc/>
-		/// <remarks>
-		/// This must be modified via Azure Portal once the database is created. Attempting to 
-		/// toggle autoscale once the database exists via dii.storage will cause
-		/// an exception to be thrown.
-		/// </remarks>
-		public bool AutoScaling { get; set; }
-	}
 }

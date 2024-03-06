@@ -4,6 +4,7 @@ using dii.storage.cosmos.examples.Models.Interfaces;
 using dii.storage.Models.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace dii.storage.cosmos.examples.Fixtures
 {
@@ -13,7 +14,7 @@ namespace dii.storage.cosmos.examples.Fixtures
     public class ExamplePersonAdapterFixture : IDisposable
     {
         public Optimizer Optimizer;
-        public INoSqlDatabaseConfig NoSqlDatabaseConfig;
+        public INoSqlContextConfig NoSqlDatabaseConfig;
         public IExamplePersonAdapter PersonAdapter;
         public List<Person> People;
 
@@ -33,10 +34,11 @@ namespace dii.storage.cosmos.examples.Fixtures
 
             if (Optimizer == null)
             {
-                Optimizer = Optimizer.Init(typeof(Person));
+                //Optimizer = Optimizer.Init(NoSqlDatabaseConfig.CosmosStorageDBs.First().DatabaseId, typeof(Person), typeof(PersonSession));
+                Optimizer = Optimizer.Init(NoSqlDatabaseConfig.CosmosStorageDBs.First().DatabaseId, typeof(Person));
             }
 
-            context.InitTablesAsync(Optimizer.Tables).Wait();
+            context.InitTablesAsync(ExampleConfig.DbName, Optimizer.Tables, true, Optimizer).Wait();
 
             if (PersonAdapter == null)
             {
@@ -51,7 +53,8 @@ namespace dii.storage.cosmos.examples.Fixtures
 
         protected virtual void Dispose(bool doNotCleanUpNative)
         {
-
+            Optimizer.Clear();
+            DiiCosmosContext.Reset();
         }
 
         public void Dispose()

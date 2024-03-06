@@ -12,12 +12,7 @@ namespace dii.storage.tests.AttributeTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class EnableTimeToLiveAttributeTests
     {
-        //[Fact, TestPriorityOrder(100)]
-        //public void EnableTimeToLiveAttributeTests_Prep()
-        //{
-        //}
-
-        [Theory, TestPriorityOrder(101), ClassData(typeof(EnableTimeToLiveData))]
+        [Theory, TestPriorityOrder(100), ClassData(typeof(EnableTimeToLiveData))]
         public void EnableTimeToLiveAttributeTests_Success(int timeToLiveInSeconds)
         {
             var enableTimeToLiveAttribute = new EnableTimeToLiveAttribute(timeToLiveInSeconds);
@@ -26,7 +21,7 @@ namespace dii.storage.tests.AttributeTests
             Assert.Equal(timeToLiveInSeconds, enableTimeToLiveAttribute.TimeToLiveInSeconds);
         }
 
-        [Theory, TestPriorityOrder(102), ClassData(typeof(EnableTimeToLiveExceptionData))]
+        [Theory, TestPriorityOrder(101), ClassData(typeof(EnableTimeToLiveExceptionData))]
         public void EnableTimeToLiveAttributeTests_Exception(int timeToLiveInSeconds)
         {
             var exception = Assert.Throws<ArgumentOutOfRangeException>(() => { new EnableTimeToLiveAttribute(timeToLiveInSeconds); });
@@ -34,12 +29,5 @@ namespace dii.storage.tests.AttributeTests
             Assert.NotNull(exception);
             Assert.Equal("The time to live in seconds must be either a nonzero positive integer or '-1'. (Parameter 'timeToLiveInSeconds')", exception.Message);
         }
-
-        #region Teardown
-        //[Fact, TestPriorityOrder(int.MaxValue)]
-        //public void Teardown()
-        //{
-        //}
-        #endregion
     }
 }

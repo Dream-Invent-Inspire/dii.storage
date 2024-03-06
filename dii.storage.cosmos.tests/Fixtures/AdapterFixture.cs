@@ -14,15 +14,15 @@ namespace dii.storage.cosmos.tests.Fixtures
     public class AdapterFixture : IDisposable
     {
         public Optimizer Optimizer;
-        public INoSqlDatabaseConfig NoSqlDatabaseConfig;
+        public INoSqlContextConfig NoSqlDatabaseConfig;
         public IFakeAdapter<FakeEntity> FakeEntityAdapter;
         public List<FakeEntity> CreatedFakeEntities;
 
         public AdapterFixture()
         {
-            NoSqlDatabaseConfig = new FakeCosmosDatabaseConfig();
+            NoSqlDatabaseConfig = new FakeCosmosContextConfig();
 
-            var initContextAndOptimizerTask = TestHelpers.InitContextAndOptimizerAsync(NoSqlDatabaseConfig, Optimizer, new[] { typeof(FakeEntity) });
+            var initContextAndOptimizerTask = TestHelpers.InitContextAndOptimizerAsync(NoSqlDatabaseConfig, Optimizer, new Dictionary<string, Type[]>() { { FakeCosmosDatabaseConfig.FakeDBName, new[] { typeof(FakeEntity) } } });
             initContextAndOptimizerTask.Wait();
 
             Optimizer = initContextAndOptimizerTask.Result;

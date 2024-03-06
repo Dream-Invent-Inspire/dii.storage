@@ -12,12 +12,7 @@ namespace dii.storage.tests.AttributeTests
     [TestCaseOrderer(TestPriorityOrderer.FullName, TestPriorityOrderer.AssemblyName)]
     public class SearchableTests
     {
-        //[Fact, TestPriorityOrder(100)]
-        //public void SearchableTests_Prep()
-        //{
-        //}
-
-        [Theory, TestPriorityOrder(101), ClassData(typeof(SearchableData))]
+        [Theory, TestPriorityOrder(100), ClassData(typeof(SearchableData))]
         public void SearchableTests_Success(string abbreviation)
         {
             var searchableAttribute = new SearchableAttribute(abbreviation);
@@ -26,7 +21,7 @@ namespace dii.storage.tests.AttributeTests
             Assert.Equal(abbreviation, searchableAttribute.Abbreviation);
         }
 
-        [Theory, TestPriorityOrder(102), ClassData(typeof(SearchableExceptionData))]
+        [Theory, TestPriorityOrder(101), ClassData(typeof(SearchableExceptionData))]
         public void SearchableTests_Exception(string abbreviation)
         {
             // Normally the property name would be derived from actual Attribute usage.
@@ -36,12 +31,5 @@ namespace dii.storage.tests.AttributeTests
             Assert.NotNull(exception);
             Assert.Equal($"The [Searchable(key)] key on {propertyName} cannot be null, empty or whitespace.", exception.Message);
         }
-
-        #region Teardown
-        //[Fact, TestPriorityOrder(int.MaxValue)]
-        //public void Teardown()
-        //{
-        //}
-        #endregion
     }
 }
