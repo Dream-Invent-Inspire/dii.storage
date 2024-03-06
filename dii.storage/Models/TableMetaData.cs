@@ -150,7 +150,7 @@ namespace dii.storage.Models
                     if (!lookuphpks.ContainsKey(kvp.Key)) lookuphpks.Add(kvp.Key, kvp.Value);
                 };
             }
-            return lookuphpks;
+            return lookuphpks.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value); ;
         }
     }
 

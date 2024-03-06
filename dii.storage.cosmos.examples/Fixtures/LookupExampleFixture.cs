@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace dii.storage.cosmos.examples.Fixtures
 {
@@ -20,9 +21,12 @@ namespace dii.storage.cosmos.examples.Fixtures
         public ExamplePersonOrderAdapter PersonOrderAdapter;
         public List<PersonOrder> Orders;
         public DiiCosmosLookupAdapter OrderLookupAdapter;
+        //public ILogger<LookupExampleTests> Logger { get; }
 
-        public LookupExampleFixture()
+        public LookupExampleFixture() //ILogger<LookupExampleTests> logger)
         {
+            //Logger = logger;
+            
             NoSqlDatabaseConfig = new ExampleConfig();
 
             var context = DiiCosmosContext.Init(NoSqlDatabaseConfig);

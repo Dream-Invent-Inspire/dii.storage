@@ -21,6 +21,10 @@ namespace dii.storage.Models
             var lst = dict.OrderBy(x => x.Key).ToDictionary(x => x.Key, y => y.Value); //Ensure we go in order of the properties
             for (int i = 0; i < lst.Count; ++i)
             {
+                if (!lst.ContainsKey(i))
+                {
+                    continue;
+                }
                 string propName = lst[i].Name;
                 PropertyInfo sourcePropInfo = lst[i];
 

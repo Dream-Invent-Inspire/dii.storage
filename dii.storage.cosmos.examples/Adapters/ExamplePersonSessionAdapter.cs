@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using static dii.storage.cosmos.examples.Models.Enums;
+using System.Text.Json;
 
 namespace dii.storage.cosmos.examples.Adapters
 {
@@ -59,6 +60,52 @@ namespace dii.storage.cosmos.examples.Adapters
             queryDefinition.WithParameter("@duration", duration);
 
             return await base.GetPagedAsync(queryDefinition);
+        }
+
+        public async Task<PagedList<PersonSession>> GetLastSessionsByPersonAsync(string clientId)
+        {
+            try
+            {
+                var queryDefinition = new QueryDefinition("SELECT c.PersonId, max(c.ended) as \"ended\" From c WHERE c.ClientId = @clientId group by c.PersonId");
+                queryDefinition.WithParameter("@clientId", clientId);
+
+                var res = await base.QueryAsync(queryDefinition);
+                if (res?.Any() ?? false)
+                {
+                    var list = new List<dynamic>();
+                    foreach (JsonElement element in res)
+                    {
+                        string personId = element.GetProperty("PersonId").GetString();
+                        string ended = element.GetProperty("ended").GetString();
+
+                        var obj = new { PersonId = personId, Ended = ended };
+                        list.Add(obj);
+                    }
+                    if (list.Any())
+                    {
+                        var sb = new StringBuilder("SELECT * FROM c WHERE c.ClientId = @clientId AND (");
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            sb.Append($"(c.PersonId = '{list[i].PersonId}' AND c.ended = '{list[i].Ended}')");
+                            if (i < list.Count - 1)
+                            {
+                                sb.Append(" OR ");
+                            }
+                        }
+                        sb.Append(")");
+
+                        var queryDefinition2 = new QueryDefinition(sb.ToString());
+                        queryDefinition2.WithParameter("@clientId", clientId);
+                        var returnresults = await base.GetPagedAsync(queryDefinition2, null, new QueryRequestOptions { MaxItemCount = 1000 });
+                        return returnresults;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            return new PagedList<PersonSession>();
         }
 
 

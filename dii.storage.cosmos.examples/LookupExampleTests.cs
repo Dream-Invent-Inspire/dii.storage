@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Xunit;
 using System.Threading;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Logging;
 
 namespace dii.storage.cosmos.examples
 {
@@ -21,10 +22,12 @@ namespace dii.storage.cosmos.examples
     public class LookupExampleTests : IClassFixture<LookupExampleFixture>
     {
         private readonly LookupExampleFixture _fixture;
+        private readonly ILogger<LookupExampleTests> _logger;
 
         public LookupExampleTests(LookupExampleFixture fixture)
         {
             _fixture = fixture ?? throw new ArgumentNullException(nameof(fixture));
+            //_logger = _fixture.Logger;
 
             if (_fixture.Orders == null)
             {
