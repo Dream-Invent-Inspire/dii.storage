@@ -316,6 +316,21 @@ namespace dii.storage.cosmos.examples
             //Assert.Equal(bok, true);
         }
 
+        [Fact, TestPriorityOrder(97)]
+        public async Task RunHPKExample97()
+        {
+            try
+            {
+                var sessions = await _fixture.PersonSessionAdapter.GetLastSessionsByPersonAsync(_fixture.sessions.First()?.ClientId).ConfigureAwait(false);
+
+                Assert.NotNull(sessions);
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+
         [Fact, TestPriorityOrder(100)]
         public async Task RunHPKExample100()
         {

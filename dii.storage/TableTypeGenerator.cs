@@ -78,24 +78,15 @@ namespace dii.storage
         protected bool ProcessHierarchicalPartitionKey(PropertyInfo p)
         {
             var hierarchicalPartitionKey = p.GetCustomAttribute<HierarchicalPartitionKeyAttribute>();
-            if (hierarchicalPartitionKey != null && hierarchicalPartitionFields != null)
+            if (hierarchicalPartitionKey != null)
             {
-                //If the property is used in multiple lookup hpks, the order may not be right for this array
-                int nxtkey = (hierarchicalPartitionFields.Count == 0) ?
-                    hierarchicalPartitionKey.Order :
-                    hierarchicalPartitionFields.Keys.ElementAt(hierarchicalPartitionFields.Count - 1) + 1;
-                
-                if (nxtkey != hierarchicalPartitionKey.Order)
-                {
-                }
-
                 //Two fields cannot occupy the same position in the partition key.
                 if (hierarchicalPartitionFields.ContainsKey(hierarchicalPartitionKey.Order))
                 {
                     throw new DiiPartitionKeyDuplicateOrderException(hierarchicalPartitionFields[hierarchicalPartitionKey.Order].Name, p.Name, hierarchicalPartitionKey.Order);
                 }
-                
-                hierarchicalPartitionFields.Add(nxtkey, p);
+
+                hierarchicalPartitionFields.Add(hierarchicalPartitionKey.Order, p);
 
                 return true;
             }

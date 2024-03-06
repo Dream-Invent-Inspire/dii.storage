@@ -24,6 +24,8 @@ using dii.storage.Attributes;
 using System.Numerics;
 using dii.storage.Utilities;
 using System.Reflection.PortableExecutable;
+using System.Text.RegularExpressions;
+using System.Drawing.Printing;
 
 namespace dii.storage.cosmos
 {
@@ -351,6 +353,36 @@ namespace dii.storage.cosmos
             return await GetPagedInternalAsync(iterator, (int)(requestOptions.MaxItemCount ?? _table.DefaultPageSize), continuationToken, cancellationToken).ConfigureAwait(false);
         }
 
+        protected virtual async Task<PagedList<JsonElement>> QueryAsync(QueryDefinition queryDefinition, CancellationToken cancellationToken = default)
+        {
+            var results = new PagedList<JsonElement>();
+
+            var iterator = _container.GetItemQueryStreamIterator(queryDefinition);
+            while (iterator.HasMoreResults)
+            {
+                var responseMessage = await iterator.ReadNextAsync(cancellationToken).ConfigureAwait(false);
+
+                if (responseMessage?.Content == null) return results;
+
+                using (var reader = new StreamReader(responseMessage.Content))
+                {
+                    var json = reader.ReadToEnd();
+                    var wrapper = JsonSerializer.Deserialize<StreamIteratorContentWrapper>(json);
+
+                    foreach (var element in wrapper.Documents)
+                    {
+                        if (!string.IsNullOrEmpty(element.ToString()))
+                        {
+                            results.Add(element);
+                        }
+                    }
+                }
+            }
+
+            return results;
+        }
+
+
         private async Task<PagedList<T>> GetPagedInternalAsync(FeedIterator iterator, int pageSize, string continuationToken = null, CancellationToken cancellationToken = default)
         {
             var results = new PagedList<T>();
@@ -360,8 +392,7 @@ namespace dii.storage.cosmos
                 var responseMessage = await iterator.ReadNextAsync(cancellationToken).ConfigureAwait(false);
                 
                 if (responseMessage?.Content == null) return results;
-
-                results.ContinuationToken = responseMessage.ContinuationToken;
+                                
                 bool dobreak = false;
                 using (var reader = new StreamReader(responseMessage.Content))
                 {
