@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>dii.storage</id>
-    <version>1.2.999</version>
+    <version>2.0.1</version>
     <title>dii.storage</title>
     <authors>Andrew Beers, Pat MacMannis and Derek Jeremias</authors>
     <owners></owners>
