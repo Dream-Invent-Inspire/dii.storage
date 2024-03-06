@@ -74,7 +74,7 @@ namespace dii.storage.Utilities
 
         }
 
-        protected static PropertyBuilder AddProperty(TypeBuilder typeBuilder, string name, Type propertyType, params CustomAttributeBuilder[] customAttributeBuilders)
+        public static PropertyBuilder AddProperty(TypeBuilder typeBuilder, string name, Type propertyType, params CustomAttributeBuilder[] customAttributeBuilders)
         {
             var field = typeBuilder.DefineField($"_{name}", propertyType, FieldAttributes.Private);
             var prop = typeBuilder.DefineProperty(name, PropertyAttributes.None, propertyType, null);
