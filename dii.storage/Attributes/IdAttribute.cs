@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection.Emit;
 
 namespace dii.storage.Attributes
 {
@@ -6,8 +7,8 @@ namespace dii.storage.Attributes
     /// Denotes the id that the entity belongs to.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-	public class IdAttribute : Attribute
-	{
+	public class IdAttribute : DiiBaseAttribute
+    {
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IdAttribute"/> class with the
 		/// order and separator values with which the instance should be initalized.
@@ -39,5 +40,18 @@ namespace dii.storage.Attributes
 		/// </para>
 		/// </summary>
 		public char Separator { get; init; }
-	}
+
+        public override CustomAttributeBuilder GetConstructorBuilder()
+        {
+            // Getting the right constructor
+            var ctor = typeof(IdAttribute).GetConstructor(new[] { typeof(int), typeof(char) });
+
+            // Creating the CustomAttributeBuilder with extracted values
+            var attributeBuilder = new CustomAttributeBuilder(
+                ctor,
+                new object[] { this.Order, Constants.DefaultIdDelimitor }
+            );
+            return attributeBuilder;
+        }
+    }
 }
