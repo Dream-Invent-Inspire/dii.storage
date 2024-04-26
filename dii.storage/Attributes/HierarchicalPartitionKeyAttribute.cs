@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -10,7 +11,7 @@ namespace dii.storage.Attributes
     /// Denotes the partition key that the entity belongs to.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-    public class HierarchicalPartitionKeyAttribute : Attribute
+    public class HierarchicalPartitionKeyAttribute : DiiBaseAttribute
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="PartitionKeyAttribute"/> class with the
@@ -42,6 +43,19 @@ namespace dii.storage.Attributes
         /// <para>Defaults to <see cref="string"/></para>
         /// </summary>
         public Type PartitionKeyType { get; init; }
+
+        public override CustomAttributeBuilder GetConstructorBuilder()
+        {
+            // Getting the right constructor
+            var ctor = typeof(HierarchicalPartitionKeyAttribute).GetConstructor(new[] { typeof(Type), typeof(int) });
+
+            // Creating the CustomAttributeBuilder with extracted values
+            var attributeBuilder = new CustomAttributeBuilder(
+                ctor,
+                new object[] { this.PartitionKeyType, this.Order }
+            );
+            return attributeBuilder;
+        }
     }
 
 }
