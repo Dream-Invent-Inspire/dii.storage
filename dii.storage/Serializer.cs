@@ -181,6 +181,11 @@ namespace dii.storage
 
 				if (Id != null)
 				{
+					if (!IdProperties?.Any() ?? false)
+					{
+						throw new Exception("Dii.Serializer: No Id properties declared, Id is a required feild.");
+					}
+
 					var idValues = new List<object>();
 
 					foreach (var property in IdProperties)
@@ -267,7 +272,7 @@ namespace dii.storage
 				}
 
                 var sourceProperties = unpackedObject.GetType().GetProperties().ToDictionary(p => p.Name, p => p);
-                if (diiChangeTrackerProperty != null && sourceProperties.ContainsKey(Constants.ReservedChangeTrackerKey))
+                if (diiChangeTrackerProperty != null && (sourceProperties?.ContainsKey(Constants.ReservedChangeTrackerKey) ?? false))
                 {
                     var sourceProp = sourceProperties[Constants.ReservedChangeTrackerKey];
                     if (sourceProp.PropertyType == diiChangeTrackerProperty.PropertyType) // Ensure the property types match

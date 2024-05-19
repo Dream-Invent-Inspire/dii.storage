@@ -12,6 +12,11 @@ namespace dii.storage.cosmos
     {
         public const int MAX_CONCURRENCY = 100;
 
+        public DiiCosmosBaseAdapter()
+        {
+
+        }
+
         public StringBuilder GetSQLWithIdsAndHpks(List<string> ids, (string keycol1, List<string> keyValues) hpk1, (string keycol2, List<string> keyValues) hpk2, (string keycol3, List<string> keyValues) hpk3)
         {
             StringBuilder stringBuilder = new StringBuilder();

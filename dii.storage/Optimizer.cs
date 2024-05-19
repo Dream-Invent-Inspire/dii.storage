@@ -313,7 +313,7 @@ namespace dii.storage
 		/// </returns>
 		public bool IsKnownConcreteType(Type type)
 		{
-			return OptimizedTypeRegistrar.IsMapped(type);
+			return OptimizedTypeRegistrar.IsMapped(type) || OptimizedTypeRegistrar.IsMapped(type.AssemblyQualifiedName);
 		}
 
 		/// <summary>
@@ -653,6 +653,15 @@ namespace dii.storage
         private Serializer RegisterType(Type type)
         {
             Serializer storageTypeSerializer = null;
+
+			if (OptimizedTypeRegistrar.IsMapped(type.AssemblyQualifiedName))
+			{
+				var serx =  OptimizedTypeRegistrar.GetPackageMapping(type.AssemblyQualifiedName);
+				return serx;
+			}
+            var sery = OptimizedTypeRegistrar.GetPackageMapping(type.AssemblyQualifiedName);
+			if (sery != null) return sery;
+
             try
             {
                 //Wiring to the new typeGenerator structure from 05/08/2023
