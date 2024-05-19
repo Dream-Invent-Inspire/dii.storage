@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using static dii.storage.Optimizer;
 
 namespace dii.storage
@@ -24,12 +25,23 @@ namespace dii.storage
 			return null;
 		}
 
-		/// <summary>
-		/// Retrieves the Package Mapping to Unpackage the specified type.
-		/// </summary>
-		/// <param name="type">The type to unpackage</param>
-		/// <returns>The serializer to unpackage the specified type.</returns>
-		public static Serializer GetUnpackageMapping(Type type)
+        public static Serializer GetPackageMapping(string type)
+        {
+            var t1 = _packing.Keys.Where(x => x.AssemblyQualifiedName.Equals(type)).FirstOrDefault();
+            if (t1 != null)
+            {
+                return _packing[t1];
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Retrieves the Package Mapping to Unpackage the specified type.
+        /// </summary>
+        /// <param name="type">The type to unpackage</param>
+        /// <returns>The serializer to unpackage the specified type.</returns>
+        public static Serializer GetUnpackageMapping(Type type)
 		{
 			if(_unpacking.ContainsKey(type))
 			{
@@ -39,22 +51,41 @@ namespace dii.storage
 			return null;
 		}
 
-		/// <summary>
-		/// Will evaluate if the type is mapped for either packing or unpacking.
-		/// </summary>
-		/// <param name="type">The type to verify is mapped</param>
-		/// <returns>True if the type is registered for either packing or unpacking.</returns>
-		public static bool IsMapped(Type type)
+        public static Serializer GetUnpackageMapping(string type)
+        {
+            var t1 = _unpacking.Keys.Where(x => x.AssemblyQualifiedName.Equals(type)).FirstOrDefault();
+            if (t1 != null)
+            {
+                return _unpacking[t1];
+            }
+
+            return null;
+        }
+
+
+        /// <summary>
+        /// Will evaluate if the type is mapped for either packing or unpacking.
+        /// </summary>
+        /// <param name="type">The type to verify is mapped</param>
+        /// <returns>True if the type is registered for either packing or unpacking.</returns>
+        public static bool IsMapped(Type type)
 		{
 			return _packing.ContainsKey(type) || _unpacking.ContainsKey(type);
 		}
 
-		/// <summary>
-		/// Registers the specified type and it's optimization serializer
-		/// </summary>
-		/// <param name="type">The concrete type that has been optimized</param>
-		/// <param name="serializer">The serializer that handles packaging and unpackaging</param>
-		public static void Register(Type type, Serializer serializer)
+        public static bool IsMapped(string type)
+        {
+            var t1 = _packing.Keys.Where(x => x.AssemblyQualifiedName.Equals(type)).FirstOrDefault();
+            var t2 = _unpacking.Keys.Where(x => x.AssemblyQualifiedName.Equals(type)).FirstOrDefault();
+			return t1 != null || t2 != null;
+        }
+
+        /// <summary>
+        /// Registers the specified type and it's optimization serializer
+        /// </summary>
+        /// <param name="type">The concrete type that has been optimized</param>
+        /// <param name="serializer">The serializer that handles packaging and unpackaging</param>
+        public static void Register(Type type, Serializer serializer)
 		{
 			try
 			{

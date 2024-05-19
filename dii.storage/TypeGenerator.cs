@@ -2,6 +2,7 @@
 using dii.storage.Exceptions;
 using dii.storage.Models;
 using dii.storage.Models.Interfaces;
+using MessagePack;
 using Microsoft.Win32;
 using System;
 using System.Collections.Concurrent;
@@ -96,7 +97,9 @@ namespace dii.storage
 
         public Type GeneratedType { get; private set; }
         #endregion
-        public TypeGenerator(Type source, ModuleBuilder builder, Dictionary<Type,Type> subPropertyMappings, bool suppressConfigurationErrors = false)
+
+
+        public TypeGenerator(Type source, ModuleBuilder builder, Dictionary<Type, Type> subPropertyMappings, bool suppressConfigurationErrors = false)
         {
             moduleBuilder = builder;
             if (moduleBuilder.GetType(source.Name) != null)
@@ -111,9 +114,10 @@ namespace dii.storage
 
             sourceType = source;
             sourceProperties = source.GetProperties();
+
             typeBuilder = moduleBuilder.DefineType(source.Name, TypeAttributes.Public);
             var typeConst = typeBuilder.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
-            
+
             compressBuilder = moduleBuilder.DefineType($"{source.Name}Compressed", TypeAttributes.Public);
             compressConst = compressBuilder.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
             compressBuilder.SetCustomAttribute(new CustomAttributeBuilder(msgPkAttrConst, new object[] { false }));
@@ -167,6 +171,13 @@ namespace dii.storage
             {
                 SubPropertyMapping.Add(sourceType, serializer.StoredEntityType);
             }
+        }
+
+        private bool TypeAlreadyExists(string typeName)
+        {
+            // Check if the type already exists in the module
+            var type = moduleBuilder.GetType(typeName, throwOnError: false, ignoreCase: true);
+            return type != null;
         }
 
         protected void ProcessProperty(PropertyInfo p)
