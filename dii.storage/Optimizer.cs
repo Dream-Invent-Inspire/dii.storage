@@ -69,7 +69,9 @@ namespace dii.storage
         /// </para>
         /// </summary>
 		public readonly Dictionary<Type, Type> SubPropertyMapping;
-        
+
+        public JsonSerializerOptions CustomJsonConverter { get; set; }
+
         #endregion Public Fields
 
         #region Constructors
@@ -473,8 +475,10 @@ namespace dii.storage
 
 			if (OptimizedTypeRegistrar.IsMapped(type))
 			{
-				var obj = JsonSerializer.Deserialize(json, OptimizedTypeRegistrar.GetPackageMapping(type).StoredEntityType);
-				return OptimizedTypeRegistrar.GetPackageMapping(type).Unpackage<T>(obj);
+				var serializer = OptimizedTypeRegistrar.GetPackageMapping(type);
+
+                var obj = JsonSerializer.Deserialize(json, serializer.StoredEntityType, CustomJsonConverter);
+				return serializer.Unpackage<T>(obj);
 			}
 
 			return default(T);
