@@ -1,31 +1,17 @@
 ﻿using dii.storage.cosmos.Models;
-using dii.storage.Models.Interfaces;
 using dii.storage.Models;
+using dii.storage.Models.Interfaces;
+using dii.storage.Utilities;
 using Microsoft.Azure.Cosmos;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Text.Json;
-using System.ComponentModel;
 using Container = Microsoft.Azure.Cosmos.Container;
-using Microsoft.Azure.Cosmos.Serialization.HybridRow.Schemas;
-using PartitionKey = Microsoft.Azure.Cosmos.PartitionKey;
-using System.Collections.Concurrent;
-using System.Security.Cryptography;
-using Azure;
-using System.Collections;
-using System.Security.Principal;
-using System.Reflection;
-using dii.storage.Attributes;
-using System.Numerics;
-using dii.storage.Utilities;
-using System.Reflection.PortableExecutable;
-using System.Text.RegularExpressions;
-using System.Drawing.Printing;
 
 namespace dii.storage.cosmos
 {
@@ -105,6 +91,35 @@ namespace dii.storage.cosmos
             var diiEntity = default(T);
 
             if (string.IsNullOrWhiteSpace(id) || partitionKeys == default(Dictionary<string, string>))
+            {
+                return diiEntity;
+            }
+
+            // Build the full partition key path
+            var partitionKey = GetPKBuilder(partitionKeys);
+
+            diiEntity = await ReadStreamAsync(id, partitionKey, requestOptions, cancellationToken).ConfigureAwait(false);
+            return diiEntity;
+        }
+
+        /// <summary>
+        /// Reads an entity from the service as an asynchronous operation.
+        /// </summary>
+        /// <param name="id">The entity id.</param>
+        /// <param name="partitionKeys">The partition key for the entity.</param>
+        /// <param name="requestOptions">(Optional) The options for the entity request.</param>
+        /// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+        /// <returns>
+        /// The entity.
+        /// </returns>
+        /// <remarks>
+        /// <see cref="ItemRequestOptions.EnableContentResponseOnWrite"/> is ignored.
+        /// </remarks>
+        protected virtual async Task<T> GetAsync(string id, Dictionary<string, object> partitionKeys, ItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        {
+            var diiEntity = default(T);
+
+            if (string.IsNullOrWhiteSpace(id) || partitionKeys == default(Dictionary<string, object>))
             {
                 return diiEntity;
             }
@@ -390,9 +405,9 @@ namespace dii.storage.cosmos
             while (iterator.HasMoreResults)
             {
                 var responseMessage = await iterator.ReadNextAsync(cancellationToken).ConfigureAwait(false);
-                
+
                 if (responseMessage?.Content == null) return results;
-                                
+
                 bool dobreak = false;
                 using (var reader = new StreamReader(responseMessage.Content))
                 {
@@ -588,7 +603,7 @@ namespace dii.storage.cosmos
                 ((T entity) =>
                 {
                     requestOptions ??= (!string.IsNullOrEmpty(entity.DataVersion)) ? new ItemRequestOptions { IfMatchEtag = entity.DataVersion } : null;
-                    
+
                     //If there is a previous version, set the initial state
                     //This could happen if this container has a lookup
                     if (prevs.Count() > 0 && prevs.ContainsKey(GetId(entity)))
@@ -597,7 +612,7 @@ namespace dii.storage.cosmos
                         entity.SetInitialState(_table, prevs[GetId(entity)]);
                     }
                     entity.SetChangeTracker(_table);
-                    return _container.ReplaceItemAsync(_optimizer.ToEntity(entity), GetId(entity), GetPK(entity).Build(), requestOptions, cancellationToken); 
+                    return _container.ReplaceItemAsync(_optimizer.ToEntity(entity), GetId(entity), GetPK(entity).Build(), requestOptions, cancellationToken);
                 }),
                 cancellationToken).ConfigureAwait(false);
 
@@ -809,7 +824,7 @@ namespace dii.storage.cosmos
             var prevs = await GetPrevSetAsync(diiEntities, cancellationToken).ConfigureAwait(false);
 
             var itemResponses = await base.ProcessConcurrentlyAsync<T, ItemResponse<object>>(diiEntities,
-                ((T entity) => 
+                ((T entity) =>
                 {
                     var requestOptionsLocal = requestOptions ?? ((!string.IsNullOrEmpty(entity.DataVersion)) ? new ItemRequestOptions { IfMatchEtag = entity.DataVersion } : null);
 
@@ -848,7 +863,7 @@ namespace dii.storage.cosmos
         /// Patches an entity as an asynchronous operation.
         /// </summary>
         /// <param name="id">The entity id.</param>
-        /// <param name="partitionKey">The partition key for the entity.</param>
+        /// <param name="partitionKeys">The partition keys for the entity.</param>
         /// <param name="patchOperations">Represents a list of operations to be sequentially applied to the referred entity.</param>
         /// <param name="requestOptions">(Optional) The options for the entity query request.</param>
         /// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
@@ -869,6 +884,33 @@ namespace dii.storage.cosmos
 
             return await PatchInternalAsync(id, partitionKey, patchOperations, requestOptions, cancellationToken).ConfigureAwait(false);
         }
+
+        /// <summary>
+        /// Patches an entity as an asynchronous operation.
+        /// </summary>
+        /// <param name="id">The entity id.</param>
+        /// <param name="partitionKeys">The partition keys for the entity.</param>
+        /// <param name="patchOperations">Represents a list of operations to be sequentially applied to the referred entity.</param>
+        /// <param name="requestOptions">(Optional) The options for the entity query request.</param>
+        /// <param name="cancellationToken">(Optional) <see cref="CancellationToken"/> representing request cancellation.</param>
+        /// <returns>
+        /// The entity that was updated.
+        /// </returns>
+        /// <remarks>
+        /// The entity's partition key value is immutable. To change an entity's partition key
+        /// value you must delete the original entity and insert a new entity. The patch operations
+        /// are atomic and are executed sequentially. By default, resource body will be returned
+        /// as part of the response. User can request no content by setting Microsoft.Azure.Cosmos.ItemRequestOptions.EnableContentResponseOnWrite
+        /// flag to false.
+        /// </remarks>
+        protected virtual async Task<T> PatchAsync(string id, Dictionary<string, object> partitionKeys, Dictionary<string, object> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
+        {
+            // Build the full partition key path
+            var partitionKey = GetPKBuilder(partitionKeys);
+
+            return await PatchInternalAsync(id, partitionKey, patchOperations, requestOptions, cancellationToken).ConfigureAwait(false);
+        }
+
         private async Task<T> PatchInternalAsync(string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> patchOperations, PatchItemRequestOptions requestOptions = null, CancellationToken cancellationToken = default)
         {
             //Here we need to check the patch operations and determine if we need to flag an Id of Hpk change
@@ -923,8 +965,8 @@ namespace dii.storage.cosmos
                 throw new ArgumentException($"The number of entities to patch exceeds the maximum batch size of {Constants.MAX_BATCH_SIZE}.");
             }
 
-            var ops = patchOperations.Select<(string id, Dictionary<string, string> partitionKeys, Dictionary<string, object> listOfPatchOperations), 
-                                            (string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations)>(x => new (x.id, GetPKBuilder(x.partitionKeys), x.listOfPatchOperations)).ToList();
+            var ops = patchOperations.Select<(string id, Dictionary<string, string> partitionKeys, Dictionary<string, object> listOfPatchOperations),
+                                            (string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations)>(x => new(x.id, GetPKBuilder(x.partitionKeys), x.listOfPatchOperations)).ToList();
 
             return await PatchBulkInternalAsync(ops, requestOptions, cancellationToken).ConfigureAwait(false);
         }
@@ -934,8 +976,8 @@ namespace dii.storage.cosmos
             var unpackedEntities = default(List<T>);
 
             var itemResponses = await base.ProcessConcurrentlyAsync<(string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations), T>(patchOperations,
-                (((string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations) x) => 
-                    { return PatchInternalAsync(x.id, x.partitionKey, x.listOfPatchOperations, requestOptions, cancellationToken); }),
+                (((string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations) x) =>
+                { return PatchInternalAsync(x.id, x.partitionKey, x.listOfPatchOperations, requestOptions, cancellationToken); }),
                 cancellationToken).ConfigureAwait(false);
 
             var returnResult = requestOptions == null || !requestOptions.EnableContentResponseOnWrite.HasValue || requestOptions.EnableContentResponseOnWrite.Value;
@@ -1067,11 +1109,11 @@ namespace dii.storage.cosmos
                 {
                     EnableContentResponseOnWrite = false
                 };
-                
+
                 var ops = diiEntities.Select<T, (string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations)>
-                    ((x) => new (GetId(x), GetPK(x), GetDeletePatch(Constants.DELETE_TTL)))
+                    ((x) => new(GetId(x), GetPK(x), GetDeletePatch(Constants.DELETE_TTL)))
                     .ToList();
-                
+
                 _ = await PatchBulkInternalAsync(ops, patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
                 return true;
             }
@@ -1119,11 +1161,11 @@ namespace dii.storage.cosmos
                 {
                     EnableContentResponseOnWrite = false
                 };
-                
+
                 var ops = idAndPks.Select<(string id, Dictionary<string, string> partitionKeys), (string id, PartitionKeyBuilder partitionKey, Dictionary<string, object> listOfPatchOperations)>
-                    ((x) => new (x.id, GetPKBuilder(x.partitionKeys), GetDeletePatch(Constants.DELETE_TTL)))
+                    ((x) => new(x.id, GetPKBuilder(x.partitionKeys), GetDeletePatch(Constants.DELETE_TTL)))
                     .ToList();
-                
+
                 _ = await PatchBulkInternalAsync(ops, patchItemRequestOptions, cancellationToken).ConfigureAwait(false);
                 return true;
             }
@@ -1134,7 +1176,7 @@ namespace dii.storage.cosmos
                     x.id,
                     GetPKBuilder(x.partitionKeys)
                 )).ToList();
-                
+
                 return await DeleteBulkInternalAsync(internalIdAndPks, requestOptions, cancellationToken).ConfigureAwait(false);
             }
         }
@@ -1199,6 +1241,64 @@ namespace dii.storage.cosmos
             return partitionKey;
         }
 
+        private PartitionKeyBuilder GetPKBuilder(Dictionary<string, object> partitionKeys)
+        {
+            var partitionKey = new PartitionKeyBuilder();
+
+            var key1 = (_table.HierarchicalPartitionKeys.ContainsKey(0)) ? this._table.HierarchicalPartitionKeys[0] : null;
+            var key2 = (_table.HierarchicalPartitionKeys.ContainsKey(1)) ? this._table.HierarchicalPartitionKeys[1] : null;
+            var key3 = (_table.HierarchicalPartitionKeys.ContainsKey(2)) ? this._table.HierarchicalPartitionKeys[2] : null;
+
+            if (key1 == null)
+            {
+                throw new Exception("No partition key defined for this table");
+            }
+
+            var curkey = partitionKeys.Where(x => x.Key.Equals(key1.Name, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+            if (curkey.Value == null)
+            {
+                throw new Exception("No valid partition key provided for this query");
+            }
+            AddPartitionKey(partitionKey, curkey.Value);
+
+            if (key2 != null)
+            {
+                curkey = partitionKeys.Where(x => x.Key.Equals(key2.Name, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+                if (curkey.Value != null) AddPartitionKey(partitionKey, curkey.Value);
+            }
+
+            if (key3 != null)
+            {
+                curkey = partitionKeys.Where(x => x.Key.Equals(key3.Name, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+                if (curkey.Value != null) AddPartitionKey(partitionKey, curkey.Value);
+            }
+
+            return partitionKey;
+        }
+
+        private static void AddPartitionKey(PartitionKeyBuilder pkb, object value)
+        {
+            if (value is int intVal)
+            {
+                pkb.Add(intVal);
+            }
+            else if (value is bool boolVal)
+            {
+                pkb.Add(boolVal);
+            }
+            else if (value is string stringVal)
+            {
+                pkb.Add(stringVal);
+            }
+            else
+            {
+                throw new Exception($"Type {value.GetType()} not supported as a Partition Key");
+
+            }
+
+
+        }
+
         private PartitionKeyBuilder GetPK(T diiEntity)
         {
             object ret = new PartitionKeyBuilder();
@@ -1228,8 +1328,8 @@ namespace dii.storage.cosmos
 
         private Dictionary<string, object> GetDeletePatch(long duration)
         {
-            return new Dictionary<string, object> 
-            { 
+            return new Dictionary<string, object>
+            {
                 { $"/{dii.storage.Constants.ReservedTTLKey}", duration },
                 { $"/{dii.storage.Constants.ReservedDeletedKey}", true }
             };

@@ -2,10 +2,7 @@
 using dii.storage.cosmos.tests.Models;
 using dii.storage.cosmos.tests.Models.Interfaces;
 using Microsoft.Azure.Cosmos;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,6 +11,11 @@ namespace dii.storage.cosmos.tests.Adapters
     public class FakeHPKEntityAdapter : DiiCosmosHierarchicalAdapter<FakeHPKEntity>, IFakeHierarchicalAdapter<FakeHPKEntity>
     {
         Task<FakeHPKEntity> IFakeHierarchicalAdapter<FakeHPKEntity>.GetAsync(string id, Dictionary<string, string> partitionKeys, ItemRequestOptions requestOptions, CancellationToken cancellationToken)
+        {
+            return base.GetAsync(id, partitionKeys, requestOptions, cancellationToken);
+        }
+
+        Task<FakeHPKEntity> IFakeHierarchicalAdapter<FakeHPKEntity>.GetAsync(string id, Dictionary<string, object> partitionKeys, ItemRequestOptions requestOptions, CancellationToken cancellationToken)
         {
             return base.GetAsync(id, partitionKeys, requestOptions, cancellationToken);
         }
@@ -64,6 +66,11 @@ namespace dii.storage.cosmos.tests.Adapters
         }
 
         Task<FakeHPKEntity> IFakeHierarchicalAdapter<FakeHPKEntity>.PatchAsync(string id, Dictionary<string, string> partitionKeys, Dictionary<string, object> patchOperations, PatchItemRequestOptions requestOptions, CancellationToken cancellationToken)
+        {
+            return base.PatchAsync(id, partitionKeys, patchOperations, requestOptions, cancellationToken);
+        }
+
+        Task<FakeHPKEntity> IFakeHierarchicalAdapter<FakeHPKEntity>.PatchAsync(string id, Dictionary<string, object> partitionKeys, Dictionary<string, object> patchOperations, PatchItemRequestOptions requestOptions, CancellationToken cancellationToken)
         {
             return base.PatchAsync(id, partitionKeys, patchOperations, requestOptions, cancellationToken);
         }
