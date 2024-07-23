@@ -8,7 +8,7 @@
     <PackageLicenseFile>COPYING.LESSER.txt</PackageLicenseFile>
     <RepositoryUrl>https://github.com/Dream-Invent-Inspire/dii.storage</RepositoryUrl>
     <PackageTags>Database;MessagePack;Storage;Compression</PackageTags>
-    <Authors>Andrew Beers, Pat MacMannis &amp; Derek Jeremias</Authors>
+    <Authors>Andrew Beers, Pat MacMannis, &amp; Derek Jeremias</Authors>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageId>dii.storage</PackageId>
     <Version>2.1.0</Version>
