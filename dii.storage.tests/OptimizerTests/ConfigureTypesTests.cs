@@ -106,10 +106,10 @@ namespace dii.storage.tests.OptimizerTests
             var tablesInitialized = optimizer.Tables;
             var tableMappingsInitialized = optimizer.TableMappings;
 
-            var exception = Assert.Throws<DiiPartitionKeyDuplicateOrderException>(() => { optimizer.ConfigureTypes("FakeDb", type); });
+            var exception = Assert.Throws<DiiDuplicateTypeInitializedException>(() => { optimizer.ConfigureTypes("FakeDb", type); });
 
             Assert.NotNull(exception);
-            Assert.Equal(new DiiPartitionKeyDuplicateOrderException(propertyName, duplicatePropertyName, order).Message, exception.Message);
+            Assert.Equal(new DiiDuplicateTypeInitializedException(type).Message, exception.Message);
 
             Assert.Single(optimizer.Tables);
             Assert.Equal(tablesInitialized.Count, optimizer.Tables.Count);

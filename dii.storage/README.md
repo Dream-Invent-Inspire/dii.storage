@@ -43,4 +43,4 @@ If you've got questions about setup, features, or just want to chat with the dev
 
 ## Contributors
 
-The core optimizer of dii.storage was originally developed by [Andrew Beers](https://github.com/aquamoogle). Additional features and maintenance by Andrew and [Pat MacMannis](https://github.com/pmac627). Both original contributors are active with the project today.
+The core optimizer of dii.storage was originally developed by [Andrew Beers](https://github.com/aquamoogle). Additional features and maintenance by Andrew, [Derek Jeremias](https://github.com/derekjeremias-dii), and [Pat MacMannis](https://github.com/pmac627). Both original contributors are active with the project today.
