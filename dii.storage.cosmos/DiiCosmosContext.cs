@@ -120,7 +120,7 @@ namespace dii.storage.cosmos
 									ThroughputProperties.CreateAutoscaleThroughput(dbcfg.MaxRUPerSecond)
 									: ThroughputProperties.CreateManualThroughput(dbcfg.MaxRUPerSecond);
 
-						var response = await Client.CreateDatabaseIfNotExistsAsync(dbcfg.DatabaseId, throughputProperties).ConfigureAwait(false);
+						var response = await Client.CreateDatabaseIfNotExistsAsync(dbcfg.DatabaseId, ((dbcfg.IsServerless) ? null : throughputProperties)).ConfigureAwait(false);
 
                         Dbs ??= new List<Database>();
                         if (!Dbs.Any(x => x.Id.Equals(dbcfg.DatabaseId, StringComparison.InvariantCultureIgnoreCase)))

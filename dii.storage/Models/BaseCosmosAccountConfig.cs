@@ -57,5 +57,6 @@ namespace dii.storage.Models
         public bool AutoAdjustMaxRUPerSecond { get; set; } = true;
         public bool AutoScaling { get; set; } = true;
         public string TypeCollectionName { get; set; }
+        public bool IsServerless { get; set; }
     }
 }

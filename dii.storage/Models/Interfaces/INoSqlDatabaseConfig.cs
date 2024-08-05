@@ -54,5 +54,7 @@ namespace dii.storage.Models.Interfaces
 		/// When true, RU throughput provisioning will be set to autoscale. 
 		/// </summary>
 		bool AutoScaling { get; set; }
-	}
+
+        public bool IsServerless { get; set; }
+    }
 }

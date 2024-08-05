@@ -11,7 +11,7 @@
     <Authors>Andrew Beers, Pat MacMannis, &amp; Derek Jeremias</Authors>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageId>dii.storage.cosmos</PackageId>
-    <Version>2.1.0</Version>
+    <Version>2.1.2</Version>
     <AssemblyName>dii.storage.cosmos</AssemblyName>
     <RootNamespace>dii.storage.cosmos</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
